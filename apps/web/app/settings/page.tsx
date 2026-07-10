@@ -77,7 +77,7 @@ export default function SettingsPage() {
         </CardBody>
         <div className="border-t border-[var(--color-border)] px-5 py-4">
           <Button onClick={save}>
-            <Icon name={saved ? "check" : "check"} width={16} height={16} />
+            <Icon name="check" width={16} height={16} />
             {saved ? "Saved!" : "Save preferences"}
           </Button>
         </div>

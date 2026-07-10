@@ -25,6 +25,18 @@ const stages: { value: Stage; label: string }[] = [
 ];
 
 export default function TreatmentPlannerPage() {
+  const { currentCase, hydrated } = useCases();
+
+  // The form captures its initial values from the active case, so it must
+  // not mount until cases have hydrated from localStorage. Keying by case
+  // id re-seeds the form if the active case changes.
+  if (!hydrated) return <Spinner label="Loading…" />;
+  return (
+    <PlannerForm key={currentCase?.id ?? "no-case"} />
+  );
+}
+
+function PlannerForm() {
   const { currentCase } = useCases();
 
   const [region, setRegion] = useState<BodyRegionId | "">(

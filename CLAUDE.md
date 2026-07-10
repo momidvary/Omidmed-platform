@@ -1,125 +1,79 @@
-# OmidMed Platform - Claude Instructions
+# PhysioAI Assistant - Claude Instructions
 
 ## Project Identity
 
-OmidMed Platform is a long-term SaaS platform for physiotherapy clinics.
+PhysioAI Assistant is an AI-powered clinical decision-support web app for
+physiotherapists. It helps with clinical reasoning, assessment, treatment
+planning, exercise prescription, red-flag safety screening, and patient
+education.
 
-The first MVP module is a B2B ordering system for OmidMed physiotherapy consumables.
+This project replaced the earlier "OmidMed ordering platform" concept.
+Do not rebuild ordering/e-commerce features.
 
-Main website:
-omidmed.com
+## Main Users
 
-Application:
-app.omidmed.com
+- Physiotherapists
+- Rehab clinicians
+- Clinic owners
+- Physiotherapy assistants under supervision
 
-The main website is WordPress and must not be modified by this project.
+## Clinical Safety Rules (non-negotiable)
 
-## Business Context
+- The app must NEVER present a final medical diagnosis.
+- Always use the wording "possible clinical hypotheses" and remind the user
+  to confirm with clinical examination.
+- Red-flag screening must always warn: "Refer to physician / emergency care
+  if clinically indicated."
+- Every AI-generated page must show the clinical safety disclaimer
+  (`Disclaimer` component in `components/ui/Misc.tsx`).
 
-OmidMed produces and sells physiotherapy consumables, including:
+## Current MVP Scope
 
-- Physiotherapy pads
-- Disposable patient sheets
-- Clinic bags
-- Custom clinic hygiene packs
-- Other physiotherapy consumables
+- 9 pages: Dashboard, New Case, Case Analysis, Treatment Planner,
+  Exercise Library, AI Assistant, Red Flag Checker, Patient Education,
+  Settings.
+- All data is mock/local: React context + localStorage. No backend, no auth.
+- The "AI" is a mock heuristic engine in `apps/web/lib/ai/engine.ts`.
 
-Clinics must be able to order customized products online.
+## AI Integration Rule
 
-## MVP Scope
-
-The MVP must include:
-
-- Clinic login
-- Clinic dashboard
-- Product catalog
-- Custom order builder
-- Bag color selection
-- Sheet color selection
-- Pad model selection
-- Logo upload
-- AI-assisted product preview
-- Order submission
-- Invoice generation
-- Order tracking
-- Admin panel for OmidMed factory
-
-## Important AI Preview Feature
-
-Clinics should upload their logo and choose product options.
-
-The system should show a realistic preview of the logo on the selected bag color.
-
-This is called: AI Product Preview.
-
-For MVP, this can start as a simulated preview or mockup generator.
-Later it can become a real AI image generation feature.
-
-## Future Roadmap
-
-Future modules may include:
-
-- Clinic CRM
-- Patient management
-- Clinic financial management
-- Insurance management
-- Inventory management
-- AI physiotherapy assistant
-- Treatment planning
-- SOAP notes
-- Exercise prescription
-- Patient progress tracking
-
-Do not implement future modules in MVP unless explicitly requested.
+All AI behaviour flows through `apps/web/lib/ai/engine.ts`. Each function is
+marked with "🔌 REAL AI API INTEGRATION POINT". When connecting a real
+provider, keep the function signatures and return types identical so the UI
+needs no changes. API keys must live in server-side environment variables —
+never in the browser, never committed.
 
 ## Technical Direction
 
-Use:
-
-- Next.js for frontend
-- TypeScript everywhere
-- Tailwind CSS
-- ShadCN UI
-- Supabase PostgreSQL
-- Supabase Auth
-- Supabase Storage
-- Docker where needed
+- Next.js App Router + React 19 + TypeScript everywhere
+- Tailwind CSS 4 (design tokens defined in `apps/web/app/globals.css`)
+- Reusable primitives in `apps/web/components/ui/`
+- App shell (sidebar + topbar) in `apps/web/components/layout/`
+- Mock data in `apps/web/lib/data/`
 - GitHub for version control
 
 ## Architecture Rules
 
-- Build incrementally.
-- Do not generate the full project at once.
+- Build incrementally; make the smallest safe change.
 - Do not modify unrelated files.
 - Do not delete existing files without confirmation.
-- Always keep the project production-ready.
-- Every feature must be documented.
-- Persian RTL support is required.
-- Mobile-first UI is required.
-- The system must be designed for future expansion.
+- Keep the project production-ready: `npm run build` and `npm run lint`
+  must pass in `apps/web` before committing.
+- Responsive design is required (desktop, tablet, mobile).
+- Every feature must be documented in README.md.
 
-## Security Rules
+## Future Roadmap (do not build unless asked)
 
-- Never commit secrets.
-- Never store passwords manually.
-- Use environment variables for keys.
-- Use role-based access control.
-- Separate clinic data by clinic account.
-- Admin and clinic users must have different permissions.
-
-## Current Phase
-
-Phase 1:
-Project foundation and MVP ordering system.
-
-Do not build AI assistant, CRM, accounting, patient management, or insurance modules yet.
+- Persian (RTL) UI
+- Real AI provider integration (server-side route handlers)
+- Supabase auth + persistence
+- Progress tracking / outcome-measure charts
+- Printable or PDF patient handouts
 
 ## Working Style
 
-When asked to work on this project:
-
-1. Understand the current phase.
+1. Understand the current scope.
 2. Make the smallest safe change.
-3. Explain what changed.
-4. Update documentation if needed.
-5. Wait for the next instruction.
+3. Verify with build + lint (and browser check for UI changes).
+4. Explain what changed.
+5. Update documentation if needed.

@@ -1,30 +1,30 @@
 import type { Metadata } from "next";
-import { Vazirmatn } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
+import { AppShell } from "@/components/layout/AppShell";
+import { CaseProvider } from "@/lib/store/CaseContext";
 
-const vazirmatn = Vazirmatn({
-  variable: "--font-vazirmatn",
-  subsets: ["arabic"],
+const inter = Inter({
+  variable: "--font-inter",
+  subsets: ["latin"],
 });
 
 export const metadata: Metadata = {
-  title: "OmidMed | پنل سفارش محصولات فیزیوتراپی",
+  title: "PhysioAI Assistant",
   description:
-    "پنل هوشمند سفارش پک‌های بهداشتی فیزیوتراپی با پیش‌نمایش لوگوی کلینیک",
+    "AI-assisted clinical reasoning, assessment, treatment planning and exercise prescription for physiotherapists.",
 };
 
 export default function RootLayout({
   children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+}: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html
-      lang="fa"
-      dir="rtl"
-      className={`${vazirmatn.variable} h-full antialiased`}
-    >
-      <body className="min-h-full flex flex-col font-sans">{children}</body>
+    <html lang="en" className={inter.variable}>
+      <body>
+        <CaseProvider>
+          <AppShell>{children}</AppShell>
+        </CaseProvider>
+      </body>
     </html>
   );
 }

@@ -48,7 +48,13 @@ export function EmptyState({
   );
 }
 
-export function Disclaimer({ className }: { className?: string }) {
+export function Disclaimer({
+  className,
+  fa = false,
+}: {
+  className?: string;
+  fa?: boolean;
+}) {
   return (
     <div
       className={cn(
@@ -59,13 +65,22 @@ export function Disclaimer({ className }: { className?: string }) {
       <span className="mt-0.5 shrink-0">
         <Icon name="shield" width={16} height={16} />
       </span>
-      <p>
-        <strong className="font-semibold">Clinical safety notice.</strong> PhysioAI
-        provides decision-support only and does not give a definitive medical
-        diagnosis. All hypotheses must be confirmed by hands-on clinical
-        examination. Refer to a physician or emergency care when clinically
-        indicated.
-      </p>
+      {fa ? (
+        <p>
+          <strong className="font-semibold">یادآوری ایمنی.</strong> این برنامه
+          فقط جنبه راهنمایی و آموزشی دارد و جایگزین نظر فیزیوتراپیست یا پزشک
+          نیست. در صورت درد شدید، ورم ناگهانی، تب یا علائم نگران‌کننده، با
+          پزشک تماس بگیرید یا به اورژانس مراجعه کنید.
+        </p>
+      ) : (
+        <p>
+          <strong className="font-semibold">Clinical safety notice.</strong>{" "}
+          PhysioAI provides decision-support only and does not give a definitive
+          medical diagnosis. All hypotheses must be confirmed by hands-on
+          clinical examination. Refer to a physician or emergency care when
+          clinically indicated.
+        </p>
+      )}
     </div>
   );
 }

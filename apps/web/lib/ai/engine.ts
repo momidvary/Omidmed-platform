@@ -1,10 +1,12 @@
 import type {
   ClinicalReasoning,
+  Patient,
   PatientCase,
   TreatmentPlan,
   TreatmentPlanInput,
 } from "@/lib/types";
 import { getRegion } from "@/lib/data/bodyRegions";
+import type { ExerciseFa } from "@/lib/data/exerciseFa";
 
 /*
  * ─────────────────────────────────────────────────────────────
@@ -250,6 +252,101 @@ export function buildChatReply(question: string, caseContext?: PatientCase): str
   }
   return `${ctx}I can help with assessment, clinical reasoning, tests, treatment planning, exercise selection, and progression. Try asking about red flags, suitable tests, a treatment plan for a specific condition, or how to progress a patient. Remember this is decision-support only — confirm findings with clinical examination.`;
 }
+
+/*
+ * ── Patient portal AI (Persian) ─────────────────────────────────
+ *
+ * 🔌 REAL AI API INTEGRATION POINT (patient chat)
+ * Replace this keyword responder with a call to your AI provider.
+ * Pass the patient's prescribed program + the Persian exercise content
+ * as context and instruct the model to answer in simple Persian,
+ * never diagnose, and route safety issues to the therapist.
+ */
+export function buildPatientChatReply(
+  question: string,
+  patient: Patient,
+  faContent: Record<string, ExerciseFa>
+): string {
+  const q = question.replace(/[‌\s]+/g, " ").toLowerCase();
+
+  // 1) Safety first: pain / worrying symptoms → guidance + ticket nudge.
+  if (/(درد|ورم|تورم|گزگز|بی[\s‌]?حس|سوزش)/.test(q)) {
+    return (
+      "توضیح شما ثبت شد. 🌡 اگر هنگام تمرین درد تیز، ورم جدید، گزگز یا بی‌حسی دارید، همان تمرین را فعلاً متوقف کنید و ادامه ندهید.\n\n" +
+      "پیشنهاد می‌کنم از بخش «تیکت‌ها» یک تیکت برای فیزیوتراپیست خود ثبت کنید و بنویسید کدام تمرین و کدام قسمت بدن بود تا برنامه‌تان بررسی و در صورت نیاز اصلاح شود.\n\n" +
+      "⚠️ اگر درد شدید و ناگهانی، تب، یا از دست دادن کنترل ادرار/مدفوع دارید، همین امروز با پزشک تماس بگیرید یا به اورژانس مراجعه کنید."
+    );
+  }
+
+  // 2) Exercise explanation: match a prescribed exercise by its Persian
+  //    (or English) name appearing in the question.
+  for (const item of patient.program) {
+    const fa = faContent[item.exerciseId];
+    if (!fa) continue;
+    const nameTokens = fa.name
+      .replace(/[()]/g, " ")
+      .split(/[\s‌-]+/)
+      .filter((t) => t.length >= 3);
+    const hit = nameTokens.some((t) => q.includes(t.toLowerCase()));
+    if (hit) {
+      return (
+        `«${fa.name}» — ${fa.purpose}.\n\n` +
+        `نحوه انجام:\n${fa.howTo.map((s, i) => `${i + 1}. ${s}`).join("\n")}\n\n` +
+        `دوز تجویزشده برای شما: ${item.dosageFa}\n\n` +
+        `اشتباه‌های رایج: ${fa.commonMistakes.join("، ")}.\n\n` +
+        `${fa.whenToStop}\n\n` +
+        "این توضیح جنبه راهنمایی دارد؛ اگر مطمئن نیستید درست انجامش می‌دهید، در جلسه بعدی از فیزیوتراپیست بخواهید حرکت را برایتان نمایش دهد."
+      );
+    }
+  }
+
+  // 3) Progress questions.
+  if (/(پیشرفت|بهتر|خوب شدم|روند)/.test(q)) {
+    const recent = patient.progress.slice(-7);
+    const avg =
+      recent.length > 0
+        ? (recent.reduce((s, e) => s + e.painLevel, 0) / recent.length).toFixed(1)
+        : "—";
+    return (
+      `طبق گزارش‌های خودتان، میانگین درد شما در هفته اخیر حدود ${avg} از ۱۰ بوده است. ` +
+      "روند کلی شما در تب «پیشرفت من» قابل مشاهده است. بهبود تدریجی طبیعی است؛ مهم، ادامه منظم تمرین‌هاست. " +
+      "ارزیابی دقیق پیشرفت را فیزیوتراپیست شما در جلسه حضوری انجام می‌دهد."
+    );
+  }
+
+  // 4) Fallback: explain capabilities.
+  return (
+    "من دستیار هوشمند برنامه توان‌بخشی شما هستم. می‌توانید از من بپرسید:\n" +
+    "• «تمرین پل باسن را چطور انجام دهم؟» (نام هر تمرین برنامه‌تان)\n" +
+    "• «روند پیشرفتم چطور است؟»\n" +
+    "• یا اگر جایی درد داشتید، برایم توضیح دهید تا راهنمایی‌تان کنم.\n\n" +
+    "توجه: من تشخیص پزشکی نمی‌دهم؛ تصمیم نهایی همیشه با فیزیوتراپیست شماست."
+  );
+}
+
+/*
+ * 🔌 REAL AI API INTEGRATION POINT (ticket triage)
+ * Immediate AI acknowledgement posted on new tickets before the
+ * therapist responds. Replace with a real triage call if desired.
+ */
+export function buildTicketAutoReply(message: string): string {
+  const hasPain = /(درد|ورم|تورم|گزگز|بی[\s‌]?حس)/.test(message);
+  if (hasPain) {
+    return (
+      "پیام شما ثبت شد و برای فیزیوتراپیست ارسال گردید. تا زمان بررسی، همان تمرین را متوقف یا با دامنه و شدت کمتر انجام دهید. " +
+      "اگر درد شدید، ورم ناگهانی، تب یا بی‌حسی پیشرونده دارید، منتظر پاسخ نمانید و با پزشک یا اورژانس تماس بگیرید. (پاسخ اولیه خودکار — فیزیوتراپیست به‌زودی پاسخ می‌دهد)"
+    );
+  }
+  return (
+    "پیام شما ثبت شد و برای فیزیوتراپیست ارسال گردید. معمولاً در اولین فرصت کاری پاسخ داده می‌شود. (پاسخ اولیه خودکار)"
+  );
+}
+
+export const patientSuggestedPrompts = [
+  "تمرین پل باسن را چطور انجام دهم؟",
+  "روند پیشرفتم چطور است؟",
+  "موقع تمرین کمی درد دارم، طبیعی است؟",
+];
 
 export const suggestedPrompts = [
   "What tests should I do for this patient?",

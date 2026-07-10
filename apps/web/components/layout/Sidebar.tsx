@@ -50,7 +50,18 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
         })}
       </nav>
 
-      <div className="border-t border-[var(--color-border)] p-4">
+      <div className="space-y-3 border-t border-[var(--color-border)] p-4">
+        <Link
+          href="/patient"
+          onClick={onNavigate}
+          className="flex items-center gap-3 rounded-xl border border-dashed border-[var(--color-border)] px-3 py-2.5 text-sm font-medium text-[var(--color-ink-soft)] transition-colors hover:border-[var(--color-primary)] hover:text-[var(--color-primary-strong)]"
+        >
+          <Icon name="user" width={18} height={18} />
+          Patient Portal
+          <span className="ms-auto text-[10px] text-[var(--color-ink-faint)]">
+            پرتال بیمار
+          </span>
+        </Link>
         <div className="flex items-start gap-2 rounded-xl bg-[var(--color-surface-muted)] p-3 text-[11px] leading-relaxed text-[var(--color-ink-soft)]">
           <span className="mt-0.5 text-[var(--color-warn)]">
             <Icon name="shield" width={16} height={16} />

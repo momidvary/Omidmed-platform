@@ -10,6 +10,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
 
+  // The patient portal is patient-facing (Persian, RTL) and must not show
+  // the clinician sidebar/topbar — it brings its own minimal chrome.
+  if (pathname.startsWith("/patient")) {
+    return <>{children}</>;
+  }
+
   const current =
     navItems.find((n) =>
       n.href === "/" ? pathname === "/" : pathname.startsWith(n.href)

@@ -21,6 +21,7 @@ red-flag safety screening, and patient education.
 | **Red Flag Checker** | Category-grouped safety screen with urgent-referral warnings |
 | **Patient Education** | Plain-language handout generator (problem, avoid, exercises, when to call, home advice) |
 | **Settings** | Local preferences, AI-connection notes, data reset |
+| **Patient Portal** (`/patient`) | Persian/RTL patient-facing portal: login by national ID (کد ملی), personalized exercise program with Persian instructions, daily session + pain logging, progress dashboard (pain trend chart, adherence, stat tiles), support tickets to the therapist with instant AI triage reply, and an AI chat that explains the patient's own exercises |
 
 ## Tech stack
 
@@ -59,10 +60,21 @@ apps/web/
     types.ts  nav.ts  utils.ts
 ```
 
+### Patient portal demo logins
+
+| کد ملی | Patient | Program |
+| --- | --- | --- |
+| `1234567890` | رضا کریمی | Post-TKA knee rehab |
+| `0987654321` | سارا احمدی | Chronic low back pain |
+
+Patient data lives in `apps/web/lib/data/samplePatients.ts` (mock auth —
+national ID lookup only; real authentication is on the roadmap).
+
 ## Connecting a real AI later
 
 Every AI-generated output flows through `apps/web/lib/ai/engine.ts`
-(`buildReasoning`, `buildTreatmentPlan`, `buildEducation`, `buildChatReply`).
+(`buildReasoning`, `buildTreatmentPlan`, `buildEducation`, `buildChatReply`,
+`buildPatientChatReply`, `buildTicketAutoReply`).
 Each function is marked with a `🔌 REAL AI API INTEGRATION POINT` comment —
 swap its body for a call to your AI provider that returns the same typed
 shape, and the UI works unchanged. Keep API keys server-side.

@@ -95,6 +95,56 @@ export interface ChatMessage {
   content: string;
 }
 
+// ── Patient portal ──────────────────────────────────────────────
+
+export interface PrescribedExercise {
+  exerciseId: string;
+  /** Prescribed dosage, e.g. "۳ ست × ۱۰ تکرار — هر روز" */
+  dosageFa: string;
+  daysPerWeek: number;
+}
+
+export interface ProgressEntry {
+  /** ISO date (yyyy-mm-dd) */
+  date: string;
+  /** 0-10 pain reported after the session */
+  painLevel: number;
+  /** Whether the day's program was completed */
+  completed: boolean;
+}
+
+export interface TicketReply {
+  id: string;
+  from: "ai" | "therapist";
+  content: string;
+  createdAt: string;
+}
+
+export interface Ticket {
+  id: string;
+  createdAt: string;
+  exerciseId: string | null;
+  subject: string;
+  message: string;
+  status: "open" | "answered";
+  replies: TicketReply[];
+}
+
+export interface Patient {
+  id: string;
+  /** Iranian national ID — the portal login key (mock auth) */
+  nationalId: string;
+  nameFa: string;
+  age: number;
+  conditionFa: string;
+  therapistNoteFa: string;
+  /** Weekly session target used for progress percentage */
+  weeklyTarget: number;
+  program: PrescribedExercise[];
+  progress: ProgressEntry[];
+  tickets: Ticket[];
+}
+
 export interface TreatmentPlanInput {
   region: BodyRegionId;
   stage: Stage;

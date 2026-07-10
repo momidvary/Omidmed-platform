@@ -29,10 +29,16 @@ Do not rebuild ordering/e-commerce features.
 
 ## Current MVP Scope
 
-- 9 pages: Dashboard, New Case, Case Analysis, Treatment Planner,
+- 9 clinician pages: Dashboard, New Case, Case Analysis, Treatment Planner,
   Exercise Library, AI Assistant, Red Flag Checker, Patient Education,
   Settings.
-- All data is mock/local: React context + localStorage. No backend, no auth.
+- Patient Portal at `/patient` (Persian, RTL, Vazirmatn font): national-ID
+  mock login, personalized program, progress logging + charts, tickets with
+  AI triage auto-reply, patient AI chat. Persian exercise content lives in
+  `apps/web/lib/data/exerciseFa.ts`; patients in
+  `apps/web/lib/data/samplePatients.ts` (demo IDs: 1234567890, 0987654321).
+- All data is mock/local: React context + localStorage. No backend; the
+  patient "login" is a lookup, not real auth.
 - The "AI" is a mock heuristic engine in `apps/web/lib/ai/engine.ts`.
 
 ## AI Integration Rule

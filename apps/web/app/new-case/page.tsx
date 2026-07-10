@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/Button";
 import { Field, Input, Select, Textarea } from "@/components/ui/Form";
 import { Icon } from "@/components/ui/Icon";
 import { PageIntro, Disclaimer } from "@/components/ui/Misc";
-import { uid } from "@/lib/utils";
+import { uuid } from "@/lib/utils";
 
 const emptyForm = {
   name: "",
@@ -65,7 +65,7 @@ export default function NewCasePage() {
     setSubmitting(true);
 
     const newCase: PatientCase = {
-      id: uid("case"),
+      id: uuid(),
       createdAt: new Date().toISOString(),
       name: form.name.trim(),
       age: form.age ? Number(form.age) : null,

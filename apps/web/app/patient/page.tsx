@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/Button";
 import { Field, Input, Select, Textarea } from "@/components/ui/Form";
 import { Icon } from "@/components/ui/Icon";
 import { Disclaimer, Spinner } from "@/components/ui/Misc";
-import { cn, uid } from "@/lib/utils";
+import { cn, uid, uuid } from "@/lib/utils";
 
 const fa = (n: number) => n.toLocaleString("fa-IR");
 const faDate = (iso: string) =>
@@ -54,15 +54,19 @@ function PatientLogin() {
   const { login } = usePatient();
   const [nationalId, setNationalId] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [checking, setChecking] = useState(false);
 
-  function submit(e: React.FormEvent) {
+  async function submit(e: React.FormEvent) {
     e.preventDefault();
     const value = nationalId.trim();
     if (!/^\d{10}$/.test(value)) {
       setError("کد ملی باید ۱۰ رقم باشد.");
       return;
     }
-    if (!login(value)) {
+    setChecking(true);
+    const ok = await login(value);
+    setChecking(false);
+    if (!ok) {
       setError("بیماری با این کد ملی پیدا نشد. با کلینیک خود تماس بگیرید.");
     }
   }
@@ -98,8 +102,8 @@ function PatientLogin() {
                 className="text-center tracking-widest"
               />
             </Field>
-            <Button type="submit" className="w-full">
-              ورود به پرتال
+            <Button type="submit" className="w-full" disabled={checking}>
+              {checking ? "در حال بررسی…" : "ورود به پرتال"}
               <Icon name="arrow" width={16} height={16} className="-scale-x-100" />
             </Button>
           </form>
@@ -579,7 +583,7 @@ function TicketsTab({ patient }: { patient: Patient }) {
     // 🔌 REAL AI API INTEGRATION POINT — the auto-reply comes from the
     // mock triage helper; replace with a real AI triage call if desired.
     const ticket: Ticket = {
-      id: uid("tk"),
+      id: uuid(),
       createdAt: new Date().toISOString(),
       exerciseId: exerciseId || null,
       subject: subject.trim(),
@@ -587,7 +591,7 @@ function TicketsTab({ patient }: { patient: Patient }) {
       status: "open",
       replies: [
         {
-          id: uid("tr"),
+          id: uuid(),
           from: "ai",
           content: buildTicketAutoReply(message),
           createdAt: new Date().toISOString(),

@@ -35,17 +35,26 @@ Persian-native. Locale choice persists in the browser.
 
 ## Supabase
 
-The app is Supabase-ready but runs fully local until configured:
+The app is Supabase-connected but degrades gracefully to local mode when
+unconfigured or offline:
 
 1. Create a project at [supabase.com](https://supabase.com), then open
-   **SQL Editor** and run `database/schema.sql` once.
+   **SQL Editor** and run `database/schema.sql` once — it creates the
+   tables, RLS policies, and demo seed data (portal logins 1234567890 /
+   0987654321).
 2. Copy `apps/web/.env.local.example` to `apps/web/.env.local` and fill in
-   `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_ANON_KEY` from
-   Project Settings → API.
+   `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
+   from Project Settings → API. (Deploying to Vercel? Add the same two
+   env vars in the Vercel project settings.)
 3. Restart the dev server. Settings → Supabase Connection shows the status.
 
-The client lives in `apps/web/lib/supabase/client.ts`; data-layer sync is
-the next step on the roadmap (the schema already matches the app's types).
+What syncs when connected: clinician cases (read + create), patient portal
+login (national-ID lookup), patient program/progress/tickets (read), and
+progress logs + new tickets (write-through). Reads have a 4s timeout and
+fall back to the local demo data, so the app never blocks on the network.
+Client helpers follow the official `@supabase/ssr` structure in
+`apps/web/utils/supabase/` (browser, server, proxy session refresh); the
+data layer is `apps/web/lib/supabase/db.ts`.
 
 ## Tech stack
 

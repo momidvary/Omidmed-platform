@@ -9,6 +9,8 @@ import {
 } from "react";
 import type { PatientCase } from "@/lib/types";
 import { sampleCases } from "@/lib/data/sampleCases";
+import { isSupabaseConfigured } from "@/lib/supabase/client";
+import { fetchCases, insertCase } from "@/lib/supabase/db";
 
 interface CaseContextValue {
   cases: PatientCase[];
@@ -60,6 +62,16 @@ export function CaseProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time localStorage hydration; cannot run during SSR
     setState({ ...loadPersisted(), hydrated: true });
+
+    // When Supabase is configured, the database is the source of truth
+    // for cases; fall back silently to local data if unreachable.
+    if (isSupabaseConfigured) {
+      fetchCases().then((rows) => {
+        if (rows) {
+          setState((prev) => ({ ...prev, cases: rows }));
+        }
+      });
+    }
   }, []);
 
   useEffect(() => {
@@ -76,12 +88,15 @@ export function CaseProvider({ children }: { children: React.ReactNode }) {
       currentCaseId: state.currentCaseId,
       currentCase:
         state.cases.find((c) => c.id === state.currentCaseId) ?? null,
-      addCase: (c) =>
+      addCase: (c) => {
         setState((prev) => ({
           ...prev,
           cases: [c, ...prev.cases],
           currentCaseId: c.id,
-        })),
+        }));
+        // Write-through to Supabase (no-op when unconfigured/offline).
+        void insertCase(c);
+      },
       setCurrentCase: (id) =>
         setState((prev) => ({ ...prev, currentCaseId: id })),
       hydrated: state.hydrated,

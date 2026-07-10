@@ -22,6 +22,30 @@ red-flag safety screening, and patient education.
 | **Patient Education** | Plain-language handout generator (problem, avoid, exercises, when to call, home advice) |
 | **Settings** | Local preferences, AI-connection notes, data reset |
 | **Patient Portal** (`/patient`) | Persian/RTL patient-facing portal: login by national ID (کد ملی), personalized exercise program with Persian instructions, daily session + pain logging, progress dashboard (pain trend chart, adherence, stat tiles), support tickets to the therapist with instant AI triage reply, and an AI chat that explains the patient's own exercises |
+| **Posture Analysis** | Upload patient photos from three views (front / side / back); the AI screens for common postural deviations per view with severity badges, a summary, and suggested focus areas. Demo engine for now — vision-AI integration point marked. Photos never leave the browser |
+
+## Languages
+
+The clinician interface supports **English, فارسی (Persian) and العربية
+(Arabic)** — switch from the topbar selector or Settings. Persian and Arabic
+flip the whole shell to RTL. The chrome, navigation, posture analysis and
+settings are fully translated; deep clinical content (exercise library,
+region modules) is translated progressively. The patient portal is
+Persian-native. Locale choice persists in the browser.
+
+## Supabase
+
+The app is Supabase-ready but runs fully local until configured:
+
+1. Create a project at [supabase.com](https://supabase.com), then open
+   **SQL Editor** and run `database/schema.sql` once.
+2. Copy `apps/web/.env.local.example` to `apps/web/.env.local` and fill in
+   `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_ANON_KEY` from
+   Project Settings → API.
+3. Restart the dev server. Settings → Supabase Connection shows the status.
+
+The client lives in `apps/web/lib/supabase/client.ts`; data-layer sync is
+the next step on the roadmap (the schema already matches the app's types).
 
 ## Tech stack
 

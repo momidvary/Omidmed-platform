@@ -4,6 +4,7 @@ import "./globals.css";
 import { AppShell } from "@/components/layout/AppShell";
 import { CaseProvider } from "@/lib/store/CaseContext";
 import { PatientProvider } from "@/lib/store/PatientContext";
+import { LocaleProvider } from "@/lib/store/LocaleContext";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -27,11 +28,13 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${inter.variable} ${vazirmatn.variable}`}>
       <body>
-        <CaseProvider>
-          <PatientProvider>
-            <AppShell>{children}</AppShell>
-          </PatientProvider>
-        </CaseProvider>
+        <LocaleProvider>
+          <CaseProvider>
+            <PatientProvider>
+              <AppShell>{children}</AppShell>
+            </PatientProvider>
+          </CaseProvider>
+        </LocaleProvider>
       </body>
     </html>
   );

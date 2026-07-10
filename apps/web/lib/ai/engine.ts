@@ -342,6 +342,147 @@ export function buildTicketAutoReply(message: string): string {
   );
 }
 
+/*
+ * ── Posture analysis ────────────────────────────────────────────
+ *
+ * 🔌 REAL AI API INTEGRATION POINT (vision)
+ * Replace this mock with a vision-capable AI call (e.g. the Claude
+ * Messages API with image blocks): send each uploaded photo with its
+ * view label and ask for structured findings matching PostureReport.
+ * Photos must be sent from a server-side route handler — never call
+ * the provider with an API key from the browser.
+ */
+
+export type PostureView = "front" | "side" | "back";
+
+export interface PostureFinding {
+  /** i18n-resolved display strings, generated per locale */
+  title: string;
+  detail: string;
+  severity: "mild" | "moderate" | "marked";
+}
+
+export interface PostureReport {
+  perView: { view: PostureView; findings: PostureFinding[] }[];
+  summary: string;
+  recommendations: string[];
+  /** 0-1 mock screening confidence */
+  confidence: number;
+}
+
+type PostureLocale = "en" | "fa" | "ar";
+
+const postureContent: Record<
+  PostureLocale,
+  {
+    findings: Record<PostureView, [string, string, PostureFinding["severity"]][]>;
+    summary: string;
+    recommendations: string[];
+  }
+> = {
+  en: {
+    findings: {
+      front: [
+        ["Right shoulder elevation", "The right shoulder sits slightly higher than the left — check upper trapezius tone and scapular resting position.", "mild"],
+        ["Mild pelvic obliquity", "The pelvis appears slightly higher on the right — screen leg-length and hip abductor strength.", "mild"],
+        ["Knee alignment", "Slight genu valgum tendency on the left — assess hip control with a single-leg squat.", "moderate"],
+      ],
+      side: [
+        ["Forward head posture", "The ear sits anterior to the acromion — screen deep neck flexor endurance and thoracic mobility.", "moderate"],
+        ["Rounded shoulders", "Protracted scapulae with increased thoracic kyphosis — assess pectoral tightness and mid-back strength.", "moderate"],
+        ["Anterior pelvic tilt", "Increased lumbar lordosis suggests anterior tilt — screen hip flexor length and gluteal/abdominal control.", "mild"],
+      ],
+      back: [
+        ["Scapular asymmetry", "The right scapula sits slightly winged/abducted — assess serratus anterior and lower trapezius control.", "mild"],
+        ["Spinal alignment", "No obvious lateral curvature at screening quality — confirm with Adams forward-bend test if indicated.", "mild"],
+        ["Calcaneal position", "Mild rearfoot valgus on the left — check foot posture and single-leg balance.", "mild"],
+      ],
+    },
+    summary:
+      "The screening pattern is consistent with an upper-crossed posture tendency (forward head, rounded shoulders) with mild pelvic asymmetry. These are photographic observations only — confirm each with hands-on assessment before treating.",
+    recommendations: [
+      "Deep neck flexor training and thoracic extension mobility",
+      "Scapular control work (serratus anterior, lower trapezius)",
+      "Hip flexor mobility plus gluteal strengthening",
+      "Re-photograph in 6–8 weeks to compare",
+    ],
+  },
+  fa: {
+    findings: {
+      front: [
+        ["بالاتر بودن شانه راست", "شانه راست کمی بالاتر از چپ است — تون ذوزنقه فوقانی و وضعیت استراحت کتف بررسی شود.", "mild"],
+        ["انحراف خفیف لگن", "لگن در سمت راست کمی بالاتر به نظر می‌رسد — اختلاف طول پا و قدرت ابداکتورهای ران غربال شود.", "mild"],
+        ["راستای زانو", "تمایل خفیف به زانوی ضربدری در سمت چپ — کنترل ران با اسکوات تک‌پا ارزیابی شود.", "moderate"],
+      ],
+      side: [
+        ["سر به جلو", "گوش جلوتر از زائده آخرومی قرار دارد — استقامت فلکسورهای عمقی گردن و تحرک توراسیک بررسی شود.", "moderate"],
+        ["شانه‌های گرد", "کتف‌ها پروترکت و کایفوز پشتی افزایش‌یافته — کوتاهی سینه‌ای و قدرت میان‌پشت ارزیابی شود.", "moderate"],
+        ["تیلت قدامی لگن", "افزایش لوردوز کمری نشانه تیلت قدامی است — طول فلکسورهای ران و کنترل شکم/باسن غربال شود.", "mild"],
+      ],
+      back: [
+        ["عدم تقارن کتف", "کتف راست کمی بالدار/دور شده است — کنترل دندانه‌ای قدامی و ذوزنقه تحتانی ارزیابی شود.", "mild"],
+        ["راستای ستون فقرات", "در حد کیفیت غربالگری، انحنای جانبی واضحی دیده نمی‌شود — در صورت نیاز با تست خم‌شدن آدامز تأیید شود.", "mild"],
+        ["وضعیت پاشنه", "والگوس خفیف پاشنه چپ — پاسچر پا و تعادل تک‌پا بررسی شود.", "mild"],
+      ],
+    },
+    summary:
+      "الگوی غربالگری با تمایل به پاسچر متقاطع فوقانی (سر به جلو، شانه‌های گرد) همراه با عدم تقارن خفیف لگن سازگار است. این‌ها فقط مشاهده از روی عکس‌اند — پیش از درمان، هر مورد با معاینه دستی تأیید شود.",
+    recommendations: [
+      "تمرین فلکسورهای عمقی گردن و تحرک اکستنشن توراسیک",
+      "کار کنترل کتف (دندانه‌ای قدامی، ذوزنقه تحتانی)",
+      "موبیلیتی فلکسور ران به‌همراه تقویت باسن",
+      "عکس‌برداری مجدد بعد از ۶ تا ۸ هفته برای مقایسه",
+    ],
+  },
+  ar: {
+    findings: {
+      front: [
+        ["ارتفاع الكتف الأيمن", "الكتف الأيمن أعلى قليلًا من الأيسر — افحص توتر الرافعة العلوية ووضعية اللوح.", "mild"],
+        ["ميلان حوضي خفيف", "يبدو الحوض أعلى قليلًا في الجهة اليمنى — افحص فرق طول الساقين وقوة مبعّدات الورك.", "mild"],
+        ["محاذاة الركبة", "ميل خفيف للركبة الروحاء في الجهة اليسرى — قيّم التحكم بالورك باختبار القرفصاء بساق واحدة.", "moderate"],
+      ],
+      side: [
+        ["تقدّم الرأس", "الأذن أمام النتوء الأخرمي — افحص تحمّل عاضلات الرقبة العميقة وحركة الصدر.", "moderate"],
+        ["استدارة الكتفين", "لوحا الكتف منسحبان للأمام مع زيادة الحدب الصدري — قيّم شدّ الصدر وقوة منتصف الظهر.", "moderate"],
+        ["إمالة الحوض الأمامية", "زيادة القعس القطني توحي بإمالة أمامية — افحص طول عاضلات الورك وتحكم البطن والألوية.", "mild"],
+      ],
+      back: [
+        ["عدم تناظر اللوحين", "اللوح الأيمن مجنّح/مبعّد قليلًا — قيّم المنشارية الأمامية والرافعة السفلية.", "mild"],
+        ["محاذاة العمود الفقري", "لا انحناء جانبي واضح بجودة الفحص — أكِّد باختبار انحناء آدمز عند الحاجة.", "mild"],
+        ["وضعية العقب", "روح خفيف في عقب القدم اليسرى — افحص وضعية القدم والتوازن بساق واحدة.", "mild"],
+      ],
+    },
+    summary:
+      "نمط الفحص يتوافق مع ميل للقوام المتقاطع العلوي (تقدّم الرأس، استدارة الكتفين) مع عدم تناظر حوضي خفيف. هذه ملاحظات من الصور فقط — أكِّد كل بند بالفحص اليدوي قبل العلاج.",
+    recommendations: [
+      "تدريب عاضلات الرقبة العميقة وحركة بسط الصدر",
+      "تمارين التحكم باللوح (المنشارية الأمامية، الرافعة السفلية)",
+      "إطالة عاضلات الورك مع تقوية الألوية",
+      "إعادة التصوير بعد ٦–٨ أسابيع للمقارنة",
+    ],
+  },
+};
+
+export function buildPostureReport(
+  views: PostureView[],
+  locale: PostureLocale
+): PostureReport {
+  const content = postureContent[locale];
+  return {
+    perView: views.map((view) => ({
+      view,
+      findings: content.findings[view].map(([title, detail, severity]) => ({
+        title,
+        detail,
+        severity,
+      })),
+    })),
+    summary: content.summary,
+    recommendations: content.recommendations,
+    confidence: 0.6 + views.length * 0.1,
+  };
+}
+
 export const patientSuggestedPrompts = [
   "تمرین پل باسن را چطور انجام دهم؟",
   "روند پیشرفتم چطور است؟",

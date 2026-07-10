@@ -29,9 +29,15 @@ Do not rebuild ordering/e-commerce features.
 
 ## Current MVP Scope
 
-- 9 clinician pages: Dashboard, New Case, Case Analysis, Treatment Planner,
-  Exercise Library, AI Assistant, Red Flag Checker, Patient Education,
-  Settings.
+- 10 clinician pages: Dashboard, New Case, Case Analysis, Treatment Planner,
+  Exercise Library, AI Assistant, Posture Analysis (3-view photo upload +
+  mock vision findings), Red Flag Checker, Patient Education, Settings.
+- Clinician UI i18n (en/fa/ar) via `lib/i18n/translations.ts` +
+  `LocaleContext`; fa/ar are RTL. Chrome/nav/posture/settings translated;
+  deep clinical content is progressive. Patient portal stays Persian-native.
+- Supabase scaffold: `lib/supabase/client.ts` (env-driven, null when
+  unconfigured), schema in `database/schema.sql`, env template in
+  `apps/web/.env.local.example`. App must keep working with no env set.
 - Patient Portal at `/patient` (Persian, RTL, Vazirmatn font): national-ID
   mock login, personalized program, progress logging + charts, tickets with
   AI triage auto-reply, patient AI chat. Persian exercise content lives in

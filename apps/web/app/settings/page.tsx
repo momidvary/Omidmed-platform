@@ -6,11 +6,14 @@ import { Button } from "@/components/ui/Button";
 import { Field, Input, Select } from "@/components/ui/Form";
 import { Icon } from "@/components/ui/Icon";
 import { Disclaimer, PageIntro } from "@/components/ui/Misc";
+import { useLocale } from "@/lib/store/LocaleContext";
+import { locales, type Locale } from "@/lib/i18n/translations";
+import { isSupabaseConfigured } from "@/lib/supabase/client";
 
 export default function SettingsPage() {
+  const { locale, setLocale, t } = useLocale();
   const [clinicName, setClinicName] = useState("");
   const [therapistName, setTherapistName] = useState("");
-  const [language, setLanguage] = useState("en");
   const [units, setUnits] = useState("metric");
   const [saved, setSaved] = useState(false);
   const [cleared, setCleared] = useState(false);
@@ -19,7 +22,7 @@ export default function SettingsPage() {
     // Local-only preferences for the MVP; wire to a backend later.
     localStorage.setItem(
       "physioai:settings:v1",
-      JSON.stringify({ clinicName, therapistName, language, units })
+      JSON.stringify({ clinicName, therapistName, units })
     );
     setSaved(true);
     setTimeout(() => setSaved(false), 1500);
@@ -62,10 +65,16 @@ export default function SettingsPage() {
               placeholder="e.g. Dr. Omidvary"
             />
           </Field>
-          <Field label="Language" hint="Persian UI is on the roadmap.">
-            <Select value={language} onChange={(e) => setLanguage(e.target.value)}>
-              <option value="en">English</option>
-              <option value="fa">فارسی (coming soon)</option>
+          <Field label={t("settings.language")} hint={t("settings.language.hint")}>
+            <Select
+              value={locale}
+              onChange={(e) => setLocale(e.target.value as Locale)}
+            >
+              {locales.map((l) => (
+                <option key={l.id} value={l.id}>
+                  {l.label}
+                </option>
+              ))}
             </Select>
           </Field>
           <Field label="Units">
@@ -81,6 +90,41 @@ export default function SettingsPage() {
             {saved ? "Saved!" : "Save preferences"}
           </Button>
         </div>
+      </Card>
+
+      <Card>
+        <CardHeader
+          title="Supabase Connection"
+          subtitle="Cloud database for cases, patients and tickets"
+          icon={<Icon name="shield" width={18} height={18} />}
+        />
+        <CardBody className="space-y-3">
+          <div className="flex items-center gap-2">
+            <span
+              className={
+                isSupabaseConfigured
+                  ? "h-2.5 w-2.5 rounded-full bg-[var(--color-success)]"
+                  : "h-2.5 w-2.5 rounded-full bg-[var(--color-ink-faint)]"
+              }
+            />
+            <p className="text-sm font-medium text-[var(--color-ink)]">
+              {isSupabaseConfigured ? "Connected" : "Not configured — running in local mode"}
+            </p>
+          </div>
+          <p className="text-sm text-[var(--color-ink-soft)]">
+            To connect: copy{" "}
+            <code className="rounded bg-[var(--color-surface-muted)] px-1.5 py-0.5 text-xs">
+              apps/web/.env.local.example
+            </code>{" "}
+            to <code className="rounded bg-[var(--color-surface-muted)] px-1.5 py-0.5 text-xs">.env.local</code>,
+            fill in your project URL and anon key from Supabase → Project
+            Settings → API, and run the SQL in{" "}
+            <code className="rounded bg-[var(--color-surface-muted)] px-1.5 py-0.5 text-xs">
+              database/schema.sql
+            </code>{" "}
+            once in the Supabase SQL editor. All data stays local until then.
+          </p>
+        </CardBody>
       </Card>
 
       <Card>

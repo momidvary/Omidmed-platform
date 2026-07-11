@@ -837,7 +837,11 @@ function TicketsTab({ patient }: { patient: Patient }) {
                   )}
                 >
                   <p className="mb-1 text-[10px] font-bold text-[var(--color-ink-faint)]">
-                    {r.from === "therapist" ? "🩺 فیزیوتراپیست" : "🤖 دستیار هوشمند"}
+                    {r.from === "therapist"
+                      ? "🩺 فیزیوتراپیست"
+                      : r.from === "patient"
+                        ? "🙋 شما"
+                        : "🤖 دستیار هوشمند"}
                   </p>
                   {r.content}
                 </div>

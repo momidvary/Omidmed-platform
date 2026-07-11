@@ -10,7 +10,12 @@ import {
 import type { Patient, ProgressEntry, Ticket } from "@/lib/types";
 import { samplePatients } from "@/lib/data/samplePatients";
 import { isMockMode } from "@/lib/config";
-import { fetchMyPatient, insertTicket, upsertProgress } from "@/lib/supabase/db";
+import {
+  fetchMyPatient,
+  insertTicket,
+  requestAiReply,
+  upsertProgress,
+} from "@/lib/supabase/db";
 import { useAuth } from "@/lib/store/AuthContext";
 
 interface PatientContextValue {
@@ -135,17 +140,40 @@ export function PatientProvider({ children }: { children: React.ReactNode }) {
         }
       },
       addTicket: async (ticket) => {
-        if (!isMockMode) {
-          if (!patient) return false;
-          const ok = await insertTicket(
-            patient.id,
-            patient.episodeId ?? null,
-            ticket,
-            profile?.id ?? null
-          );
-          if (!ok) return false;
+        if (isMockMode) {
+          // Demo mode keeps the locally generated AI reply.
+          updatePatient((p) => ({ ...p, tickets: [ticket, ...p.tickets] }));
+          return true;
         }
-        updatePatient((p) => ({ ...p, tickets: [ticket, ...p.tickets] }));
+        if (!patient || !profile) return false;
+        // Real mode: the client may not write sender='ai' (RLS). Store the
+        // ticket bare, then ask the server route to attach the AI reply.
+        const bare = { ...ticket, replies: [] };
+        const ok = await insertTicket(
+          patient.id,
+          patient.episodeId ?? null,
+          bare,
+          profile.id
+        );
+        if (!ok) return false;
+        updatePatient((p) => ({ ...p, tickets: [bare, ...p.tickets] }));
+        void requestAiReply(ticket.id, ticket.message).then((reply) => {
+          if (!reply) return;
+          updatePatient((p) => ({
+            ...p,
+            tickets: p.tickets.map((t) =>
+              t.id === ticket.id
+                ? {
+                    ...t,
+                    replies: [
+                      ...t.replies,
+                      { id: reply.id, from: "ai", content: reply.content, createdAt: reply.createdAt },
+                    ],
+                  }
+                : t
+            ),
+          }));
+        });
         return true;
       },
     };

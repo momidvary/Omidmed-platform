@@ -115,7 +115,7 @@ export interface ProgressEntry {
 
 export interface TicketReply {
   id: string;
-  from: "ai" | "therapist";
+  from: "ai" | "therapist" | "patient";
   content: string;
   createdAt: string;
 }

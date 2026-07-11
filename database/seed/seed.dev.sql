@@ -1,6 +1,7 @@
 -- PhysioAI — DEVELOPMENT-ONLY seed data.
 -- ⚠ Never run this on a production project. Run after both migrations.
 --
+-- Run order: 001_schema.sql → 002_rls.sql → 003_security_fixes.sql → this file.
 -- It creates one demo clinic, two patients, care episodes, programs,
 -- two weeks of progress, and one answered ticket. It does NOT create
 -- auth users (create those in Dashboard → Authentication → Add user,
@@ -36,7 +37,7 @@ insert into episode_program (episode_id, exercise_id, dosage_fa, days_per_week) 
   ('eeeeeee2-2222-4222-8222-eeeeeeeeeee2', 'ex_glute_bridge', '۳ ست × ۱۲ تکرار — ۵ روز در هفته', 5),
   ('eeeeeee2-2222-4222-8222-eeeeeeeeeee2', 'ex_glute_med_sidelying', '۲ ست × ۱۲ تکرار هر سمت — ۳ روز در هفته', 3);
 
-insert into progress (episode_id, date, pain_level, completed)
+insert into patient_daily_logs (episode_id, date, pain_level, completed)
 select 'eeeeeee1-1111-4111-8111-eeeeeeeeeee1', current_date - offs, pain, done from (values
   (13, 7, true), (12, 7, true), (11, 6, false), (10, 6, true),
   (9, 6, true), (8, 5, true), (7, 5, false), (6, 5, true),
@@ -44,7 +45,7 @@ select 'eeeeeee1-1111-4111-8111-eeeeeeeeeee1', current_date - offs, pain, done f
 ) as t(offs, pain, done)
 on conflict (episode_id, date) do nothing;
 
-insert into progress (episode_id, date, pain_level, completed)
+insert into patient_daily_logs (episode_id, date, pain_level, completed)
 select 'eeeeeee2-2222-4222-8222-eeeeeeeeeee2', current_date - offs, pain, done from (values
   (13, 6, true), (12, 5, true), (11, 5, true), (10, 6, false),
   (9, 5, true), (8, 4, true), (7, 4, true), (6, 4, false),

@@ -21,7 +21,7 @@ red-flag safety screening, and patient education.
 | **Red Flag Checker** | Category-grouped safety screen with urgent-referral warnings |
 | **Patient Education** | Plain-language handout generator (problem, avoid, exercises, when to call, home advice) |
 | **Settings** | Local preferences, AI-connection notes, data reset |
-| **Patient Portal** (`/patient`) | Persian/RTL patient-facing portal: login by national ID (کد ملی), personalized exercise program with Persian instructions, daily session + pain logging, progress dashboard (pain trend chart, adherence, stat tiles), support tickets to the therapist with instant AI triage reply, and an AI chat that explains the patient's own exercises |
+| **Patient Portal** (`/patient`) | Persian/RTL patient-facing portal with Supabase email+password sign-in/sign-up: personalized exercise program with Persian instructions, daily session + pain logging, progress dashboard (pain trend chart, adherence, stat tiles), support tickets with a server-generated AI triage reply, and an AI chat that explains the patient's own exercises |
 | **Posture Analysis** | Upload patient photos from three views (front / side / back); the AI screens for common postural deviations per view with severity badges, a summary, and suggested focus areas. Demo engine for now — vision-AI integration point marked. Photos never leave the browser |
 
 ## Languages
@@ -99,15 +99,29 @@ apps/web/
     types.ts  nav.ts  utils.ts
 ```
 
-### Patient portal demo logins
+### Demo (mock) mode
 
-| کد ملی | Patient | Program |
-| --- | --- | --- |
-| `1234567890` | رضا کریمی | Post-TKA knee rehab |
-| `0987654321` | سارا احمدی | Chronic low back pain |
+Set `NEXT_PUBLIC_DATA_MODE=mock` to run without auth or a database: the
+patient portal then offers two demo patients (knee rehab / low back pain)
+from `apps/web/lib/data/samplePatients.ts`, stored only in the browser.
+This mode is for development and demos — real mode never falls back to
+localStorage.
 
-Patient data lives in `apps/web/lib/data/samplePatients.ts` (mock auth —
-national ID lookup only; real authentication is on the roadmap).
+### Database files
+
+| File | Purpose |
+| --- | --- |
+| `database/migrations/001_schema.sql` | Core schema (roles, clinics, patients, care episodes…) |
+| `database/migrations/002_rls.sql` | Row Level Security — no anon access |
+| `database/migrations/003_security_fixes.sql` | Admin bootstrap, granular role access, reply hardening, patient logs vs clinical measurements |
+| `database/seed/seed.dev.sql` | Development-only demo data |
+| `database/tests/rls_tests.sql` | Runnable RLS isolation test scenarios |
+| `docs/RAHNAMA-FA.md` | Persian step-by-step setup guide |
+
+Run migrations sequentially (001 → 002 → 003) in the Supabase SQL editor.
+The first `platform_admin` is created once via
+`select public.bootstrap_platform_admin('<user-uuid>');` — SQL editor or
+service role only, refuses to run twice.
 
 ## Connecting a real AI later
 

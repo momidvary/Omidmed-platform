@@ -85,7 +85,7 @@ export async function fetchMyPatient(userId: string): Promise<Patient | null> {
           `id, full_name,
            care_episodes ( id, title_fa, therapist_note_fa, weekly_target, status, started_at,
              episode_program ( exercise_id, dosage_fa, days_per_week ),
-             progress ( date, pain_level, completed ) ),
+             patient_daily_logs ( date, pain_level, completed ) ),
            tickets ( id, exercise_id, subject, message, status, created_at,
              ticket_replies ( id, sender, content, created_at ) )`
         )
@@ -121,7 +121,7 @@ export async function fetchMyPatient(userId: string): Promise<Patient | null> {
         dosageFa: row.dosage_fa as string,
         daysPerWeek: row.days_per_week as number,
       })),
-      progress: ((active.progress as Row[]) ?? [])
+      progress: ((active.patient_daily_logs as Row[]) ?? [])
         .map((row) => ({
           date: row.date as string,
           painLevel: row.pain_level as number,
@@ -160,7 +160,7 @@ export function upsertProgress(
   return trackedWrite(async () => {
     const supabase = getSupabase();
     if (!supabase) return false;
-    const { error } = await supabase.from("progress").upsert(
+    const { error } = await supabase.from("patient_daily_logs").upsert(
       {
         episode_id: episodeId,
         date: entry.date,
@@ -193,20 +193,35 @@ export function insertTicket(
       created_by: createdBy,
       created_at: ticket.createdAt,
     });
-    if (error) return false;
-    if (ticket.replies.length > 0) {
-      await supabase.from("ticket_replies").insert(
-        ticket.replies.map((r) => ({
-          id: r.id,
-          ticket_id: ticket.id,
-          sender: r.from,
-          content: r.content,
-          created_at: r.createdAt,
-        }))
-      );
-    }
-    return true;
+    // Replies are NOT inserted from the browser: RLS forbids sender='ai'
+    // for clients. The AI auto-reply is created by the server route
+    // /api/tickets/ai-reply using the service key.
+    return !error;
   });
+}
+
+/**
+ * Ask the server to attach the AI triage reply to a ticket. Returns the
+ * created reply, or null when the server AI key isn't configured.
+ */
+export async function requestAiReply(
+  ticketId: string,
+  message: string
+): Promise<{ id: string; content: string; createdAt: string } | null> {
+  try {
+    const res = await fetch("/api/tickets/ai-reply", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ticketId, message }),
+    });
+    if (!res.ok) return null;
+    const json = (await res.json()) as {
+      reply?: { id: string; content: string; createdAt: string };
+    };
+    return json.reply ?? null;
+  } catch {
+    return null;
+  }
 }
 
 /* ── Clinician cases ───────────────────────────────────────────── */

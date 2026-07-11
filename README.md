@@ -35,26 +35,32 @@ Persian-native. Locale choice persists in the browser.
 
 ## Supabase
 
-The app is Supabase-connected but degrades gracefully to local mode when
-unconfigured or offline:
+Real Supabase Auth with role-based, clinic-isolated access:
 
-1. Create a project at [supabase.com](https://supabase.com), then open
-   **SQL Editor** and run `database/schema.sql` once — it creates the
-   tables, RLS policies, and demo seed data (portal logins 1234567890 /
-   0987654321).
-2. Copy `apps/web/.env.local.example` to `apps/web/.env.local` and fill in
-   `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
-   from Project Settings → API. (Deploying to Vercel? Add the same two
-   env vars in the Vercel project settings.)
-3. Restart the dev server. Settings → Supabase Connection shows the status.
-
-What syncs when connected: clinician cases (read + create), patient portal
-login (national-ID lookup), patient program/progress/tickets (read), and
-progress logs + new tickets (write-through). Reads have a 4s timeout and
-fall back to the local demo data, so the app never blocks on the network.
-Client helpers follow the official `@supabase/ssr` structure in
-`apps/web/utils/supabase/` (browser, server, proxy session refresh); the
-data layer is `apps/web/lib/supabase/db.ts`.
+- **Roles**: `platform_admin`, `clinic_owner`, `therapist`,
+  `clinic_staff`, `patient` (in `profiles`; escalation blocked by a
+  DB trigger — only platform admins can change roles).
+- **Schema**: `database/migrations/001_schema.sql` (clinics,
+  clinic_members, patients, patient_users, patient_therapists,
+  care_episodes — one patient can have multiple treatment episodes —
+  episode_program, progress, sessions, appointments, exercises, tickets,
+  cases). Run it, then `002_rls.sql`, in the Supabase SQL editor.
+- **RLS**: `database/migrations/002_rls.sql`. No anon policies at all.
+  Each clinic sees only its own data; therapists see their clinic's or
+  assigned patients; patients see only themselves.
+- **Dev seed** (never for production): `database/seed/seed.dev.sql`.
+- **Sign-in**: email + password (clinicians at `/`, patients at
+  `/patient` with sign-up). National-ID login is removed; the national ID
+  is a record field only. Phone OTP requires an SMS provider configured
+  in Supabase (see `docs/RAHNAMA-FA.md`).
+- **Env**: copy `apps/web/.env.local.example` to `.env.local`
+  (URL + publishable key). Same vars on Vercel.
+- **Data modes**: real mode has no localStorage fallback; the topbar
+  shows live storage status (Connected / Saving / Saved / Offline /
+  Save failed) and failed saves never clear the form. Set
+  `NEXT_PUBLIC_DATA_MODE=mock` for the auth-free local demo.
+- **راهنمای فارسی**: `docs/RAHNAMA-FA.md` — creating the first admin,
+  clinic, staff, and linking patient accounts.
 
 ## Tech stack
 

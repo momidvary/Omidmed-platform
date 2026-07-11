@@ -15,6 +15,17 @@ import { Field, Input, Select, Textarea } from "@/components/ui/Form";
 import { Icon } from "@/components/ui/Icon";
 import { Disclaimer, Spinner } from "@/components/ui/Misc";
 import { cn, uid, uuid } from "@/lib/utils";
+import { useAuth } from "@/lib/store/AuthContext";
+import { isMockMode } from "@/lib/config";
+import { SaveStatusPill } from "@/components/ui/SaveStatusPill";
+
+const statusLabelsFa = {
+  connected: "متصل",
+  saving: "در حال ذخیره…",
+  saved: "ذخیره شد",
+  offline: "آفلاین",
+  save_failed: "ذخیره ناموفق",
+} as const;
 
 const fa = (n: number) => n.toLocaleString("fa-IR");
 const faDate = (iso: string) =>
@@ -31,46 +42,58 @@ const tabs: { id: Tab; label: string; icon: React.ComponentProps<typeof Icon>["n
 
 export default function PatientPortalPage() {
   const { patient, hydrated } = usePatient();
+  const { session, loading } = useAuth();
+
+  const waiting = !hydrated || (!isMockMode && loading);
+  // Signed in but not yet linked to a patient record by the clinic.
+  const unlinked = !isMockMode && session && hydrated && !patient;
 
   return (
     <div
       dir="rtl"
       className="min-h-screen bg-[var(--color-bg)] font-[family-name:var(--font-vazirmatn)]"
     >
-      {!hydrated ? (
+      {waiting ? (
         <Spinner label="در حال بارگذاری…" />
       ) : patient ? (
         <PatientDashboard patient={patient} />
+      ) : unlinked ? (
+        <UnlinkedNotice />
       ) : (
-        <PatientLogin />
+        <PatientEntry />
       )}
     </div>
   );
 }
 
-/* ── Login ─────────────────────────────────────────────────────── */
+/** Signed in, but the clinic hasn't linked this account to a patient yet. */
+function UnlinkedNotice() {
+  const { signOut } = useAuth();
+  return (
+    <div className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center px-5 py-10 text-center">
+      <Card>
+        <CardBody className="space-y-4">
+          <p className="text-sm font-semibold text-[var(--color-ink)]">
+            حساب شما هنوز به پرونده‌ای متصل نشده است
+          </p>
+          <p className="text-xs leading-relaxed text-[var(--color-ink-soft)]">
+            ورود شما موفق بود، اما کلینیک هنوز حساب شما را به پرونده درمانی‌تان
+            متصل نکرده است. لطفاً با کلینیک خود تماس بگیرید و ایمیل ثبت‌نامی‌تان
+            را اعلام کنید.
+          </p>
+          <Button variant="secondary" className="w-full" onClick={signOut}>
+            خروج از حساب
+          </Button>
+        </CardBody>
+      </Card>
+      <Disclaimer fa className="mt-6" />
+    </div>
+  );
+}
 
-function PatientLogin() {
-  const { login } = usePatient();
-  const [nationalId, setNationalId] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [checking, setChecking] = useState(false);
+/* ── Entry (auth in Supabase mode, demo picker in mock mode) ───── */
 
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
-    const value = nationalId.trim();
-    if (!/^\d{10}$/.test(value)) {
-      setError("کد ملی باید ۱۰ رقم باشد.");
-      return;
-    }
-    setChecking(true);
-    const ok = await login(value);
-    setChecking(false);
-    if (!ok) {
-      setError("بیماری با این کد ملی پیدا نشد. با کلینیک خود تماس بگیرید.");
-    }
-  }
-
+function PatientEntry() {
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center px-5 py-10">
       <div className="mb-8 text-center">
@@ -85,61 +108,154 @@ function PatientLogin() {
         </p>
       </div>
 
-      <Card>
-        <CardBody className="space-y-4">
-          <form onSubmit={submit} className="space-y-4">
-            <Field label="کد ملی" required error={error ?? undefined}>
-              <Input
-                inputMode="numeric"
-                dir="ltr"
-                maxLength={10}
-                value={nationalId}
-                onChange={(e) => {
-                  setNationalId(e.target.value.replace(/\D/g, ""));
-                  setError(null);
-                }}
-                placeholder="0123456789"
-                className="text-center tracking-widest"
-              />
-            </Field>
-            <Button type="submit" className="w-full" disabled={checking}>
-              {checking ? "در حال بررسی…" : "ورود به پرتال"}
-              <Icon name="arrow" width={16} height={16} className="-scale-x-100" />
-            </Button>
-          </form>
-          <p className="rounded-lg bg-[var(--color-surface-muted)] px-3 py-2 text-[11px] leading-relaxed text-[var(--color-ink-faint)]">
-            نسخه آزمایشی — برای مشاهده دمو با یکی از این کدها وارد شوید:{" "}
-            <button
-              type="button"
-              onClick={() => setNationalId("1234567890")}
-              className="font-mono text-[var(--color-primary-strong)] underline"
-              dir="ltr"
-            >
-              1234567890
-            </button>{" "}
-            (توان‌بخشی زانو) یا{" "}
-            <button
-              type="button"
-              onClick={() => setNationalId("0987654321")}
-              className="font-mono text-[var(--color-primary-strong)] underline"
-              dir="ltr"
-            >
-              0987654321
-            </button>{" "}
-            (کمردرد)
-          </p>
-        </CardBody>
-      </Card>
+      {isMockMode ? <DemoPicker /> : <PatientAuth />}
 
       <Disclaimer fa className="mt-6" />
     </div>
   );
 }
 
+/** Mock/dev mode only: open a demo patient without authentication. */
+function DemoPicker() {
+  const { openDemoPatient } = usePatient();
+  return (
+    <Card>
+      <CardBody className="space-y-3">
+        <p className="text-sm font-semibold text-[var(--color-ink)]">
+          حالت دمو (بدون ورود)
+        </p>
+        <p className="text-xs leading-relaxed text-[var(--color-ink-soft)]">
+          این نسخه آزمایشی است و داده‌ها فقط در همین مرورگر ذخیره می‌شوند. در
+          نسخه اصلی، بیماران با ایمیل و رمز عبور وارد می‌شوند.
+        </p>
+        <Button className="w-full" onClick={() => openDemoPatient(0)}>
+          بیمار دمو ۱ — توان‌بخشی زانو
+        </Button>
+        <Button
+          variant="secondary"
+          className="w-full"
+          onClick={() => openDemoPatient(1)}
+        >
+          بیمار دمو ۲ — کمردرد مزمن
+        </Button>
+      </CardBody>
+    </Card>
+  );
+}
+
+/** Supabase mode: real sign-in / sign-up with Supabase Auth. */
+function PatientAuth() {
+  const { signIn, signUp } = useAuth();
+  const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setError(null);
+    setNotice(null);
+    const err =
+      mode === "signin"
+        ? await signIn(email.trim(), password)
+        : await signUp(email.trim(), password, fullName.trim());
+    setBusy(false);
+    if (err) {
+      setError(err);
+    } else if (mode === "signup") {
+      setNotice(
+        "حساب ساخته شد. اگر تأیید ایمیل فعال باشد، ابتدا ایمیل خود را تأیید کنید؛ سپس کلینیک باید حساب شما را به پرونده‌تان متصل کند."
+      );
+    }
+  }
+
+  return (
+    <Card>
+      <CardBody className="space-y-4">
+        <div className="flex gap-1 rounded-xl bg-[var(--color-surface-muted)] p-1">
+          {(["signin", "signup"] as const).map((m) => (
+            <button
+              key={m}
+              type="button"
+              onClick={() => {
+                setMode(m);
+                setError(null);
+              }}
+              className={cn(
+                "flex-1 rounded-lg py-2 text-[13px] font-medium transition-colors",
+                mode === m
+                  ? "bg-white text-[var(--color-ink)] shadow-sm"
+                  : "text-[var(--color-ink-faint)]"
+              )}
+            >
+              {m === "signin" ? "ورود" : "ثبت‌نام"}
+            </button>
+          ))}
+        </div>
+
+        <form onSubmit={submit} className="space-y-3">
+          {mode === "signup" && (
+            <Field label="نام و نام خانوادگی" required>
+              <Input
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                placeholder="مثلاً رضا کریمی"
+              />
+            </Field>
+          )}
+          <Field label="ایمیل" required>
+            <Input
+              type="email"
+              dir="ltr"
+              autoComplete="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@example.com"
+            />
+          </Field>
+          <Field
+            label="رمز عبور"
+            required
+            error={error ?? undefined}
+            hint={mode === "signup" ? "حداقل ۶ کاراکتر" : undefined}
+          >
+            <Input
+              type="password"
+              dir="ltr"
+              autoComplete={mode === "signin" ? "current-password" : "new-password"}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
+            />
+          </Field>
+          <Button type="submit" className="w-full" disabled={busy}>
+            {busy ? "لطفاً صبر کنید…" : mode === "signin" ? "ورود به پرتال" : "ساخت حساب"}
+          </Button>
+        </form>
+
+        {notice && (
+          <p className="rounded-lg bg-[var(--color-success-soft)] px-3 py-2 text-[12px] leading-relaxed text-[var(--color-success)]">
+            {notice}
+          </p>
+        )}
+        <p className="text-[11px] leading-relaxed text-[var(--color-ink-faint)]">
+          پس از ثبت‌نام، کلینیک شما باید حساب‌تان را به پرونده درمانی‌تان متصل
+          کند تا برنامه تمرینی را ببینید. کد ملی دیگر برای ورود استفاده نمی‌شود.
+        </p>
+      </CardBody>
+    </Card>
+  );
+}
+
 /* ── Dashboard shell ───────────────────────────────────────────── */
 
 function PatientDashboard({ patient }: { patient: Patient }) {
-  const { logout } = usePatient();
+  const { closeDemoPatient } = usePatient();
+  const { signOut } = useAuth();
   const [tab, setTab] = useState<Tab>("program");
   const openTickets = patient.tickets.filter((t) => t.status === "open").length;
 
@@ -156,7 +272,12 @@ function PatientDashboard({ patient }: { patient: Patient }) {
             سلام، {patient.nameFa} 👋
           </h1>
         </div>
-        <Button variant="secondary" size="sm" onClick={logout}>
+        <SaveStatusPill labels={statusLabelsFa} />
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => (isMockMode ? closeDemoPatient() : signOut())}
+        >
           خروج
         </Button>
       </header>
@@ -573,13 +694,16 @@ function TicketsTab({ patient }: { patient: Patient }) {
   const [message, setMessage] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
+  const [sending, setSending] = useState(false);
 
-  function submit(e: React.FormEvent) {
+  async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!subject.trim() || !message.trim()) {
       setError("موضوع و متن پیام را بنویسید.");
       return;
     }
+    setSending(true);
+    setError(null);
     // 🔌 REAL AI API INTEGRATION POINT — the auto-reply comes from the
     // mock triage helper; replace with a real AI triage call if desired.
     const ticket: Ticket = {
@@ -598,11 +722,16 @@ function TicketsTab({ patient }: { patient: Patient }) {
         },
       ],
     };
-    addTicket(ticket);
+    const ok = await addTicket(ticket);
+    setSending(false);
+    if (!ok) {
+      // Keep every field intact so nothing the patient typed is lost.
+      setError("ذخیره ناموفق بود — متن شما پاک نشده؛ لطفاً دوباره تلاش کنید.");
+      return;
+    }
     setSubject("");
     setMessage("");
     setExerciseId("");
-    setError(null);
     setSent(true);
     setTimeout(() => setSent(false), 2500);
   }
@@ -656,7 +785,7 @@ function TicketsTab({ patient }: { patient: Patient }) {
             </Field>
             <Button type="submit" size="sm">
               <Icon name="send" width={14} height={14} className="-scale-x-100" />
-              {sent ? "ارسال شد ✓" : "ارسال تیکت"}
+              {sending ? "در حال ارسال…" : sent ? "ارسال شد ✓" : "ارسال تیکت"}
             </Button>
           </form>
         </CardBody>

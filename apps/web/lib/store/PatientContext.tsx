@@ -9,105 +9,104 @@ import {
 } from "react";
 import type { Patient, ProgressEntry, Ticket } from "@/lib/types";
 import { samplePatients } from "@/lib/data/samplePatients";
-import { isSupabaseConfigured } from "@/lib/supabase/client";
-import {
-  fetchPatientByNationalId,
-  insertTicket,
-  upsertProgress,
-} from "@/lib/supabase/db";
+import { isMockMode } from "@/lib/config";
+import { fetchMyPatient, insertTicket, upsertProgress } from "@/lib/supabase/db";
+import { useAuth } from "@/lib/store/AuthContext";
 
 interface PatientContextValue {
-  /** The logged-in patient, or null when logged out. */
+  /** The active patient (mock demo selection, or the signed-in patient). */
   patient: Patient | null;
   hydrated: boolean;
-  /** Try to log in with a national id. Resolves false when not found. */
-  login: (nationalId: string) => Promise<boolean>;
-  logout: () => void;
+  /** Mock mode only: open a demo patient by index. */
+  openDemoPatient: (index: number) => void;
+  closeDemoPatient: () => void;
   logProgress: (entry: ProgressEntry) => void;
-  addTicket: (ticket: Ticket) => void;
+  /** Resolves true when the ticket is stored (or in mock mode). */
+  addTicket: (ticket: Ticket) => Promise<boolean>;
 }
 
 const PatientContext = createContext<PatientContextValue | null>(null);
 
-const STORAGE_KEY = "physioai:patients:v1";
-const SESSION_KEY = "physioai:patient-session:v1";
+const STORAGE_KEY = "physioai:patients:v2";
 
 interface PatientState {
+  /** Mock-mode demo patients (persisted locally in dev). */
   patients: Patient[];
-  sessionPatientId: string | null;
-  /** DB-mode: the logged-in patient loaded from Supabase. */
+  demoPatientId: string | null;
+  /** Supabase mode: the signed-in user's patient record. */
   remotePatient: Patient | null;
   hydrated: boolean;
 }
 
-function loadPersisted(): Pick<PatientState, "patients" | "sessionPatientId"> {
+function loadPersisted(): Pick<PatientState, "patients" | "demoPatientId"> {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw) as {
         patients?: Patient[];
-        sessionPatientId?: string | null;
+        demoPatientId?: string | null;
       };
       return {
         patients: parsed.patients?.length ? parsed.patients : samplePatients,
-        sessionPatientId: parsed.sessionPatientId ?? null,
+        demoPatientId: parsed.demoPatientId ?? null,
       };
     }
   } catch {
     /* ignore corrupt storage */
   }
-  return { patients: samplePatients, sessionPatientId: null };
+  return { patients: samplePatients, demoPatientId: null };
 }
 
 export function PatientProvider({ children }: { children: React.ReactNode }) {
+  const { session, profile } = useAuth();
   const [state, setState] = useState<PatientState>({
     patients: samplePatients,
-    sessionPatientId: null,
+    demoPatientId: null,
     remotePatient: null,
     hydrated: false,
   });
 
+  // Mock mode: local demo data.
   useEffect(() => {
-    if (isSupabaseConfigured) {
-      // DB mode: restore the session by re-fetching the patient. Falls
-      // back to local mode automatically if the DB is unreachable.
-      const nationalId = localStorage.getItem(SESSION_KEY);
-      if (nationalId) {
-        fetchPatientByNationalId(nationalId).then((p) => {
-          setState((prev) => ({ ...prev, remotePatient: p, hydrated: true }));
-        });
-        return;
-      }
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time hydration; cannot run during SSR
-      setState((prev) => ({ ...prev, hydrated: true }));
-      return;
-    }
+    if (!isMockMode) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time localStorage hydration; cannot run during SSR
     setState((prev) => ({ ...prev, ...loadPersisted(), hydrated: true }));
   }, []);
 
+  // Supabase mode: load the signed-in user's patient record.
   useEffect(() => {
-    if (!state.hydrated || isSupabaseConfigured) return;
+    if (isMockMode) return;
+    if (!session) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- reset on sign-out
+      setState((prev) => ({ ...prev, remotePatient: null, hydrated: true }));
+      return;
+    }
+    fetchMyPatient(session.user.id).then((p) => {
+      setState((prev) => ({ ...prev, remotePatient: p, hydrated: true }));
+    });
+  }, [session]);
+
+  useEffect(() => {
+    if (!state.hydrated || !isMockMode) return;
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
         patients: state.patients,
-        sessionPatientId: state.sessionPatientId,
+        demoPatientId: state.demoPatientId,
       })
     );
   }, [state]);
 
   const value = useMemo<PatientContextValue>(() => {
-    const localPatient =
-      state.patients.find((p) => p.id === state.sessionPatientId) ?? null;
-    // Prefer the DB-loaded patient; fall back to the local session so the
-    // app still works when Supabase is configured but unreachable.
-    const patient = state.remotePatient ?? localPatient;
+    const demoPatient =
+      state.patients.find((p) => p.id === state.demoPatientId) ?? null;
+    const patient = isMockMode ? demoPatient : state.remotePatient;
 
-    const updateLocalPatient = (fn: (p: Patient) => Patient) =>
+    const updatePatient = (fn: (p: Patient) => Patient) =>
       setState((prev) => ({
         ...prev,
         patients: prev.patients.map((p) =>
-          p.id === prev.sessionPatientId ? fn(p) : p
+          p.id === prev.demoPatientId ? fn(p) : p
         ),
         remotePatient: prev.remotePatient ? fn(prev.remotePatient) : null,
       }));
@@ -115,48 +114,42 @@ export function PatientProvider({ children }: { children: React.ReactNode }) {
     return {
       patient,
       hydrated: state.hydrated,
-      login: async (nationalId) => {
-        const id = nationalId.trim();
-        if (isSupabaseConfigured) {
-          const remote = await fetchPatientByNationalId(id);
-          if (remote) {
-            localStorage.setItem(SESSION_KEY, id);
-            setState((prev) => ({ ...prev, remotePatient: remote }));
-            return true;
-          }
-          // DB unreachable or patient missing → try the local demo data
-          // so the app still works offline.
+      openDemoPatient: (index) => {
+        const target = state.patients[index];
+        if (isMockMode && target) {
+          setState((prev) => ({ ...prev, demoPatientId: target.id }));
         }
-        const found = state.patients.find((p) => p.nationalId === id);
-        if (!found) return false;
-        setState((prev) => ({ ...prev, sessionPatientId: found.id }));
-        return true;
       },
-      logout: () => {
-        localStorage.removeItem(SESSION_KEY);
-        setState((prev) => ({
-          ...prev,
-          sessionPatientId: null,
-          remotePatient: null,
-        }));
-      },
+      closeDemoPatient: () =>
+        setState((prev) => ({ ...prev, demoPatientId: null })),
       logProgress: (entry) => {
-        updateLocalPatient((p) => ({
+        updatePatient((p) => ({
           ...p,
           progress: [
             ...p.progress.filter((e) => e.date !== entry.date),
             entry,
           ].sort((a, b) => a.date.localeCompare(b.date)),
         }));
-        // Write-through to Supabase (no-op when unconfigured/offline).
-        if (patient) void upsertProgress(patient.id, entry);
+        if (!isMockMode && patient?.episodeId) {
+          void upsertProgress(patient.episodeId, entry);
+        }
       },
-      addTicket: (ticket) => {
-        updateLocalPatient((p) => ({ ...p, tickets: [ticket, ...p.tickets] }));
-        if (patient) void insertTicket(patient.id, ticket);
+      addTicket: async (ticket) => {
+        if (!isMockMode) {
+          if (!patient) return false;
+          const ok = await insertTicket(
+            patient.id,
+            patient.episodeId ?? null,
+            ticket,
+            profile?.id ?? null
+          );
+          if (!ok) return false;
+        }
+        updatePatient((p) => ({ ...p, tickets: [ticket, ...p.tickets] }));
+        return true;
       },
     };
-  }, [state]);
+  }, [state, profile]);
 
   return (
     <PatientContext.Provider value={value}>{children}</PatientContext.Provider>

@@ -117,12 +117,17 @@ export default function SettingsPage() {
               apps/web/.env.local.example
             </code>{" "}
             to <code className="rounded bg-[var(--color-surface-muted)] px-1.5 py-0.5 text-xs">.env.local</code>,
-            fill in your project URL and anon key from Supabase → Project
-            Settings → API, and run the SQL in{" "}
+            fill in your project URL and publishable key from Supabase →
+            Project Settings → API, and run the migrations in{" "}
             <code className="rounded bg-[var(--color-surface-muted)] px-1.5 py-0.5 text-xs">
-              database/schema.sql
+              database/migrations/
             </code>{" "}
-            once in the Supabase SQL editor. All data stays local until then.
+            in order in the Supabase SQL editor. See the Persian setup guide
+            in{" "}
+            <code className="rounded bg-[var(--color-surface-muted)] px-1.5 py-0.5 text-xs">
+              docs/RAHNAMA-FA.md
+            </code>
+            .
           </p>
         </CardBody>
       </Card>

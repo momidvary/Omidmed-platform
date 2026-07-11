@@ -8,11 +8,16 @@ import { navItems } from "@/lib/nav";
 import { useLocale } from "@/lib/store/LocaleContext";
 import { locales } from "@/lib/i18n/translations";
 import type { Locale } from "@/lib/i18n/translations";
+import { ClinicianGate } from "@/components/auth/ClinicianGate";
+import { SaveStatusPill } from "@/components/ui/SaveStatusPill";
+import { useAuth } from "@/lib/store/AuthContext";
+import { isMockMode } from "@/lib/config";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
   const { t, dir, locale, setLocale } = useLocale();
+  const { session, signOut } = useAuth();
 
   // The patient portal is patient-facing (Persian, RTL) and must not show
   // the clinician sidebar/topbar — it brings its own minimal chrome.
@@ -89,22 +94,34 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             ))}
           </select>
 
+          <SaveStatusPill
+            labels={{
+              connected: t("status.connected"),
+              saving: t("status.saving"),
+              saved: t("status.saved"),
+              offline: t("status.offline"),
+              save_failed: t("status.save_failed"),
+            }}
+          />
+
           <div className="hidden items-center gap-2 rounded-full bg-[var(--color-primary-tint)] px-3 py-1.5 text-xs font-medium text-[var(--color-primary-strong)] sm:flex">
             <Icon name="shield" width={14} height={14} />
             {t("shell.evidence")}
           </div>
 
-          <button
-            type="button"
-            className="grid h-9 w-9 place-items-center rounded-full bg-[var(--color-surface-muted)] text-[var(--color-ink-soft)]"
-            aria-label="Account"
-          >
-            <Icon name="user" width={18} height={18} />
-          </button>
+          {!isMockMode && session && (
+            <button
+              type="button"
+              onClick={signOut}
+              className="rounded-lg px-2.5 py-1.5 text-xs text-[var(--color-ink-soft)] hover:bg-[var(--color-surface-muted)]"
+            >
+              {t("auth.signout")}
+            </button>
+          )}
         </header>
 
         <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-6 lg:px-8">
-          {children}
+          <ClinicianGate>{children}</ClinicianGate>
         </main>
       </div>
     </div>

@@ -5,6 +5,7 @@ import { AppShell } from "@/components/layout/AppShell";
 import { CaseProvider } from "@/lib/store/CaseContext";
 import { PatientProvider } from "@/lib/store/PatientContext";
 import { LocaleProvider } from "@/lib/store/LocaleContext";
+import { AuthProvider } from "@/lib/store/AuthContext";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -29,11 +30,13 @@ export default function RootLayout({
     <html lang="en" className={`${inter.variable} ${vazirmatn.variable}`}>
       <body>
         <LocaleProvider>
-          <CaseProvider>
-            <PatientProvider>
-              <AppShell>{children}</AppShell>
-            </PatientProvider>
-          </CaseProvider>
+          <AuthProvider>
+            <CaseProvider>
+              <PatientProvider>
+                <AppShell>{children}</AppShell>
+              </PatientProvider>
+            </CaseProvider>
+          </AuthProvider>
         </LocaleProvider>
       </body>
     </html>

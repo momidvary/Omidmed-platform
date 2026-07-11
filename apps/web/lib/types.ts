@@ -132,7 +132,9 @@ export interface Ticket {
 
 export interface Patient {
   id: string;
-  /** Iranian national ID — the portal login key (mock auth) */
+  /** Active care episode id (Supabase mode); empty in mock mode. */
+  episodeId?: string;
+  /** National ID on file — an identifier only, never a login credential. */
   nationalId: string;
   nameFa: string;
   age: number;

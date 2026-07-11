@@ -68,6 +68,13 @@ const en: Dict = {
   // settings
   "settings.language": "Language",
   "settings.language.hint": "Applies to the clinician interface.",
+  // storage status
+  "status.connected": "Connected",
+  "status.saving": "Saving…",
+  "status.saved": "Saved",
+  "status.offline": "Offline",
+  "status.save_failed": "Save failed",
+  "auth.signout": "Sign out",
 };
 
 const fa: Dict = {
@@ -119,6 +126,12 @@ const fa: Dict = {
     "عکس‌ها فقط در همین مرورگر می‌مانند — در این نسخه چیزی به سرور ارسال نمی‌شود.",
   "settings.language": "زبان",
   "settings.language.hint": "روی رابط فیزیوتراپیست اعمال می‌شود.",
+  "status.connected": "متصل",
+  "status.saving": "در حال ذخیره…",
+  "status.saved": "ذخیره شد",
+  "status.offline": "آفلاین",
+  "status.save_failed": "ذخیره ناموفق",
+  "auth.signout": "خروج",
 };
 
 const ar: Dict = {
@@ -170,6 +183,12 @@ const ar: Dict = {
     "تبقى الصور في هذا المتصفح فقط — لا يُرسل شيء إلى الخادم في هذه النسخة.",
   "settings.language": "اللغة",
   "settings.language.hint": "تنطبق على واجهة أخصائي العلاج الطبيعي.",
+  "status.connected": "متصل",
+  "status.saving": "جارٍ الحفظ…",
+  "status.saved": "تم الحفظ",
+  "status.offline": "غير متصل",
+  "status.save_failed": "فشل الحفظ",
+  "auth.signout": "تسجيل الخروج",
 };
 
 const dictionaries: Record<Locale, Dict> = { en, fa, ar };

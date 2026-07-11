@@ -7,79 +7,136 @@ import type {
 } from "@/lib/types";
 
 /*
- * Data-access layer: maps between the app's camelCase types and the
- * snake_case tables in database/schema.sql. Every function is a no-op
- * (returns null/false) when Supabase is not configured or unreachable,
- * so the app degrades gracefully to local mode.
+ * Data-access layer for the authenticated schema (see database/migrations).
+ * RLS scopes every query: staff see their clinic, patients see themselves.
+ * Reads have a timeout; writes report to the save-status channel so the
+ * UI can show Connected / Saving / Saved / Offline / Save failed.
  */
 
-/**
- * Cap slow/unreachable DB reads so the UI can fall back to local mode
- * quickly instead of waiting out fetch retries.
- */
-function withTimeout<T>(promise: PromiseLike<T>, ms = 4000): Promise<T | null> {
+/* ── Save-status channel ───────────────────────────────────────── */
+
+export type SaveStatus =
+  | "connected"
+  | "saving"
+  | "saved"
+  | "offline"
+  | "save_failed";
+
+const listeners = new Set<(s: SaveStatus) => void>();
+
+export function subscribeSaveStatus(cb: (s: SaveStatus) => void): () => void {
+  listeners.add(cb);
+  return () => listeners.delete(cb);
+}
+
+function report(status: SaveStatus) {
+  listeners.forEach((cb) => cb(status));
+}
+
+/** Wrap a write: emits saving → saved / save_failed and returns success. */
+async function trackedWrite(op: () => Promise<boolean>): Promise<boolean> {
+  report("saving");
+  try {
+    const ok = await op();
+    report(ok ? "saved" : "save_failed");
+    return ok;
+  } catch {
+    report("save_failed");
+    return false;
+  }
+}
+
+function withTimeout<T>(promise: PromiseLike<T>, ms = 6000): Promise<T | null> {
   return Promise.race([
     Promise.resolve(promise),
     new Promise<null>((resolve) => setTimeout(() => resolve(null), ms)),
   ]);
 }
 
-/* ── Patients (portal) ─────────────────────────────────────────── */
+/* ── Patient portal (authenticated patient) ────────────────────── */
 
-export async function fetchPatientByNationalId(
-  nationalId: string
-): Promise<Patient | null> {
+/**
+ * Load the patient record linked to the signed-in user, with the most
+ * recent active care episode and its program / progress / tickets.
+ */
+export async function fetchMyPatient(userId: string): Promise<Patient | null> {
   const supabase = getSupabase();
   if (!supabase) return null;
   try {
-    const result = await withTimeout(
+    const linkResult = await withTimeout(
       supabase
-      .from("patients")
-      .select(
-        `id, national_id, name_fa, age, condition_fa, therapist_note_fa, weekly_target,
-         patient_program ( exercise_id, dosage_fa, days_per_week ),
-         patient_progress ( date, pain_level, completed ),
-         tickets ( id, exercise_id, subject, message, status, created_at,
-                   ticket_replies ( id, sender, content, created_at ) )`
-      )
-        .eq("national_id", nationalId)
+        .from("patient_users")
+        .select("patient_id")
+        .eq("user_id", userId)
+        .limit(1)
         .maybeSingle()
     );
-    if (!result) return null;
-    const { data: p, error } = result;
-    if (error || !p) return null;
+    if (!linkResult) {
+      report("offline");
+      return null;
+    }
+    if (!linkResult.data) return null;
+    const patientId = linkResult.data.patient_id as string;
 
+    const result = await withTimeout(
+      supabase
+        .from("patients")
+        .select(
+          `id, full_name,
+           care_episodes ( id, title_fa, therapist_note_fa, weekly_target, status, started_at,
+             episode_program ( exercise_id, dosage_fa, days_per_week ),
+             progress ( date, pain_level, completed ) ),
+           tickets ( id, exercise_id, subject, message, status, created_at,
+             ticket_replies ( id, sender, content, created_at ) )`
+        )
+        .eq("id", patientId)
+        .maybeSingle()
+    );
+    if (!result) {
+      report("offline");
+      return null;
+    }
+    const p = result.data;
+    if (!p) return null;
+
+    type Row = Record<string, unknown>;
+    const episodes = (p.care_episodes ?? []) as Row[];
+    const active =
+      episodes.find((e) => e.status === "active") ??
+      episodes[episodes.length - 1];
+    if (!active) return null;
+
+    report("connected");
     return {
       id: p.id,
-      nationalId: p.national_id,
-      nameFa: p.name_fa,
-      age: p.age ?? 0,
-      conditionFa: p.condition_fa ?? "",
-      therapistNoteFa: p.therapist_note_fa ?? "",
-      weeklyTarget: p.weekly_target,
-      program: (p.patient_program ?? []).map((row: Record<string, unknown>) => ({
+      episodeId: active.id as string,
+      nationalId: "",
+      nameFa: p.full_name,
+      age: 0,
+      conditionFa: (active.title_fa as string) ?? "",
+      therapistNoteFa: (active.therapist_note_fa as string) ?? "",
+      weeklyTarget: (active.weekly_target as number) ?? 5,
+      program: ((active.episode_program as Row[]) ?? []).map((row) => ({
         exerciseId: row.exercise_id as string,
         dosageFa: row.dosage_fa as string,
         daysPerWeek: row.days_per_week as number,
       })),
-      progress: (p.patient_progress ?? [])
-        .map((row: Record<string, unknown>) => ({
+      progress: ((active.progress as Row[]) ?? [])
+        .map((row) => ({
           date: row.date as string,
           painLevel: row.pain_level as number,
           completed: row.completed as boolean,
         }))
-        .sort((a: ProgressEntry, b: ProgressEntry) =>
-          a.date.localeCompare(b.date)
-        ),
-      tickets: (p.tickets ?? [])
-        .map((row: Record<string, unknown>) => ({
+        .sort((a, b) => a.date.localeCompare(b.date)),
+      tickets: ((p.tickets as Row[]) ?? [])
+        .map((row) => ({
           id: row.id as string,
           createdAt: row.created_at as string,
           exerciseId: (row.exercise_id as string) ?? null,
           subject: row.subject as string,
           message: row.message as string,
           status: row.status as Ticket["status"],
-          replies: ((row.ticket_replies as Record<string, unknown>[]) ?? [])
+          replies: ((row.ticket_replies as Row[]) ?? [])
             .map((r) => ({
               id: r.id as string,
               from: r.sender as "ai" | "therapist",
@@ -88,49 +145,52 @@ export async function fetchPatientByNationalId(
             }))
             .sort((a, b) => a.createdAt.localeCompare(b.createdAt)),
         }))
-        .sort((a: Ticket, b: Ticket) => b.createdAt.localeCompare(a.createdAt)),
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
     };
   } catch {
+    report("offline");
     return null;
   }
 }
 
-export async function upsertProgress(
-  patientId: string,
+export function upsertProgress(
+  episodeId: string,
   entry: ProgressEntry
 ): Promise<boolean> {
-  const supabase = getSupabase();
-  if (!supabase) return false;
-  try {
-    const { error } = await supabase.from("patient_progress").upsert(
+  return trackedWrite(async () => {
+    const supabase = getSupabase();
+    if (!supabase) return false;
+    const { error } = await supabase.from("progress").upsert(
       {
-        patient_id: patientId,
+        episode_id: episodeId,
         date: entry.date,
         pain_level: entry.painLevel,
         completed: entry.completed,
       },
-      { onConflict: "patient_id,date" }
+      { onConflict: "episode_id,date" }
     );
     return !error;
-  } catch {
-    return false;
-  }
+  });
 }
 
-export async function insertTicket(
+export function insertTicket(
   patientId: string,
-  ticket: Ticket
+  episodeId: string | null,
+  ticket: Ticket,
+  createdBy: string | null
 ): Promise<boolean> {
-  const supabase = getSupabase();
-  if (!supabase) return false;
-  try {
+  return trackedWrite(async () => {
+    const supabase = getSupabase();
+    if (!supabase) return false;
     const { error } = await supabase.from("tickets").insert({
       id: ticket.id,
       patient_id: patientId,
+      episode_id: episodeId,
       exercise_id: ticket.exerciseId,
       subject: ticket.subject,
       message: ticket.message,
       status: ticket.status,
+      created_by: createdBy,
       created_at: ticket.createdAt,
     });
     if (error) return false;
@@ -146,9 +206,7 @@ export async function insertTicket(
       );
     }
     return true;
-  } catch {
-    return false;
-  }
+  });
 }
 
 /* ── Clinician cases ───────────────────────────────────────────── */
@@ -163,9 +221,13 @@ export async function fetchCases(): Promise<PatientCase[] | null> {
         .select("*")
         .order("created_at", { ascending: false })
     );
-    if (!result) return null;
+    if (!result) {
+      report("offline");
+      return null;
+    }
     const { data, error } = result;
     if (error || !data) return null;
+    report("connected");
     return data.map((row) => ({
       id: row.id,
       createdAt: row.created_at,
@@ -188,16 +250,23 @@ export async function fetchCases(): Promise<PatientCase[] | null> {
       region: row.region ?? undefined,
     }));
   } catch {
+    report("offline");
     return null;
   }
 }
 
-export async function insertCase(c: PatientCase): Promise<boolean> {
-  const supabase = getSupabase();
-  if (!supabase) return false;
-  try {
+export function insertCase(
+  c: PatientCase,
+  clinicId: string,
+  createdBy: string
+): Promise<boolean> {
+  return trackedWrite(async () => {
+    const supabase = getSupabase();
+    if (!supabase) return false;
     const { error } = await supabase.from("cases").insert({
       id: c.id,
+      clinic_id: clinicId,
+      created_by: createdBy,
       created_at: c.createdAt,
       name: c.name,
       age: c.age,
@@ -218,7 +287,5 @@ export async function insertCase(c: PatientCase): Promise<boolean> {
       patient_goal: c.patientGoal,
     });
     return !error;
-  } catch {
-    return false;
-  }
+  });
 }

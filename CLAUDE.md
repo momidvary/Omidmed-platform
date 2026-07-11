@@ -35,16 +35,23 @@ Do not rebuild ordering/e-commerce features.
 - Clinician UI i18n (en/fa/ar) via `lib/i18n/translations.ts` +
   `LocaleContext`; fa/ar are RTL. Chrome/nav/posture/settings translated;
   deep clinical content is progressive. Patient portal stays Persian-native.
-- Supabase scaffold: `lib/supabase/client.ts` (env-driven, null when
-  unconfigured), schema in `database/schema.sql`, env template in
-  `apps/web/.env.local.example`. App must keep working with no env set.
-- Patient Portal at `/patient` (Persian, RTL, Vazirmatn font): national-ID
-  mock login, personalized program, progress logging + charts, tickets with
-  AI triage auto-reply, patient AI chat. Persian exercise content lives in
-  `apps/web/lib/data/exerciseFa.ts`; patients in
-  `apps/web/lib/data/samplePatients.ts` (demo IDs: 1234567890, 0987654321).
-- All data is mock/local: React context + localStorage. No backend; the
-  patient "login" is a lookup, not real auth.
+- Supabase Auth + RLS are real: roles in `profiles` (platform_admin /
+  clinic_owner / therapist / clinic_staff / patient), schema in
+  `database/migrations/001_schema.sql`, policies in `002_rls.sql` (no anon
+  policies), dev-only seed in `database/seed/seed.dev.sql`. Clinic data is
+  isolated per clinic; therapists see their clinic's or assigned patients;
+  patients see only themselves. One patient can have multiple
+  care_episodes.
+- Patient Portal at `/patient` (Persian, RTL, Vazirmatn font): Supabase
+  email+password auth (sign-up + clinic links the account via
+  patient_users). National-ID login is REMOVED — never reintroduce it as
+  a credential; national_id is a record field only. Persian exercise
+  content in `apps/web/lib/data/exerciseFa.ts`.
+- Data modes (`lib/config.ts`): mock mode (NEXT_PUBLIC_DATA_MODE=mock or
+  missing env) = local demo, no auth. Real mode = no localStorage
+  fallback; storage status shown via `SaveStatusPill` (Connected/Saving/
+  Saved/Offline/Save failed); failed saves must never clear user input.
+- Persian setup guide: `docs/RAHNAMA-FA.md`.
 - The "AI" is a mock heuristic engine in `apps/web/lib/ai/engine.ts`.
 
 ## AI Integration Rule

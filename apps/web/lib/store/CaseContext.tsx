@@ -9,14 +9,16 @@ import {
 } from "react";
 import type { PatientCase } from "@/lib/types";
 import { sampleCases } from "@/lib/data/sampleCases";
-import { isSupabaseConfigured } from "@/lib/supabase/client";
+import { isMockMode } from "@/lib/config";
 import { fetchCases, insertCase } from "@/lib/supabase/db";
+import { useAuth } from "@/lib/store/AuthContext";
 
 interface CaseContextValue {
   cases: PatientCase[];
   currentCaseId: string | null;
   currentCase: PatientCase | null;
-  addCase: (c: PatientCase) => void;
+  /** Resolves true when the case is stored (or in mock mode). */
+  addCase: (c: PatientCase) => Promise<boolean>;
   setCurrentCase: (id: string | null) => void;
   hydrated: boolean;
 }
@@ -51,31 +53,40 @@ function loadPersisted(): Pick<CaseState, "cases" | "currentCaseId"> {
 }
 
 export function CaseProvider({ children }: { children: React.ReactNode }) {
-  // Server render uses sample data; localStorage is only readable after
-  // mount, so hydration must happen in an effect (single state update).
+  const { session, profile } = useAuth();
   const [state, setState] = useState<CaseState>({
-    cases: sampleCases,
+    cases: isMockMode ? sampleCases : [],
     currentCaseId: null,
     hydrated: false,
   });
 
+  // Mock mode: hydrate from localStorage (dev/demo only).
   useEffect(() => {
+    if (!isMockMode) return;
     // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time localStorage hydration; cannot run during SSR
     setState({ ...loadPersisted(), hydrated: true });
-
-    // When Supabase is configured, the database is the source of truth
-    // for cases; fall back silently to local data if unreachable.
-    if (isSupabaseConfigured) {
-      fetchCases().then((rows) => {
-        if (rows) {
-          setState((prev) => ({ ...prev, cases: rows }));
-        }
-      });
-    }
   }, []);
 
+  // Supabase mode: the database (scoped by RLS) is the only source.
   useEffect(() => {
-    if (!state.hydrated) return;
+    if (isMockMode) return;
+    if (!session) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- reset on sign-out
+      setState({ cases: [], currentCaseId: null, hydrated: true });
+      return;
+    }
+    fetchCases().then((rows) => {
+      setState((prev) => ({
+        ...prev,
+        cases: rows ?? prev.cases,
+        hydrated: true,
+      }));
+    });
+  }, [session]);
+
+  // Persist locally only in mock mode.
+  useEffect(() => {
+    if (!state.hydrated || !isMockMode) return;
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({ cases: state.cases, currentCaseId: state.currentCaseId })
@@ -88,20 +99,25 @@ export function CaseProvider({ children }: { children: React.ReactNode }) {
       currentCaseId: state.currentCaseId,
       currentCase:
         state.cases.find((c) => c.id === state.currentCaseId) ?? null,
-      addCase: (c) => {
+      addCase: async (c) => {
+        if (!isMockMode) {
+          const clinicId = profile?.clinicIds[0];
+          if (!clinicId || !profile) return false;
+          const ok = await insertCase(c, clinicId, profile.id);
+          if (!ok) return false;
+        }
         setState((prev) => ({
           ...prev,
           cases: [c, ...prev.cases],
           currentCaseId: c.id,
         }));
-        // Write-through to Supabase (no-op when unconfigured/offline).
-        void insertCase(c);
+        return true;
       },
       setCurrentCase: (id) =>
         setState((prev) => ({ ...prev, currentCaseId: id })),
       hydrated: state.hydrated,
     }),
-    [state]
+    [state, profile]
   );
 
   return <CaseContext.Provider value={value}>{children}</CaseContext.Provider>;

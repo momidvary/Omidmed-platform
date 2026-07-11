@@ -41,6 +41,7 @@ export default function NewCasePage() {
   const [form, setForm] = useState<FormState>(emptyForm);
   const [errors, setErrors] = useState<Errors>({});
   const [submitting, setSubmitting] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   function set<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -59,10 +60,11 @@ export default function NewCasePage() {
     return Object.keys(next).length === 0;
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!validate()) return;
     setSubmitting(true);
+    setSaveError(null);
 
     const newCase: PatientCase = {
       id: uuid(),
@@ -86,7 +88,15 @@ export default function NewCasePage() {
       region: form.region || undefined,
     };
 
-    addCase(newCase);
+    const ok = await addCase(newCase);
+    if (!ok) {
+      // Keep the form exactly as typed — nothing is lost on a failed save.
+      setSubmitting(false);
+      setSaveError(
+        "Save failed — your input has been kept. Check the connection (or that your account belongs to a clinic) and try again."
+      );
+      return;
+    }
     router.push("/case-analysis");
   }
 
@@ -275,6 +285,12 @@ export default function NewCasePage() {
         </Card>
 
         <Disclaimer />
+
+        {saveError && (
+          <p className="rounded-xl bg-[var(--color-danger-soft)] px-4 py-3 text-sm text-[var(--color-danger)]">
+            {saveError}
+          </p>
+        )}
 
         <div className="flex items-center justify-end gap-3">
           <Button

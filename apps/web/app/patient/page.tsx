@@ -1,7 +1,11 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { usePatient } from "@/lib/store/PatientContext";
+import { PhoneOtpLogin } from "@/components/auth/PhoneOtpLogin";
+import { UnlinkedScreen } from "@/components/auth/ClinicianGate";
+import { translate } from "@/lib/i18n/translations";
 import { exerciseFa } from "@/lib/data/exerciseFa";
 import {
   buildPatientChatReply,
@@ -42,11 +46,18 @@ const tabs: { id: Tab; label: string; icon: React.ComponentProps<typeof Icon>["n
 
 export default function PatientPortalPage() {
   const { patient, hydrated } = usePatient();
-  const { session, loading } = useAuth();
+  const { session, profile, loading } = useAuth();
+  const router = useRouter();
+
+  // Staff accounts belong in the clinician workspace.
+  const isStaff = !!profile && profile.role !== "patient";
+  useEffect(() => {
+    if (!isMockMode && isStaff) router.replace("/");
+  }, [isStaff, router]);
 
   const waiting = !hydrated || (!isMockMode && loading);
   // Signed in but not yet linked to a patient record by the clinic.
-  const unlinked = !isMockMode && session && hydrated && !patient;
+  const unlinked = !isMockMode && session && hydrated && !isStaff && !patient;
 
   return (
     <div
@@ -66,26 +77,11 @@ export default function PatientPortalPage() {
   );
 }
 
-/** Signed in, but the clinic hasn't linked this account to a patient yet. */
+/** Signed in but not linked to a patient record: sign out + generic message. */
 function UnlinkedNotice() {
-  const { signOut } = useAuth();
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center px-5 py-10 text-center">
-      <Card>
-        <CardBody className="space-y-4">
-          <p className="text-sm font-semibold text-[var(--color-ink)]">
-            حساب شما هنوز به پرونده‌ای متصل نشده است
-          </p>
-          <p className="text-xs leading-relaxed text-[var(--color-ink-soft)]">
-            ورود شما موفق بود، اما کلینیک هنوز حساب شما را به پرونده درمانی‌تان
-            متصل نکرده است. لطفاً با کلینیک خود تماس بگیرید و ایمیل ثبت‌نامی‌تان
-            را اعلام کنید.
-          </p>
-          <Button variant="secondary" className="w-full" onClick={signOut}>
-            خروج از حساب
-          </Button>
-        </CardBody>
-      </Card>
+    <div className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center px-5 py-10">
+      <UnlinkedScreen message="حساب کاربری شما هنوز به یک کلینیک یا پرونده معتبر متصل نشده است. لطفاً با مدیر مجموعه تماس بگیرید." />
       <Disclaimer fa className="mt-6" />
     </div>
   );
@@ -126,7 +122,7 @@ function DemoPicker() {
         </p>
         <p className="text-xs leading-relaxed text-[var(--color-ink-soft)]">
           این نسخه آزمایشی است و داده‌ها فقط در همین مرورگر ذخیره می‌شوند. در
-          نسخه اصلی، بیماران با ایمیل و رمز عبور وارد می‌شوند.
+          نسخه اصلی، بیماران با شماره موبایل و کد یک‌بارمصرف وارد می‌شوند.
         </p>
         <Button className="w-full" onClick={() => openDemoPatient(0)}>
           بیمار دمو ۱ — توان‌بخشی زانو
@@ -143,112 +139,9 @@ function DemoPicker() {
   );
 }
 
-/** Supabase mode: real sign-in / sign-up with Supabase Auth. */
+/** Supabase mode: phone-OTP sign-in (the portal is Persian-native). */
 function PatientAuth() {
-  const { signIn, signUp } = useAuth();
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
-  const [fullName, setFullName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
-    setBusy(true);
-    setError(null);
-    setNotice(null);
-    const err =
-      mode === "signin"
-        ? await signIn(email.trim(), password)
-        : await signUp(email.trim(), password, fullName.trim());
-    setBusy(false);
-    if (err) {
-      setError(err);
-    } else if (mode === "signup") {
-      setNotice(
-        "حساب ساخته شد. اگر تأیید ایمیل فعال باشد، ابتدا ایمیل خود را تأیید کنید؛ سپس کلینیک باید حساب شما را به پرونده‌تان متصل کند."
-      );
-    }
-  }
-
-  return (
-    <Card>
-      <CardBody className="space-y-4">
-        <div className="flex gap-1 rounded-xl bg-[var(--color-surface-muted)] p-1">
-          {(["signin", "signup"] as const).map((m) => (
-            <button
-              key={m}
-              type="button"
-              onClick={() => {
-                setMode(m);
-                setError(null);
-              }}
-              className={cn(
-                "flex-1 rounded-lg py-2 text-[13px] font-medium transition-colors",
-                mode === m
-                  ? "bg-white text-[var(--color-ink)] shadow-sm"
-                  : "text-[var(--color-ink-faint)]"
-              )}
-            >
-              {m === "signin" ? "ورود" : "ثبت‌نام"}
-            </button>
-          ))}
-        </div>
-
-        <form onSubmit={submit} className="space-y-3">
-          {mode === "signup" && (
-            <Field label="نام و نام خانوادگی" required>
-              <Input
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                placeholder="مثلاً رضا کریمی"
-              />
-            </Field>
-          )}
-          <Field label="ایمیل" required>
-            <Input
-              type="email"
-              dir="ltr"
-              autoComplete="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
-            />
-          </Field>
-          <Field
-            label="رمز عبور"
-            required
-            error={error ?? undefined}
-            hint={mode === "signup" ? "حداقل ۶ کاراکتر" : undefined}
-          >
-            <Input
-              type="password"
-              dir="ltr"
-              autoComplete={mode === "signin" ? "current-password" : "new-password"}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-            />
-          </Field>
-          <Button type="submit" className="w-full" disabled={busy}>
-            {busy ? "لطفاً صبر کنید…" : mode === "signin" ? "ورود به پرتال" : "ساخت حساب"}
-          </Button>
-        </form>
-
-        {notice && (
-          <p className="rounded-lg bg-[var(--color-success-soft)] px-3 py-2 text-[12px] leading-relaxed text-[var(--color-success)]">
-            {notice}
-          </p>
-        )}
-        <p className="text-[11px] leading-relaxed text-[var(--color-ink-faint)]">
-          پس از ثبت‌نام، کلینیک شما باید حساب‌تان را به پرونده درمانی‌تان متصل
-          کند تا برنامه تمرینی را ببینید. کد ملی دیگر برای ورود استفاده نمی‌شود.
-        </p>
-      </CardBody>
-    </Card>
-  );
+  return <PhoneOtpLogin t={(key) => translate("fa", key)} />;
 }
 
 /* ── Dashboard shell ───────────────────────────────────────────── */

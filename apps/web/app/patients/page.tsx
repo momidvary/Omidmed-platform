@@ -118,7 +118,9 @@ export default function PatientsPage() {
         </CardBody>
       </Card>
 
-      {state !== "ready" ? (
+      {!isMockMode && !authLoading && !session ? (
+        <PageState state="denied" t={t} />
+      ) : state !== "ready" ? (
         <PageState state={state as Exclude<LoadState, "ready">} t={t} onRetry={() => { setState("loading"); load(); }} />
       ) : (
         <>

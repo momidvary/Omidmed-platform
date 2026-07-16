@@ -23,14 +23,23 @@ export interface PatientRow {
   address: string | null;
   emergency_contact_name: string | null;
   emergency_contact_phone: string | null;
-  medical_history: string | null;
-  surgical_history: string | null;
-  medications: string | null;
-  allergies: string | null;
   general_notes: string | null;
   status: string;
   created_at: string;
   care_episodes?: EpisodeRow[];
+  /** Flattened from patient_clinical_background (014). clinic_staff has
+   *  no read access to these — they arrive as null for staff. */
+  medical_history?: string | null;
+  surgical_history?: string | null;
+  medications?: string | null;
+  allergies?: string | null;
+}
+
+export interface ClinicalBackgroundInput {
+  medical_history?: string | null;
+  surgical_history?: string | null;
+  medications?: string | null;
+  allergies?: string | null;
 }
 
 export interface EpisodeRow {
@@ -168,7 +177,8 @@ export async function findDuplicatePhone(
 }
 
 export async function createPatient(
-  input: Partial<PatientRow> & { clinic_id: string; created_by: string }
+  input: Partial<PatientRow> & { clinic_id: string; created_by: string },
+  clinical?: ClinicalBackgroundInput
 ): Promise<{ id: string } | null> {
   const client = db();
   if (!client) return null;
@@ -181,6 +191,21 @@ export async function createPatient(
       .single();
     if (error || !data) return false;
     created = data as { id: string };
+    // Clinical background lives in its own table (014) with stricter
+    // RLS: clinic_staff cannot write it (the form hides these fields
+    // for staff, and the database enforces it regardless).
+    const hasClinical =
+      clinical && Object.values(clinical).some((v) => v && String(v).trim());
+    if (hasClinical) {
+      const { error: bgError } = await client
+        .from("patient_clinical_background")
+        .insert({
+          patient_id: created.id,
+          clinic_id: input.clinic_id,
+          ...clinical,
+        });
+      if (bgError) return false;
+    }
     return true;
   });
   return ok ? created : null;
@@ -204,7 +229,8 @@ export async function getPatient(id: string): Promise<PatientRow | null> {
   const { data, error } = await client
     .from("patients")
     .select(
-      `*, care_episodes ( *, sessions ( id, status, session_date, session_number ) )`
+      `*, care_episodes ( *, sessions ( id, status, session_date, session_number ) ),
+       patient_clinical_background ( medical_history, surgical_history, medications, allergies )`
     )
     .eq("id", id)
     .maybeSingle();
@@ -212,7 +238,21 @@ export async function getPatient(id: string): Promise<PatientRow | null> {
     reportSaveStatus("offline");
     return null;
   }
-  return data as PatientRow | null;
+  if (!data) return null;
+  // Flatten the clinical background (null for clinic_staff: RLS hides it).
+  const row = data as PatientRow & {
+    patient_clinical_background?: ClinicalBackgroundInput | ClinicalBackgroundInput[] | null;
+  };
+  const bg = Array.isArray(row.patient_clinical_background)
+    ? row.patient_clinical_background[0]
+    : row.patient_clinical_background;
+  return {
+    ...row,
+    medical_history: bg?.medical_history ?? null,
+    surgical_history: bg?.surgical_history ?? null,
+    medications: bg?.medications ?? null,
+    allergies: bg?.allergies ?? null,
+  };
 }
 
 /* ── Episodes ──────────────────────────────────────────────────── */

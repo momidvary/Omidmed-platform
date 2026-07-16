@@ -44,6 +44,9 @@ export default function NewPatientPage() {
   if (profile.role === "patient" || !clinicId) {
     return <PageState state="denied" t={t} />;
   }
+  // clinic_staff create administrative records only: the clinical
+  // background section is hidden (and blocked by RLS regardless).
+  const isStaff = profile.role === "clinic_staff";
 
   const set = (k: keyof typeof empty, v: string) => {
     setForm((f) => ({ ...f, [k]: v }));
@@ -91,12 +94,16 @@ export default function NewPatientPage() {
       address: form.address.trim() || null,
       emergency_contact_name: form.emergency_contact_name.trim() || null,
       emergency_contact_phone: form.emergency_contact_phone.trim() || null,
-      medical_history: form.medical_history.trim() || null,
-      surgical_history: form.surgical_history.trim() || null,
-      medications: form.medications.trim() || null,
-      allergies: form.allergies.trim() || null,
       general_notes: form.general_notes.trim() || null,
-    });
+    },
+    isStaff
+      ? undefined
+      : {
+          medical_history: form.medical_history.trim() || null,
+          surgical_history: form.surgical_history.trim() || null,
+          medications: form.medications.trim() || null,
+          allergies: form.allergies.trim() || null,
+        });
     setBusy(false);
     if (!created) {
       // The form is kept exactly as typed.
@@ -157,6 +164,7 @@ export default function NewPatientPage() {
           </CardBody>
         </Card>
 
+        {!isStaff && (
         <Card>
           <CardHeader title={t("pm.medicalHistory")} icon={<Icon name="clock" width={18} height={18} />} />
           <CardBody className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -172,11 +180,15 @@ export default function NewPatientPage() {
             <Field label={t("pm.allergies")}>
               <Textarea className="min-h-20" value={form.allergies} onChange={(e) => set("allergies", e.target.value)} />
             </Field>
-            <div className="sm:col-span-2">
-              <Field label={t("pm.adminNotes")}>
-                <Textarea className="min-h-20" value={form.general_notes} onChange={(e) => set("general_notes", e.target.value)} />
-              </Field>
-            </div>
+          </CardBody>
+        </Card>
+        )}
+
+        <Card>
+          <CardBody>
+            <Field label={t("pm.adminNotes")}>
+              <Textarea className="min-h-20" value={form.general_notes} onChange={(e) => set("general_notes", e.target.value)} />
+            </Field>
           </CardBody>
         </Card>
 

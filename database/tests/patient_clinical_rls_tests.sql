@@ -1,5 +1,5 @@
 -- PhysioAI — RLS tests for the patient/clinical module (migrations 010-013).
--- Run AFTER 001→002→003→010→011→012→013 in the Supabase SQL editor.
+-- Run AFTER 001→002→003→010→011→012→013→014 in the Supabase SQL editor.
 -- Same usage as rls_tests.sql: create SIX auth users, paste their UUIDs,
 -- run the file, read PASS lines in the Logs panel. Cleans up after itself.
 
@@ -80,6 +80,35 @@ values
   ('f1111111-1111-4111-8111-11111111111b','c1111111-1111-4111-8111-111111111111',
    'd1111111-1111-4111-8111-111111111111','e1111111-1111-4111-8111-111111111111',
    'a2222222-2222-4222-8222-222222222222', 45, 'deg', (select id from test_ids where name='therapist_a'))
+on conflict (id) do nothing;
+
+
+-- 014 test fixtures: clinical background, an assessment, a second
+-- episode + session (for cross-episode checks), and a clinic-B metric.
+insert into patient_clinical_background (patient_id, clinic_id, medical_history, medications)
+values ('d1111111-1111-4111-8111-111111111111','c1111111-1111-4111-8111-111111111111',
+        'TEST history','TEST meds')
+on conflict (patient_id) do nothing;
+
+insert into assessments (id, clinic_id, patient_id, care_episode_id)
+values ('ac111111-1111-4111-8111-111111111111','c1111111-1111-4111-8111-111111111111',
+        'd1111111-1111-4111-8111-111111111111','e1111111-1111-4111-8111-111111111111')
+on conflict (id) do nothing;
+
+insert into care_episodes (id, clinic_id, patient_id, title_fa, title, status) values
+  ('e3333333-3333-4333-8333-333333333333','c1111111-1111-4111-8111-111111111111',
+   'd1111111-1111-4111-8111-111111111111','TEST Episode 2','TEST Episode 2','active')
+on conflict (id) do nothing;
+
+insert into sessions (id, clinic_id, patient_id, care_episode_id, session_date, status, therapist_id)
+values ('b2222222-2222-4222-8222-222222222222','c1111111-1111-4111-8111-111111111111',
+        'd1111111-1111-4111-8111-111111111111','e3333333-3333-4333-8333-333333333333',
+        current_date, 'draft', (select id from test_ids where name='therapist_a'))
+on conflict (id) do nothing;
+
+insert into progress_metric_definitions (id, clinic_id, name_key, data_type, unit, direction) values
+  ('a3333333-3333-4333-8333-333333333333','c2222222-2222-4222-8222-222222222222',
+   'clinic_b_metric','numeric','deg','higher_is_better')
 on conflict (id) do nothing;
 
 -- ═══ 1: owner B sees nothing of clinic A ════════════════════════
@@ -194,10 +223,138 @@ do $$ begin
   raise notice 'PASS 5: audit log rows recorded';
 end $$;
 
+
+-- ═══ 6 (014): write_audit is not directly executable ════════════
+begin;
+set local role authenticated;
+select set_config('request.jwt.claims', json_build_object('sub',(select id from test_ids where name='owner_a'),'role','authenticated')::text, true);
+do $$ begin
+  begin
+    perform public.write_audit('hack','patient',null,null,null,null,null);
+    raise exception 'FAIL 6: authenticated executed write_audit directly';
+  exception when sqlstate '42501' then
+    raise notice 'PASS 6: write_audit locked down';
+  end;
+end $$;
+rollback;
+
+-- ═══ 7 (014): staff cannot touch or read clinical background ════
+begin;
+set local role authenticated;
+select set_config('request.jwt.claims', json_build_object('sub',(select id from test_ids where name='staff_a'),'role','authenticated')::text, true);
+do $$ begin
+  if exists (select 1 from patient_clinical_background
+             where patient_id='d1111111-1111-4111-8111-111111111111') then
+    raise exception 'FAIL 7a: staff can read clinical background';
+  end if;
+  update patient_clinical_background set medications='hack'
+    where patient_id='d1111111-1111-4111-8111-111111111111';
+  if exists (select 1 from patient_clinical_background
+             where patient_id='d1111111-1111-4111-8111-111111111111' and medications='hack') then
+    raise exception 'FAIL 7b: staff edited medications';
+  end if;
+  -- staff cannot read raw sessions (private notes) but CAN use the admin view
+  if exists (select 1 from sessions where id='b1111111-1111-4111-8111-111111111111') then
+    raise exception 'FAIL 7c: staff read the raw sessions table';
+  end if;
+  if not exists (select 1 from session_admin_view where id='b1111111-1111-4111-8111-111111111111') then
+    raise exception 'FAIL 7d: staff cannot use the admin session view';
+  end if;
+  raise notice 'PASS 7: staff column-level clinical isolation holds';
+end $$;
+rollback;
+
+-- ═══ 8 (014): unassigned therapist cannot READ clinical records ═
+begin;
+set local role authenticated;
+select set_config('request.jwt.claims', json_build_object('sub',(select id from test_ids where name='therapist_a2'),'role','authenticated')::text, true);
+do $$ begin
+  if exists (select 1 from sessions where patient_id='d1111111-1111-4111-8111-111111111111') then
+    raise exception 'FAIL 8a: unassigned therapist read sessions';
+  end if;
+  if exists (select 1 from assessments where patient_id='d1111111-1111-4111-8111-111111111111') then
+    raise exception 'FAIL 8b: unassigned therapist read assessments';
+  end if;
+  raise notice 'PASS 8: clinical read requires assignment (or owner/admin)';
+end $$;
+rollback;
+
+-- ═══ 9 (014): integrity triggers reject mismatches, fix spoofing ═
+begin;
+set local role authenticated;
+select set_config('request.jwt.claims', json_build_object('sub',(select id from test_ids where name='therapist_a'),'role','authenticated')::text, true);
+do $$
+declare sid uuid; cb uuid; pid uuid;
+begin
+  -- forged patient_id + created_by are corrected server-side
+  insert into sessions (clinic_id, patient_id, care_episode_id, session_date, status, therapist_id, created_by)
+  values ('c2222222-2222-4222-8222-222222222222',       -- forged clinic
+          'd2222222-2222-4222-8222-222222222222',       -- forged patient
+          'e1111111-1111-4111-8111-111111111111', current_date, 'draft',
+          (select id from test_ids where name='therapist_a'),
+          (select id from test_ids where name='owner_b'))  -- forged author
+  returning id, created_by, patient_id into sid, cb, pid;
+  if pid <> 'd1111111-1111-4111-8111-111111111111' then
+    raise exception 'FAIL 9a: patient_id not corrected from episode';
+  end if;
+  if cb <> (select id from test_ids where name='therapist_a') then
+    raise exception 'FAIL 9b: created_by not forced to auth.uid()';
+  end if;
+  -- measurement bound to a session from ANOTHER episode is rejected
+  begin
+    insert into clinical_measurements (clinic_id, patient_id, care_episode_id,
+        session_id, metric_definition_id, numeric_value, unit, therapist_id)
+    values ('c1111111-1111-4111-8111-111111111111','d1111111-1111-4111-8111-111111111111',
+            'e1111111-1111-4111-8111-111111111111',
+            'b2222222-2222-4222-8222-222222222222',   -- session of episode 2!
+            'a1111111-1111-4111-8111-111111111111', 10, 'deg',
+            (select id from test_ids where name='therapist_a'));
+    raise exception 'FAIL 9c: cross-episode session accepted';
+  exception when others then
+    if sqlerrm not like '%does not belong%' then raise; end if;
+  end;
+  -- metric definition from another clinic is rejected
+  begin
+    insert into clinical_measurements (clinic_id, patient_id, care_episode_id,
+        metric_definition_id, numeric_value, unit, therapist_id)
+    values ('c1111111-1111-4111-8111-111111111111','d1111111-1111-4111-8111-111111111111',
+            'e1111111-1111-4111-8111-111111111111',
+            'a3333333-3333-4333-8333-333333333333', 10, 'deg',
+            (select id from test_ids where name='therapist_a'));
+    raise exception 'FAIL 9d: other-clinic metric definition accepted';
+  exception when others then
+    if sqlerrm not like '%another clinic%' then raise; end if;
+  end;
+  raise notice 'PASS 9: integrity triggers enforce consistency + authorship';
+end $$;
+rollback;
+
+-- ═══ 10 (014): duplicate session number rejected ════════════════
+begin;
+set local role authenticated;
+select set_config('request.jwt.claims', json_build_object('sub',(select id from test_ids where name='therapist_a'),'role','authenticated')::text, true);
+do $$
+declare existing_no int;
+begin
+  select session_number into existing_no from sessions
+    where id='b1111111-1111-4111-8111-111111111111';
+  begin
+    insert into sessions (clinic_id, patient_id, care_episode_id, session_number,
+                          session_date, status, therapist_id)
+    values ('c1111111-1111-4111-8111-111111111111','d1111111-1111-4111-8111-111111111111',
+            'e1111111-1111-4111-8111-111111111111', existing_no, current_date, 'draft',
+            (select id from test_ids where name='therapist_a'));
+    raise exception 'FAIL 10: duplicate session_number accepted';
+  exception when unique_violation then
+    raise notice 'PASS 10: (care_episode_id, session_number) is unique';
+  end;
+end $$;
+rollback;
+
 -- ═══ Cleanup ════════════════════════════════════════════════════
-delete from care_episodes where id='e1111111-1111-4111-8111-111111111111';
+delete from care_episodes where id in ('e1111111-1111-4111-8111-111111111111','e3333333-3333-4333-8333-333333333333');
 delete from patients where id in ('d1111111-1111-4111-8111-111111111111','d2222222-2222-4222-8222-222222222222');
-delete from progress_metric_definitions where id in ('a1111111-1111-4111-8111-111111111111','a2222222-2222-4222-8222-222222222222');
+delete from progress_metric_definitions where id in ('a1111111-1111-4111-8111-111111111111','a2222222-2222-4222-8222-222222222222','a3333333-3333-4333-8333-333333333333');
 delete from clinic_members where clinic_id in ('c1111111-1111-4111-8111-111111111111','c2222222-2222-4222-8222-222222222222');
 delete from clinics where id in ('c1111111-1111-4111-8111-111111111111','c2222222-2222-4222-8222-222222222222');
 delete from audit_logs where patient_id='d1111111-1111-4111-8111-111111111111';

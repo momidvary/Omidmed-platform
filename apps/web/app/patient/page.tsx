@@ -20,7 +20,7 @@ import { Icon } from "@/components/ui/Icon";
 import { Disclaimer, Spinner } from "@/components/ui/Misc";
 import { cn, uid, uuid } from "@/lib/utils";
 import { useAuth } from "@/lib/store/AuthContext";
-import { isMockMode } from "@/lib/config";
+import { isMockMode, authMode } from "@/lib/config";
 import { SaveStatusPill } from "@/components/ui/SaveStatusPill";
 
 const statusLabelsFa = {
@@ -122,7 +122,7 @@ function DemoPicker() {
         </p>
         <p className="text-xs leading-relaxed text-[var(--color-ink-soft)]">
           این نسخه آزمایشی است و داده‌ها فقط در همین مرورگر ذخیره می‌شوند. در
-          نسخه اصلی، بیماران با شماره موبایل و کد یک‌بارمصرف وارد می‌شوند.
+          نسخه اصلی، بیماران با حساب کاربری خود وارد می‌شوند.
         </p>
         <Button className="w-full" onClick={() => openDemoPatient(0)}>
           بیمار دمو ۱ — توان‌بخشی زانو
@@ -139,9 +139,118 @@ function DemoPicker() {
   );
 }
 
-/** Supabase mode: phone-OTP sign-in (the portal is Persian-native). */
+/** Supabase mode sign-in (the portal is Persian-native). The auth mode
+ *  only changes how the patient signs in; which patient record they see
+ *  is always decided by patient_users + RLS, never by the login method. */
 function PatientAuth() {
-  return <PhoneOtpLogin t={(key) => translate("fa", key)} />;
+  if (authMode === "phone_otp") {
+    return <PhoneOtpLogin t={(key) => translate("fa", key)} />;
+  }
+  return <PatientEmailAuth />;
+}
+
+/** Email/password sign-in / sign-up (auth mode "email_password"). */
+function PatientEmailAuth() {
+  const { signIn, signUp } = useAuth();
+  const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setError(null);
+    setNotice(null);
+    const err =
+      mode === "signin"
+        ? await signIn(email.trim(), password)
+        : await signUp(email.trim(), password, fullName.trim());
+    setBusy(false);
+    if (err) {
+      setError(err);
+    } else if (mode === "signup") {
+      setNotice(
+        "حساب ساخته شد. اگر تأیید ایمیل فعال باشد، ابتدا ایمیل خود را تأیید کنید؛ سپس کلینیک باید حساب شما را به پرونده‌تان متصل کند."
+      );
+    }
+  }
+
+  return (
+    <Card>
+      <CardBody className="space-y-4">
+        <div className="flex gap-1 rounded-xl bg-[var(--color-surface-muted)] p-1">
+          {(["signin", "signup"] as const).map((m) => (
+            <button
+              key={m}
+              type="button"
+              onClick={() => {
+                setMode(m);
+                setError(null);
+              }}
+              className={cn(
+                "flex-1 rounded-lg py-2 text-[13px] font-medium transition-colors",
+                mode === m
+                  ? "bg-white text-[var(--color-ink)] shadow-sm"
+                  : "text-[var(--color-ink-faint)]"
+              )}
+            >
+              {m === "signin" ? "ورود" : "ثبت‌نام"}
+            </button>
+          ))}
+        </div>
+
+        <form onSubmit={submit} className="space-y-3">
+          {mode === "signup" && (
+            <Field label="نام و نام خانوادگی" required>
+              <Input
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                placeholder="مثلاً رضا کریمی"
+              />
+            </Field>
+          )}
+          <Field label="ایمیل" required>
+            <Input
+              type="email"
+              dir="ltr"
+              autoComplete="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@example.com"
+            />
+          </Field>
+          <Field
+            label="رمز عبور"
+            required
+            error={error ?? undefined}
+            hint={mode === "signup" ? "حداقل ۶ کاراکتر" : undefined}
+          >
+            <Input
+              type="password"
+              dir="ltr"
+              autoComplete={mode === "signin" ? "current-password" : "new-password"}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
+            />
+          </Field>
+          <Button type="submit" className="w-full" disabled={busy}>
+            {busy ? "لطفاً صبر کنید…" : mode === "signin" ? "ورود به پرتال" : "ساخت حساب"}
+          </Button>
+        </form>
+
+        {notice && (
+          <p className="rounded-xl bg-[var(--color-success-soft)] px-3.5 py-2.5 text-[12px] leading-relaxed text-[var(--color-success)]">
+            {notice}
+          </p>
+        )}
+      </CardBody>
+    </Card>
+  );
 }
 
 /* ── Dashboard shell ───────────────────────────────────────────── */

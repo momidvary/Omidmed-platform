@@ -1,22 +1,29 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/store/AuthContext";
 import { useLocale } from "@/lib/store/LocaleContext";
-import { isMockMode } from "@/lib/config";
+import { isMockMode, authMode } from "@/lib/config";
 import { roleHomePath } from "@/lib/auth/redirect";
 import { PhoneOtpLogin } from "./PhoneOtpLogin";
 import { Card, CardBody } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
+import { Field, Input } from "@/components/ui/Form";
 import { Icon } from "@/components/ui/Icon";
 import { Spinner } from "@/components/ui/Misc";
 
 /**
- * Wraps the clinician app. Supabase mode requires a phone-OTP session
- * with a linked staff role; patients are redirected to /patient; accounts
+ * Wraps the clinician app. Supabase mode requires a signed-in session
+ * (email/password or phone OTP depending on NEXT_PUBLIC_AUTH_MODE) with
+ * a linked staff role; patients are redirected to /patient; accounts
  * without a valid profile/linkage are signed out with a generic message.
  * Mock mode (dev/demo) passes straight through.
+ *
+ * The auth mode only changes HOW users sign in — authorization always
+ * comes from auth.uid() + profiles/clinic_members (RLS), never from the
+ * sign-in method.
  */
 export function ClinicianGate({ children }: { children: React.ReactNode }) {
   const { session, profile, loading } = useAuth();
@@ -43,7 +50,7 @@ export function ClinicianGate({ children }: { children: React.ReactNode }) {
             {t("otp.title")} — PhysioAI
           </h2>
         </div>
-        <PhoneOtpLogin t={t} />
+        {authMode === "phone_otp" ? <PhoneOtpLogin t={t} /> : <EmailLogin />}
       </div>
     );
   }
@@ -56,6 +63,65 @@ export function ClinicianGate({ children }: { children: React.ReactNode }) {
   }
 
   return <>{children}</>;
+}
+
+/** Email/password sign-in form (auth mode "email_password"). */
+function EmailLogin() {
+  const { signIn } = useAuth();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setError(null);
+    const err = await signIn(email.trim(), password);
+    setBusy(false);
+    if (err) setError(err);
+  }
+
+  return (
+    <Card>
+      <CardBody>
+        <form onSubmit={submit} className="space-y-4">
+          <Field label="Email" required>
+            <Input
+              type="email"
+              dir="ltr"
+              autoComplete="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@clinic.com"
+            />
+          </Field>
+          <Field label="Password" required error={error ?? undefined}>
+            <Input
+              type="password"
+              dir="ltr"
+              autoComplete="current-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
+            />
+          </Field>
+          <Button type="submit" className="w-full" disabled={busy}>
+            {busy ? "Signing in…" : "Sign in"}
+          </Button>
+        </form>
+        <p className="mt-4 text-center text-xs text-[var(--color-ink-faint)]">
+          Patient?{" "}
+          <Link
+            href="/patient"
+            className="text-[var(--color-primary-strong)] underline"
+          >
+            پرتال بیمار
+          </Link>
+        </p>
+      </CardBody>
+    </Card>
+  );
 }
 
 /** Signs the session out and shows only a generic message. */

@@ -43,7 +43,17 @@ interface AuthContextValue {
   session: Session | null;
   profile: AuthProfile | null;
   loading: boolean;
-  /** Send an OTP to an E.164 phone. Never creates a user. */
+  /** Email/password sign-in (auth mode "email_password"). */
+  signIn: (email: string, password: string) => Promise<string | null>;
+  /** Email/password sign-up (patient self-registration; the clinic must
+   *  still link the account before any data is visible). */
+  signUp: (
+    email: string,
+    password: string,
+    fullName: string
+  ) => Promise<string | null>;
+  /** Send an OTP to an E.164 phone (auth mode "phone_otp").
+   *  Never creates a user. */
   sendOtp: (
     phoneE164: string,
     captchaToken?: string
@@ -158,6 +168,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       session,
       profile,
       loading,
+      signIn: async (email, password) => {
+        const supabase = getSupabase();
+        if (!supabase) return "Supabase not configured";
+        const { error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+        return error ? error.message : null;
+      },
+      signUp: async (email, password, fullName) => {
+        const supabase = getSupabase();
+        if (!supabase) return "Supabase not configured";
+        const { error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: { data: { full_name: fullName } },
+        });
+        return error ? error.message : null;
+      },
       sendOtp: async (phoneE164, captchaToken) => {
         const supabase = getSupabase();
         if (!supabase) return "generic";

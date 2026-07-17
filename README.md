@@ -49,17 +49,28 @@ Real Supabase Auth with role-based, clinic-isolated access:
   Each clinic sees only its own data; therapists see their clinic's or
   assigned patients; patients see only themselves.
 - **Dev seed** (never for production): `database/seed/seed.dev.sql`.
-- **Sign-in**: phone OTP for ALL roles — one flow (country code + mobile
-  + optional Turnstile CAPTCHA → 6-digit SMS code), `shouldCreateUser:
-  false` so unknown numbers can never self-register. No email/password,
-  no magic links, no national-ID login (national ID is a record field
-  only). SMS delivery via the Send SMS Hook Edge Function
-  (`supabase/functions/send-auth-sms`, Kavenegar / mock providers).
-  Accounts are provisioned by admins/clinics through audited server
-  routes (`/api/admin/clinic-owners`, `/api/clinic/members`,
-  `/api/clinic/patients/link`, `/api/admin/recover-phone`).
+- **Sign-in** is provider-neutral via `NEXT_PUBLIC_AUTH_MODE`
+  (authorization always comes from `auth.uid()` + `profiles` /
+  `clinic_members` / `patient_users` / `patient_therapists` — never
+  from the login method, so switching modes never changes roles, RLS
+  or clinical data):
+  - `email_password` (default) — Supabase email + password; works with
+    no SMS provider configured, so the app is testable immediately.
+  - `phone_otp` — one flow for ALL roles (country code + mobile +
+    optional Turnstile CAPTCHA → 6-digit SMS code),
+    `shouldCreateUser: false` so unknown numbers can never
+    self-register. No magic links, no national-ID login (national ID
+    is a record field only). SMS delivery via the Send SMS Hook Edge
+    Function (`supabase/functions/send-auth-sms`; MeliPayamak default,
+    Kavenegar / mock providers kept). If the SMS provider isn't
+    configured the login page shows a clear "could not send the SMS"
+    message — the app never crashes. Accounts are provisioned by
+    admins/clinics through audited server routes
+    (`/api/admin/clinic-owners`, `/api/clinic/members`,
+    `/api/clinic/patients/link`, `/api/admin/recover-phone`).
   Setup guides (Persian): `docs/PHONE_OTP_ALL_USERS_FA.md`,
-  `docs/KAVENEGAR_SETUP_FA.md`, `docs/SUPABASE_SEND_SMS_HOOK_FA.md`,
+  `docs/MELIPAYAMAK_SETUP_FA.md`, `docs/KAVENEGAR_SETUP_FA.md`,
+  `docs/SUPABASE_SEND_SMS_HOOK_FA.md`,
   `docs/CREATE_FIRST_PHONE_ADMIN_FA.md`,
   `docs/PHONE_ACCOUNT_RECOVERY_FA.md`.
 - **Env**: copy `apps/web/.env.local.example` to `.env.local`
@@ -155,9 +166,10 @@ shape, and the UI works unchanged. Keep API keys server-side.
 `/patients` adds real patient records, multi-episode care, initial
 assessments (9 region templates), treatment-session documentation with
 draft/finalise, therapist-recorded clinical measurements with per-region
-metric templates, and a per-episode progress dashboard. Migrations
-`010_patient_core.sql` → `011` → `012` → `013_patient_clinical_rls.sql`
-run sequentially after 001–003; RLS scenarios in
+metric templates, and a per-episode progress dashboard. Migrations run
+sequentially: `001 → 002 → 003 → 004 → 010 → 011 → 012 → 013 → 014`
+(004 is phone-OTP support; 010–014 are the clinical module + security
+hardening); RLS scenarios in
 `database/tests/patient_clinical_rls_tests.sql`. Persian guides:
 `docs/PATIENT_MANAGEMENT_FA.md`, `CARE_EPISODE_FA.md`,
 `INITIAL_ASSESSMENT_FA.md`, `SESSION_DOCUMENTATION_FA.md`,

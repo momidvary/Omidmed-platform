@@ -2,14 +2,15 @@
 
 ## چرا Hook؟
 Supabase خودش OTP را تولید و اعتبارسنجی می‌کند؛ ما فقط «تحویل پیامک» را
-به دست می‌گیریم تا از سرویس ایرانی (کاوه‌نگار) استفاده شود. کد OTP هرگز
-در دیتابیس برنامه ذخیره و هرگز در UI/Log نمایش داده نمی‌شود.
+به دست می‌گیریم تا از سرویس ایرانی (پیش‌فرض: **ملی‌پیامک**) استفاده
+شود. کد OTP هرگز در دیتابیس برنامه ذخیره و هرگز در UI/Log نمایش داده
+نمی‌شود.
 
 ## مسیر پیام
 ```
 کاربر → signInWithOtp → Supabase Auth (تولید کد)
       → Send SMS Hook (امضاشده) → Edge Function send-auth-sms
-      → SmsProvider (Kavenegar | Mock) → پیامک به کاربر
+      → SmsProvider (MeliPayamak | Kavenegar | Mock) → پیامک به کاربر
 ```
 
 ## Edge Function: `supabase/functions/send-auth-sms/index.ts`
@@ -23,6 +24,8 @@ Supabase خودش OTP را تولید و اعتبارسنجی می‌کند؛ م
 6. تابع هرگز خودش OTP نمی‌سازد.
 
 ## معماری Provider
+پیاده‌سازی Providerها در `supabase/functions/send-auth-sms/providers.ts`
+است (جدا از `index.ts` تا با vitest تست واحد شود):
 ```ts
 interface SmsProvider {
   name: string;
@@ -30,12 +33,20 @@ interface SmsProvider {
     : Promise<SmsSendResult>;
 }
 ```
-- `KavenegarSmsProvider` — Verify Lookup با قالب تأییدشده.
+- `MeliPayamakSmsProvider` — **پیش‌فرض**؛ ارسال با الگوی خدماتی
+  (bodyId) از طریق REST کنسول ملی‌پیامک؛ خطاها به برچسب‌های امن نگاشت
+  می‌شوند (`insufficient_credit`، `invalid_api_key`، `invalid_pattern`،
+  `invalid_number`، `rate_limited`، `network`).
+- `KavenegarSmsProvider` — جایگزین؛ Verify Lookup با قالب تأییدشده.
 - `MockSmsProvider` — فقط توسعه؛ با برچسب `[DEVELOPMENT MOCK]` و بدون
   نمایش کد.
 - افزودن Provider جدید = یک کلاس جدید + مقدار جدید `SMS_PROVIDER`؛
   صفحه ورود و Supabase Auth هیچ تغییری نمی‌خواهند.
 
+شماره‌ها در Supabase و دیتابیس همیشه E.164 هستند (+98912…)؛ فقط داخل
+Provider برای API ایرانی به فرمت محلی (0912…) تبدیل می‌شوند.
+
 ## Deploy و Secrets
-به `docs/KAVENEGAR_SETUP_FA.md` مراجعه کنید (secrets فقط در Supabase
-Secrets؛ هرگز در کد یا env کلاینت).
+به `docs/MELIPAYAMAK_SETUP_FA.md` (پیش‌فرض) یا
+`docs/KAVENEGAR_SETUP_FA.md` (جایگزین) مراجعه کنید — secrets فقط در
+Supabase Secrets؛ هرگز در کد، گیت‌هاب یا env کلاینت.

@@ -36,7 +36,14 @@ Session با `@supabase/ssr` حفظ می‌شود: رفرش صفحه باعث خ
 - فاصله ارسال مجدد در UI: ۶۰ ثانیه؛ Supabase هم حداقل فاصله خودش را
   دارد (`sms_otp` throttle).
 همچنین Authentication → Attack Protection → CAPTCHA را با کلید
-Turnstile فعال کنید (راهنمای CAPTCHA در KAVENEGAR_SETUP_FA.md بخش آخر).
+Turnstile فعال کنید (راهنمای CAPTCHA در MELIPAYAMAK_SETUP_FA.md بخش آخر).
+
+## سرویس ارسال پیامک
+Provider پیش‌فرض **ملی‌پیامک** است — راه‌اندازی کامل (وب‌سرویس، کلید
+API، الگوی خدماتی، secrets، deploy، تست واقعی و رفع خطا) در
+`docs/MELIPAYAMAK_SETUP_FA.md`. کاوه‌نگار به‌عنوان جایگزین پشتیبانی
+می‌شود (`docs/KAVENEGAR_SETUP_FA.md`). در هر دو حالت، کد OTP را فقط
+Supabase تولید می‌کند و کلیدها فقط در Supabase Secrets هستند.
 
 ## چک‌لیست تست دستی (بعد از راه‌اندازی پیامک واقعی)
 برای هر پنج نقش یک شماره واقعی آماده کنید و این‌ها را تیک بزنید:

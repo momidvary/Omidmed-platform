@@ -33,8 +33,13 @@ function report(status: SaveStatus) {
   listeners.forEach((cb) => cb(status));
 }
 
+/** Report a status change (shared with the clinical data layer). */
+export function reportSaveStatus(status: SaveStatus) {
+  report(status);
+}
+
 /** Wrap a write: emits saving → saved / save_failed and returns success. */
-async function trackedWrite(op: () => Promise<boolean>): Promise<boolean> {
+export async function trackedWrite(op: () => Promise<boolean>): Promise<boolean> {
   report("saving");
   try {
     const ok = await op();

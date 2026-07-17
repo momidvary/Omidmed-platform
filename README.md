@@ -139,3 +139,17 @@ shape, and the UI works unchanged. Keep API keys server-side.
 - Multi-user accounts & cloud persistence (Supabase)
 - Progress tracking and outcome-measure charts
 - Printable/PDF patient handouts
+
+## Patient Management module (feature branch)
+
+`/patients` adds real patient records, multi-episode care, initial
+assessments (9 region templates), treatment-session documentation with
+draft/finalise, therapist-recorded clinical measurements with per-region
+metric templates, and a per-episode progress dashboard. Migrations
+`010_patient_core.sql` → `011` → `012` → `013_patient_clinical_rls.sql`
+run sequentially after 001–003; RLS scenarios in
+`database/tests/patient_clinical_rls_tests.sql`. Persian guides:
+`docs/PATIENT_MANAGEMENT_FA.md`, `CARE_EPISODE_FA.md`,
+`INITIAL_ASSESSMENT_FA.md`, `SESSION_DOCUMENTATION_FA.md`,
+`CLINICAL_MEASUREMENTS_FA.md`, `PATIENT_PROGRESS_FA.md`,
+`PATIENT_RLS_TEST_FA.md`. Unit tests: `cd apps/web && npm test`.

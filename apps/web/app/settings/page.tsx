@@ -9,6 +9,7 @@ import { Disclaimer, PageIntro } from "@/components/ui/Misc";
 import { useLocale } from "@/lib/store/LocaleContext";
 import { locales, type Locale } from "@/lib/i18n/translations";
 import { isSupabaseConfigured } from "@/lib/supabase/client";
+import { AccountAdminCards } from "@/components/settings/AccountAdminCards";
 
 export default function SettingsPage() {
   const { locale, setLocale, t } = useLocale();
@@ -173,6 +174,8 @@ export default function SettingsPage() {
           </Button>
         </CardBody>
       </Card>
+
+      <AccountAdminCards />
 
       <Disclaimer />
     </div>

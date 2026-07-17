@@ -42,11 +42,19 @@ Do not rebuild ordering/e-commerce features.
   isolated per clinic; therapists see their clinic's or assigned patients;
   patients see only themselves. One patient can have multiple
   care_episodes.
-- Patient Portal at `/patient` (Persian, RTL, Vazirmatn font): Supabase
-  email+password auth (sign-up + clinic links the account via
-  patient_users). National-ID login is REMOVED — never reintroduce it as
-  a credential; national_id is a record field only. Persian exercise
-  content in `apps/web/lib/data/exerciseFa.ts`.
+- Auth is PHONE OTP ONLY for all five roles (single flow in
+  `components/auth/PhoneOtpLogin.tsx`, `shouldCreateUser:false`; accounts
+  provisioned via audited server routes under `app/api/`). Never add
+  email/password, magic-link, or national-ID login; national_id is a
+  record field only. Phone normalization lives in `lib/phone.ts` (E.164,
+  fa/ar digits) with tests in `lib/__tests__` (`npm test`). SMS delivery:
+  `supabase/functions/send-auth-sms` (Kavenegar/mock providers; secrets
+  only in Supabase Secrets). Persian guides: docs/PHONE_OTP_ALL_USERS_FA,
+  KAVENEGAR_SETUP_FA, SUPABASE_SEND_SMS_HOOK_FA,
+  CREATE_FIRST_PHONE_ADMIN_FA, PHONE_ACCOUNT_RECOVERY_FA.
+- Patient Portal at `/patient` (Persian, RTL, Vazirmatn font); clinic
+  links accounts via patient_users. Persian exercise content in
+  `apps/web/lib/data/exerciseFa.ts`.
 - Data modes (`lib/config.ts`): mock mode (NEXT_PUBLIC_DATA_MODE=mock or
   missing env) = local demo, no auth. Real mode = no localStorage
   fallback; storage status shown via `SaveStatusPill` (Connected/Saving/

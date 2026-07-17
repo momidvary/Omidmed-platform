@@ -49,10 +49,19 @@ Real Supabase Auth with role-based, clinic-isolated access:
   Each clinic sees only its own data; therapists see their clinic's or
   assigned patients; patients see only themselves.
 - **Dev seed** (never for production): `database/seed/seed.dev.sql`.
-- **Sign-in**: email + password (clinicians at `/`, patients at
-  `/patient` with sign-up). National-ID login is removed; the national ID
-  is a record field only. Phone OTP requires an SMS provider configured
-  in Supabase (see `docs/RAHNAMA-FA.md`).
+- **Sign-in**: phone OTP for ALL roles — one flow (country code + mobile
+  + optional Turnstile CAPTCHA → 6-digit SMS code), `shouldCreateUser:
+  false` so unknown numbers can never self-register. No email/password,
+  no magic links, no national-ID login (national ID is a record field
+  only). SMS delivery via the Send SMS Hook Edge Function
+  (`supabase/functions/send-auth-sms`, Kavenegar / mock providers).
+  Accounts are provisioned by admins/clinics through audited server
+  routes (`/api/admin/clinic-owners`, `/api/clinic/members`,
+  `/api/clinic/patients/link`, `/api/admin/recover-phone`).
+  Setup guides (Persian): `docs/PHONE_OTP_ALL_USERS_FA.md`,
+  `docs/KAVENEGAR_SETUP_FA.md`, `docs/SUPABASE_SEND_SMS_HOOK_FA.md`,
+  `docs/CREATE_FIRST_PHONE_ADMIN_FA.md`,
+  `docs/PHONE_ACCOUNT_RECOVERY_FA.md`.
 - **Env**: copy `apps/web/.env.local.example` to `.env.local`
   (URL + publishable key). Same vars on Vercel.
 - **Data modes**: real mode has no localStorage fallback; the topbar
@@ -114,6 +123,7 @@ localStorage.
 | `database/migrations/001_schema.sql` | Core schema (roles, clinics, patients, care episodes…) |
 | `database/migrations/002_rls.sql` | Row Level Security — no anon access |
 | `database/migrations/003_security_fixes.sql` | Admin bootstrap, granular role access, reply hardening, patient logs vs clinical measurements |
+| `database/migrations/004_phone_otp.sql` | Unique normalized phone on profiles, audit_logs, phone-based admin bootstrap |
 | `database/seed/seed.dev.sql` | Development-only demo data |
 | `database/tests/rls_tests.sql` | Runnable RLS isolation test scenarios |
 | `docs/RAHNAMA-FA.md` | Persian step-by-step setup guide |

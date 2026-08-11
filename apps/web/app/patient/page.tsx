@@ -259,11 +259,21 @@ function PatientAuth() {
 
 /* ── Dashboard shell ───────────────────────────────────────────── */
 
+/**
+ * A ticket is answered once the therapist has actually replied. The stored
+ * status is honoured as well, but deriving it means the AI acknowledgement
+ * never reads as an answer, and rows written before the status was
+ * maintained still display correctly.
+ */
+function ticketAnswered(t: Ticket): boolean {
+  return t.status === "answered" || t.replies.some((r) => r.from === "therapist");
+}
+
 function PatientDashboard({ patient }: { patient: Patient }) {
   const { closeDemoPatient } = usePatient();
   const { signOut } = useAuth();
   const [tab, setTab] = useState<Tab>("program");
-  const openTickets = patient.tickets.filter((t) => t.status === "open").length;
+  const openTickets = patient.tickets.filter((t) => !ticketAnswered(t)).length;
 
   return (
     <div className="mx-auto w-full max-w-3xl px-4 pb-10 sm:px-6">
@@ -819,12 +829,12 @@ function TicketsTab({ patient }: { patient: Patient }) {
                 <span
                   className={cn(
                     "shrink-0 rounded-full px-2.5 py-1 text-[10px] font-medium",
-                    t.status === "answered"
+                    ticketAnswered(t)
                       ? "bg-[var(--color-success-soft)] text-[var(--color-success)]"
                       : "bg-[var(--color-warn-soft)] text-[var(--color-warn)]"
                   )}
                 >
-                  {t.status === "answered" ? "پاسخ داده شد" : "در انتظار فیزیوتراپیست"}
+                  {ticketAnswered(t) ? "پاسخ داده شد" : "در انتظار فیزیوتراپیست"}
                 </span>
               </div>
               <p className="rounded-xl bg-[var(--color-surface-muted)] px-3.5 py-2.5 text-[13px] leading-relaxed text-[var(--color-ink)]">

@@ -13,6 +13,8 @@ red-flag safety screening, and patient education.
 | Page | What it does |
 | --- | --- |
 | **Dashboard** | Quick clinical tools, recent cases, body-region modules |
+| **Patients** (`/patients`) | The clinic's patient register: create and edit records, search and filter (mine / no portal account), assign the care team, link the patient's login by email, open care episodes and prescribe the exercise programme the patient sees in their portal |
+| **Patient Messages** (`/tickets`) | Inbox for questions raised from the patient portal: reply as the therapist (which marks the ticket answered), or close it without replying |
 | **New Case** | Structured patient intake (complaint, pain, history, goals) |
 | **Case Analysis** | Auto-organised clinical reasoning: subjective/objective findings, hypotheses, differentials, yellow/red flags, missing info, suggested tests & outcome measures |
 | **Treatment Planner** | Stage- and irritability-aware plan: manual therapy, exercise, mobility, strengthening, motor control, balance, education, home program, progression rules |
@@ -48,6 +50,22 @@ Real Supabase Auth with role-based, clinic-isolated access:
 - **RLS**: `database/migrations/002_rls.sql`. No anon policies at all.
   Each clinic sees only its own data; therapists see their clinic's or
   assigned patients; patients see only themselves.
+- **Clinician workspace**: `database/migrations/004_clinician_workspace.sql`
+  adds what the `/patients` and `/tickets` pages need — `profiles.email`
+  kept in sync with `auth.users`, profile visibility scoped to clinic
+  colleagues and linked patients, a `link_patient_account` RPC (so the
+  browser can attach an account by email without a readable email index),
+  and a policy letting a therapist assign *themselves* to a patient of
+  their own clinic. That last one is a deliberate loosening of 003 and is
+  documented inline — drop the policy to revert it.
+- **Migration order and safety**: run 001 → 002 → 003 → 004 once, in
+  order. 003 and 004 are re-runnable; 001 refuses to run on an already
+  initialised project (its drops are `cascade` and would delete every
+  patient record), and 002 refuses once 003 is applied.
+- **Tests**: `database/tests/rls_tests.sql` (clinic isolation, role
+  escalation, reply spoofing — needs six user UUIDs pasted in) and
+  `database/tests/migration_004_tests.sql` (creates its own users; just
+  run it). Both print PASS/FAIL to the Logs panel.
 - **Dev seed** (never for production): `database/seed/seed.dev.sql`.
 - **Sign-in**: email + password (clinicians at `/`, patients at
   `/patient` with sign-up). National-ID login is removed; the national ID

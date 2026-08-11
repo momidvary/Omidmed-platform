@@ -19,6 +19,10 @@ const en: Dict = {
   // nav
   "nav.dashboard": "Dashboard",
   "nav.dashboard.desc": "Overview & quick tools",
+  "nav.patients": "Patients",
+  "nav.patients.desc": "Register, assign, prescribe",
+  "nav.tickets": "Patient Messages",
+  "nav.tickets.desc": "Questions from the portal",
   "nav.new-case": "New Case",
   "nav.new-case.desc": "Patient intake",
   "nav.case-analysis": "Case Analysis",
@@ -80,6 +84,10 @@ const en: Dict = {
 const fa: Dict = {
   "nav.dashboard": "داشبورد",
   "nav.dashboard.desc": "نمای کلی و ابزارهای سریع",
+  "nav.patients": "بیماران",
+  "nav.patients.desc": "ثبت، انتساب، تجویز برنامه",
+  "nav.tickets": "پیام‌های بیماران",
+  "nav.tickets.desc": "پرسش‌های ارسالی از پرتال",
   "nav.new-case": "پرونده جدید",
   "nav.new-case.desc": "پذیرش بیمار",
   "nav.case-analysis": "تحلیل پرونده",
@@ -137,6 +145,10 @@ const fa: Dict = {
 const ar: Dict = {
   "nav.dashboard": "لوحة التحكم",
   "nav.dashboard.desc": "نظرة عامة وأدوات سريعة",
+  "nav.patients": "المرضى",
+  "nav.patients.desc": "التسجيل والإسناد ووصف البرنامج",
+  "nav.tickets": "رسائل المرضى",
+  "nav.tickets.desc": "أسئلة واردة من البوابة",
   "nav.new-case": "حالة جديدة",
   "nav.new-case.desc": "استقبال المريض",
   "nav.case-analysis": "تحليل الحالة",

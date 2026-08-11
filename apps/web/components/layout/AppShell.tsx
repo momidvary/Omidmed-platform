@@ -18,12 +18,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
   const { t, dir, locale, setLocale } = useLocale();
-  const { session, signOut } = useAuth();
+  const { session, signOut, profile, activeClinicId, setActiveClinic } =
+    useAuth();
 
   // The patient portal is patient-facing (Persian, RTL) and must not show
   // the clinician sidebar/topbar — it brings its own minimal chrome. It
   // handles the misconfigured case itself.
-  if (pathname.startsWith("/patient")) {
+  //
+  // Matched exactly, not by prefix: `startsWith("/patient")` also catches
+  // the clinician routes `/patients` and `/patients/[id]`, which would
+  // hand them the portal's bare shell and skip ClinicianGate entirely.
+  if (pathname === "/patient" || pathname.startsWith("/patient/")) {
     return <>{children}</>;
   }
 
@@ -86,6 +91,23 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               {t(`nav.${current.key}.desc`)}
             </p>
           </div>
+
+          {/* Clinic switcher — only when the user holds more than one post,
+              so single-clinic users never see a control they can't use. */}
+          {!isMockMode && profile && profile.memberships.length > 1 && (
+            <select
+              value={activeClinicId ?? ""}
+              onChange={(e) => setActiveClinic(e.target.value)}
+              aria-label="Active clinic"
+              className="max-w-40 truncate rounded-lg border border-[var(--color-border)] bg-white px-2 py-1.5 text-xs text-[var(--color-ink-soft)] focus:border-[var(--color-primary)] focus:outline-none"
+            >
+              {profile.memberships.map((m) => (
+                <option key={m.clinicId} value={m.clinicId}>
+                  {m.clinicName}
+                </option>
+              ))}
+            </select>
+          )}
 
           {/* Language switcher */}
           <select

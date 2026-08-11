@@ -18,12 +18,19 @@ export type Role =
   | "clinic_staff"
   | "patient";
 
+export interface ClinicMembership {
+  clinicId: string;
+  clinicName: string;
+  memberRole: "clinic_owner" | "therapist" | "clinic_staff";
+}
+
 export interface AuthProfile {
   id: string;
   role: Role;
   fullName: string;
-  /** Clinics this user is a member of (staff roles). */
-  clinicIds: string[];
+  email: string | null;
+  /** Clinics this user is a member of, with the role held in each. */
+  memberships: ClinicMembership[];
 }
 
 /**
@@ -40,6 +47,13 @@ interface AuthContextValue {
   loading: boolean;
   error: AuthError | null;
   retry: () => void;
+  /**
+   * The clinic the user is currently acting in. A therapist may hold a
+   * post in more than one clinic, so this cannot be inferred — writes go
+   * to whichever clinic is selected here.
+   */
+  activeClinicId: string | null;
+  setActiveClinic: (clinicId: string) => void;
   signIn: (email: string, password: string) => Promise<string | null>;
   signUp: (
     email: string,
@@ -57,23 +71,38 @@ async function loadProfile(userId: string): Promise<AuthProfile | null> {
   if (!supabase) return null;
   const { data: p, error: profileError } = await supabase
     .from("profiles")
-    .select("id, role, full_name")
+    .select("id, role, full_name, email")
     .eq("id", userId)
     .maybeSingle();
   if (profileError) throw profileError;
   if (!p) return null;
   const { data: memberships, error: memberError } = await supabase
     .from("clinic_members")
-    .select("clinic_id")
+    .select("clinic_id, member_role, clinics ( name )")
     .eq("user_id", userId);
   if (memberError) throw memberError;
+  type Row = {
+    clinic_id: string;
+    member_role: ClinicMembership["memberRole"];
+    clinics: { name: string } | { name: string }[] | null;
+  };
   return {
     id: p.id,
     role: p.role as Role,
     fullName: p.full_name ?? "",
-    clinicIds: (memberships ?? []).map((m) => m.clinic_id as string),
+    email: (p.email as string | null) ?? null,
+    memberships: ((memberships ?? []) as Row[]).map((m) => {
+      const clinic = Array.isArray(m.clinics) ? m.clinics[0] : m.clinics;
+      return {
+        clinicId: m.clinic_id,
+        clinicName: clinic?.name ?? "Clinic",
+        memberRole: m.member_role,
+      };
+    }),
   };
 }
+
+const ACTIVE_CLINIC_KEY = "physioai:activeClinic:v1";
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
@@ -84,6 +113,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(!isMockMode && !isMisconfigured);
   const [error, setError] = useState<AuthError | null>(null);
   const [attempt, setAttempt] = useState(0);
+  const [chosenClinicId, setChosenClinicId] = useState<string | null>(null);
+
+  // Restore the last clinic the user worked in. Validated against the
+  // memberships below, so a stale or revoked id can never take effect.
+  useEffect(() => {
+    const stored = localStorage.getItem(ACTIVE_CLINIC_KEY);
+    if (stored) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time localStorage hydration; cannot run during SSR
+      setChosenClinicId(stored);
+    }
+  }, []);
 
   useEffect(() => {
     if (isMockMode) return;
@@ -140,12 +180,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, [attempt]);
 
+  // Only ever resolves to a clinic the user actually belongs to; falls
+  // back to the first membership so single-clinic users never see a picker.
+  const activeClinicId =
+    profile?.memberships.find((m) => m.clinicId === chosenClinicId)?.clinicId ??
+    profile?.memberships[0]?.clinicId ??
+    null;
+
   const value = useMemo<AuthContextValue>(
     () => ({
       session,
       profile,
       loading,
       error,
+      activeClinicId,
+      setActiveClinic: (clinicId) => {
+        setChosenClinicId(clinicId);
+        localStorage.setItem(ACTIVE_CLINIC_KEY, clinicId);
+      },
       retry: () => {
         setError(null);
         setLoading(true);
@@ -174,7 +226,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         await getSupabase()?.auth.signOut();
       },
     }),
-    [session, profile, loading, error]
+    [session, profile, loading, error, activeClinicId]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

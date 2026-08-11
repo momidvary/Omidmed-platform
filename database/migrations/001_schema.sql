@@ -4,6 +4,28 @@
 -- ⚠ This replaces the old demo schema: the previous demo tables (which
 -- held only sample data and anon policies) are dropped.
 
+-- ⚠ DESTRUCTIVE — READ BEFORE RUNNING
+--
+-- The drops below are `cascade` and include `patients`, `tickets` and
+-- `cases`. On a project that already has this schema they would delete
+-- every real patient record, so the guard aborts instead. It fires when
+-- `profiles` exists, which only happens after this file has already run.
+--
+-- To reset a development project on purpose:
+--   set physioai.allow_destructive_reset = 'yes';
+-- in the same SQL editor tab, then run this file.
+do $$ begin
+  if exists (
+    select 1 from information_schema.tables
+    where table_schema = 'public' and table_name = 'profiles'
+  ) and coalesce(
+    current_setting('physioai.allow_destructive_reset', true), ''
+  ) <> 'yes' then
+    raise exception
+      'Refusing to run 001: this project is already initialised and the drops below would delete all patient data. See the comment at the top of this file.';
+  end if;
+end $$;
+
 -- ── Drop the old demo schema ────────────────────────────────────
 drop table if exists ticket_replies cascade;
 drop table if exists tickets cascade;

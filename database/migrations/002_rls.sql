@@ -2,6 +2,21 @@
 -- Run AFTER 001_schema.sql. There are NO anon policies: every access
 -- requires an authenticated user, and access is scoped by role,
 -- clinic membership, therapist assignment, or patient linkage.
+--
+-- Re-runnable on its own, but NOT after 003: that migration replaces the
+-- coarse policies below with granular ones and renames `progress`, so a
+-- second pass here would both fail halfway and revert the hardening.
+-- The guard makes that a clean refusal instead of a partial apply.
+do $$ begin
+  if exists (
+    select 1 from pg_proc p
+    join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public' and p.proname = 'can_view_patient'
+  ) then
+    raise exception
+      'Refusing to run 002: migration 003 is already applied and this would partially revert it. Re-run 003 instead.';
+  end if;
+end $$;
 
 -- ── Helper functions (security definer to avoid RLS recursion) ──
 create or replace function public.is_platform_admin()
@@ -77,8 +92,10 @@ alter table ticket_replies enable row level security;
 alter table cases enable row level security;
 
 -- ── profiles ────────────────────────────────────────────────────
+drop policy if exists "own profile read" on profiles;
 create policy "own profile read" on profiles for select
   using (id = auth.uid() or public.is_platform_admin());
+drop policy if exists "own profile update" on profiles;
 create policy "own profile update" on profiles for update
   using (id = auth.uid() or public.is_platform_admin())
   with check (id = auth.uid() or public.is_platform_admin());
@@ -99,99 +116,129 @@ create trigger profiles_role_guard
   for each row execute function public.guard_role_change();
 
 -- ── clinics ─────────────────────────────────────────────────────
+drop policy if exists "clinic read" on clinics;
 create policy "clinic read" on clinics for select
   using (public.is_platform_admin() or public.is_member_of(id));
+drop policy if exists "clinic admin write" on clinics;
 create policy "clinic admin write" on clinics for all
   using (public.is_platform_admin()) with check (public.is_platform_admin());
+drop policy if exists "clinic owner update" on clinics;
 create policy "clinic owner update" on clinics for update
   using (public.is_owner_of(id)) with check (public.is_owner_of(id));
 
 -- ── clinic_members ──────────────────────────────────────────────
+drop policy if exists "members read" on clinic_members;
 create policy "members read" on clinic_members for select
   using (public.is_platform_admin() or public.is_member_of(clinic_id));
+drop policy if exists "members manage" on clinic_members;
 create policy "members manage" on clinic_members for all
   using (public.is_platform_admin() or public.is_owner_of(clinic_id))
   with check (public.is_platform_admin() or public.is_owner_of(clinic_id));
 
 -- ── patients ────────────────────────────────────────────────────
+drop policy if exists "patient read" on patients;
 create policy "patient read" on patients for select
   using (public.can_access_patient(id));
+drop policy if exists "patient insert" on patients;
 create policy "patient insert" on patients for insert
   with check (public.is_platform_admin() or public.is_member_of(clinic_id));
+drop policy if exists "patient update" on patients;
 create policy "patient update" on patients for update
   using (public.can_manage_patient(id)) with check (public.can_manage_patient(id));
+drop policy if exists "patient delete" on patients;
 create policy "patient delete" on patients for delete
   using (public.is_platform_admin() or public.is_owner_of(clinic_id));
 
 -- ── patient_users / patient_therapists ──────────────────────────
+drop policy if exists "patient_users read" on patient_users;
 create policy "patient_users read" on patient_users for select
   using (user_id = auth.uid() or public.can_manage_patient(patient_id));
+drop policy if exists "patient_users manage" on patient_users;
 create policy "patient_users manage" on patient_users for all
   using (public.can_manage_patient(patient_id))
   with check (public.can_manage_patient(patient_id));
 
+drop policy if exists "patient_therapists read" on patient_therapists;
 create policy "patient_therapists read" on patient_therapists for select
   using (therapist_id = auth.uid() or public.can_manage_patient(patient_id));
+drop policy if exists "patient_therapists manage" on patient_therapists;
 create policy "patient_therapists manage" on patient_therapists for all
   using (public.can_manage_patient(patient_id))
   with check (public.can_manage_patient(patient_id));
 
 -- ── care_episodes ───────────────────────────────────────────────
+drop policy if exists "episodes read" on care_episodes;
 create policy "episodes read" on care_episodes for select
   using (public.can_access_patient(patient_id));
+drop policy if exists "episodes manage" on care_episodes;
 create policy "episodes manage" on care_episodes for all
   using (public.can_manage_patient(patient_id))
   with check (public.can_manage_patient(patient_id));
 
 -- ── episode_program ─────────────────────────────────────────────
+drop policy if exists "program read" on episode_program;
 create policy "program read" on episode_program for select
   using (public.can_access_patient(public.episode_patient(episode_id)));
+drop policy if exists "program manage" on episode_program;
 create policy "program manage" on episode_program for all
   using (public.can_manage_patient(public.episode_patient(episode_id)))
   with check (public.can_manage_patient(public.episode_patient(episode_id)));
 
 -- ── progress (patients log their own; staff can correct) ────────
+drop policy if exists "progress read" on progress;
 create policy "progress read" on progress for select
   using (public.can_access_patient(public.episode_patient(episode_id)));
+drop policy if exists "progress write" on progress;
 create policy "progress write" on progress for all
   using (public.can_access_patient(public.episode_patient(episode_id)))
   with check (public.can_access_patient(public.episode_patient(episode_id)));
 
 -- ── sessions ────────────────────────────────────────────────────
+drop policy if exists "sessions read" on sessions;
 create policy "sessions read" on sessions for select
   using (public.can_access_patient(public.episode_patient(episode_id)));
+drop policy if exists "sessions manage" on sessions;
 create policy "sessions manage" on sessions for all
   using (public.can_manage_patient(public.episode_patient(episode_id)))
   with check (public.can_manage_patient(public.episode_patient(episode_id)));
 
 -- ── appointments ────────────────────────────────────────────────
+drop policy if exists "appointments read" on appointments;
 create policy "appointments read" on appointments for select
   using (public.can_access_patient(patient_id));
+drop policy if exists "appointments manage" on appointments;
 create policy "appointments manage" on appointments for all
   using (public.is_platform_admin() or public.is_member_of(clinic_id))
   with check (public.is_platform_admin() or public.is_member_of(clinic_id));
 
 -- ── exercises (clinic custom library) ───────────────────────────
+drop policy if exists "exercises read" on exercises;
 create policy "exercises read" on exercises for select
   using (public.is_platform_admin() or public.is_member_of(clinic_id));
+drop policy if exists "exercises manage" on exercises;
 create policy "exercises manage" on exercises for all
   using (public.is_platform_admin() or public.is_member_of(clinic_id))
   with check (public.is_platform_admin() or public.is_member_of(clinic_id));
 
 -- ── tickets & replies ───────────────────────────────────────────
+drop policy if exists "tickets read" on tickets;
 create policy "tickets read" on tickets for select
   using (public.can_access_patient(patient_id));
+drop policy if exists "tickets insert" on tickets;
 create policy "tickets insert" on tickets for insert
   with check (public.can_access_patient(patient_id));
+drop policy if exists "tickets update" on tickets;
 create policy "tickets update" on tickets for update
   using (public.can_manage_patient(patient_id))
   with check (public.can_manage_patient(patient_id));
 
+drop policy if exists "replies read" on ticket_replies;
 create policy "replies read" on ticket_replies for select
   using (exists (
     select 1 from tickets t
     where t.id = ticket_id and public.can_access_patient(t.patient_id)
   ));
+drop policy if exists "replies insert" on ticket_replies;
 create policy "replies insert" on ticket_replies for insert
   with check (exists (
     select 1 from tickets t
@@ -199,8 +246,10 @@ create policy "replies insert" on ticket_replies for insert
   ));
 
 -- ── cases (clinic-scoped intake records) ────────────────────────
+drop policy if exists "cases read" on cases;
 create policy "cases read" on cases for select
   using (public.is_platform_admin() or public.is_member_of(clinic_id));
+drop policy if exists "cases write" on cases;
 create policy "cases write" on cases for all
   using (public.is_platform_admin() or public.is_member_of(clinic_id))
   with check (public.is_platform_admin() or public.is_member_of(clinic_id));

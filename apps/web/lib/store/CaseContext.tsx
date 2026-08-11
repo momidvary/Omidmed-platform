@@ -53,7 +53,7 @@ function loadPersisted(): Pick<CaseState, "cases" | "currentCaseId"> {
 }
 
 export function CaseProvider({ children }: { children: React.ReactNode }) {
-  const { session, profile } = useAuth();
+  const { session, profile, activeClinicId } = useAuth();
   const [state, setState] = useState<CaseState>({
     cases: isMockMode ? sampleCases : [],
     currentCaseId: null,
@@ -101,9 +101,11 @@ export function CaseProvider({ children }: { children: React.ReactNode }) {
         state.cases.find((c) => c.id === state.currentCaseId) ?? null,
       addCase: async (c) => {
         if (!isMockMode) {
-          const clinicId = profile?.clinicIds[0];
-          if (!clinicId || !profile) return false;
-          const ok = await insertCase(c, clinicId, profile.id);
+          // The clinic comes from the topbar selector, not from whichever
+          // membership happens to be first — a therapist working across two
+          // clinics would otherwise file cases against the wrong one.
+          if (!activeClinicId || !profile) return false;
+          const ok = await insertCase(c, activeClinicId, profile.id);
           if (!ok) return false;
         }
         setState((prev) => ({
@@ -117,7 +119,7 @@ export function CaseProvider({ children }: { children: React.ReactNode }) {
         setState((prev) => ({ ...prev, currentCaseId: id })),
       hydrated: state.hydrated,
     }),
-    [state, profile]
+    [state, profile, activeClinicId]
   );
 
   return <CaseContext.Provider value={value}>{children}</CaseContext.Provider>;

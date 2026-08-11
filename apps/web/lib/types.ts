@@ -118,6 +118,8 @@ export interface TicketReply {
   from: "ai" | "therapist" | "patient";
   content: string;
   createdAt: string;
+  /** Display name of the author, when the reader is allowed to see it. */
+  authorName?: string;
 }
 
 export interface Ticket {
@@ -145,6 +147,80 @@ export interface Patient {
   program: PrescribedExercise[];
   progress: ProgressEntry[];
   tickets: Ticket[];
+}
+
+// ── Clinician workspace ─────────────────────────────────────────
+
+export type MemberRole = "clinic_owner" | "therapist" | "clinic_staff";
+export type EpisodeStatus = "active" | "completed" | "paused";
+
+export interface Clinic {
+  id: string;
+  name: string;
+  city: string | null;
+}
+
+export interface ClinicMember {
+  userId: string;
+  memberRole: MemberRole;
+  fullName: string;
+  email: string | null;
+}
+
+/** A patient row as the clinic sees it (distinct from the portal's `Patient`). */
+export interface PatientRecord {
+  id: string;
+  clinicId: string;
+  fullName: string;
+  nationalId: string | null;
+  phone: string | null;
+  birthYear: number | null;
+  gender: Gender | null;
+  createdAt: string;
+  /** Therapists assigned to this patient. */
+  therapistIds: string[];
+  /** Auth accounts that may sign in as this patient. */
+  linkedUsers: { userId: string; fullName: string; email: string | null }[];
+  episodes: CareEpisode[];
+}
+
+/** Summary row for the patient list — cheap to fetch in bulk. */
+export interface PatientListItem {
+  id: string;
+  fullName: string;
+  phone: string | null;
+  birthYear: number | null;
+  createdAt: string;
+  activeEpisodeTitle: string | null;
+  hasLinkedAccount: boolean;
+  isMine: boolean;
+  openTickets: number;
+}
+
+export interface CareEpisode {
+  id: string;
+  titleFa: string;
+  therapistNoteFa: string;
+  weeklyTarget: number;
+  status: EpisodeStatus;
+  startedAt: string;
+  program: PrescribedExercise[];
+  /** Most recent daily logs, newest last. */
+  progress: ProgressEntry[];
+}
+
+/** A ticket as the clinic inbox sees it — carries the patient's name. */
+export interface ClinicTicket {
+  id: string;
+  patientId: string;
+  patientName: string;
+  episodeId: string | null;
+  exerciseId: string | null;
+  subject: string;
+  message: string;
+  status: "open" | "answered";
+  createdAt: string;
+  replies: TicketReply[];
 }
 
 export interface TreatmentPlanInput {

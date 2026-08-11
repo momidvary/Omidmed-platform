@@ -124,9 +124,18 @@ $$;
 -- ════════════════════════════════════════════════════════════════
 -- 3) Split patient self-reports from clinical measurements
 -- ════════════════════════════════════════════════════════════════
-alter table progress rename to patient_daily_logs;
+-- Guarded so the file can be re-run: an unguarded rename aborts the whole
+-- script on the second pass and leaves everything below it unapplied.
+do $$ begin
+  if exists (
+    select 1 from information_schema.tables
+    where table_schema = 'public' and table_name = 'progress'
+  ) then
+    alter table progress rename to patient_daily_logs;
+  end if;
+end $$;
 
-create table clinical_measurements (
+create table if not exists clinical_measurements (
   id uuid primary key default gen_random_uuid(),
   episode_id uuid not null references care_episodes (id) on delete cascade,
   therapist_id uuid not null references profiles (id),
@@ -136,7 +145,8 @@ create table clinical_measurements (
   notes text,
   created_at timestamptz not null default now()
 );
-create index on clinical_measurements (episode_id);
+create index if not exists clinical_measurements_episode_idx
+  on clinical_measurements (episode_id);
 alter table clinical_measurements enable row level security;
 
 -- ════════════════════════════════════════════════════════════════
@@ -156,11 +166,14 @@ drop policy if exists "patient update" on patients;
 drop policy if exists "patient delete" on patients;
 create policy "patient read" on patients for select
   using (public.can_view_patient(id));
+drop policy if exists "patient insert" on patients;
 create policy "patient insert" on patients for insert
   with check (public.is_platform_admin() or public.is_member_of(clinic_id));
+drop policy if exists "patient update" on patients;
 create policy "patient update" on patients for update
   using (public.can_edit_patient_demographics(id))
   with check (public.can_edit_patient_demographics(id));
+drop policy if exists "patient delete" on patients;
 create policy "patient delete" on patients for delete
   using (public.is_platform_admin() or public.is_owner_of(clinic_id));
 
@@ -169,6 +182,7 @@ drop policy if exists "patient_users read" on patient_users;
 drop policy if exists "patient_users manage" on patient_users;
 create policy "patient_users read" on patient_users for select
   using (user_id = auth.uid() or public.can_view_patient(patient_id));
+drop policy if exists "patient_users manage" on patient_users;
 create policy "patient_users manage" on patient_users for all
   using (public.is_platform_admin() or public.is_owner_of(public.patient_clinic(patient_id))
          or public.is_staff_of(public.patient_clinic(patient_id)))
@@ -179,6 +193,7 @@ drop policy if exists "patient_therapists read" on patient_therapists;
 drop policy if exists "patient_therapists manage" on patient_therapists;
 create policy "patient_therapists read" on patient_therapists for select
   using (therapist_id = auth.uid() or public.can_view_patient(patient_id));
+drop policy if exists "patient_therapists manage" on patient_therapists;
 create policy "patient_therapists manage" on patient_therapists for all
   using (public.is_platform_admin() or public.is_owner_of(public.patient_clinic(patient_id)))
   with check (public.is_platform_admin() or public.is_owner_of(public.patient_clinic(patient_id)));
@@ -188,6 +203,7 @@ drop policy if exists "episodes read" on care_episodes;
 drop policy if exists "episodes manage" on care_episodes;
 create policy "episodes read" on care_episodes for select
   using (public.can_view_patient(patient_id));
+drop policy if exists "episodes manage" on care_episodes;
 create policy "episodes manage" on care_episodes for all
   using (public.can_manage_clinical_record(patient_id))
   with check (public.can_manage_clinical_record(patient_id));
@@ -196,6 +212,7 @@ drop policy if exists "program read" on episode_program;
 drop policy if exists "program manage" on episode_program;
 create policy "program read" on episode_program for select
   using (public.can_view_patient(public.episode_patient(episode_id)));
+drop policy if exists "program manage" on episode_program;
 create policy "program manage" on episode_program for all
   using (public.can_manage_clinical_record(public.episode_patient(episode_id)))
   with check (public.can_manage_clinical_record(public.episode_patient(episode_id)));
@@ -204,8 +221,10 @@ create policy "program manage" on episode_program for all
 -- clinical managers may also correct them. Staff cannot.
 drop policy if exists "progress read" on patient_daily_logs;
 drop policy if exists "progress write" on patient_daily_logs;
+drop policy if exists "daily logs read" on patient_daily_logs;
 create policy "daily logs read" on patient_daily_logs for select
   using (public.can_view_patient(public.episode_patient(episode_id)));
+drop policy if exists "daily logs write" on patient_daily_logs;
 create policy "daily logs write" on patient_daily_logs for all
   using (public.is_linked_patient(public.episode_patient(episode_id))
          or public.can_manage_clinical_record(public.episode_patient(episode_id)))
@@ -214,8 +233,10 @@ create policy "daily logs write" on patient_daily_logs for all
 
 -- clinical_measurements: therapists/owners only; patients read-only.
 -- therapist_id cannot be spoofed: non-admins must record as themselves.
+drop policy if exists "measurements read" on clinical_measurements;
 create policy "measurements read" on clinical_measurements for select
   using (public.can_view_patient(public.episode_patient(episode_id)));
+drop policy if exists "measurements write" on clinical_measurements;
 create policy "measurements write" on clinical_measurements for all
   using (public.can_manage_clinical_record(public.episode_patient(episode_id)))
   with check (
@@ -228,6 +249,7 @@ drop policy if exists "sessions read" on sessions;
 drop policy if exists "sessions manage" on sessions;
 create policy "sessions read" on sessions for select
   using (public.can_view_patient(public.episode_patient(episode_id)));
+drop policy if exists "sessions manage" on sessions;
 create policy "sessions manage" on sessions for all
   using (public.can_manage_clinical_record(public.episode_patient(episode_id)))
   with check (
@@ -241,6 +263,7 @@ drop policy if exists "appointments read" on appointments;
 drop policy if exists "appointments manage" on appointments;
 create policy "appointments read" on appointments for select
   using (public.can_view_patient(patient_id));
+drop policy if exists "appointments manage" on appointments;
 create policy "appointments manage" on appointments for all
   using (public.can_manage_appointment(clinic_id))
   with check (public.can_manage_appointment(clinic_id));
@@ -251,8 +274,10 @@ drop policy if exists "tickets insert" on tickets;
 drop policy if exists "tickets update" on tickets;
 create policy "tickets read" on tickets for select
   using (public.can_view_patient(patient_id));
+drop policy if exists "tickets insert" on tickets;
 create policy "tickets insert" on tickets for insert
   with check (public.can_view_patient(patient_id) and created_by = auth.uid());
+drop policy if exists "tickets update" on tickets;
 create policy "tickets update" on tickets for update
   using (public.can_manage_clinical_record(patient_id))
   with check (public.can_manage_clinical_record(patient_id));
@@ -266,6 +291,7 @@ drop policy if exists "replies read" on ticket_replies;
 drop policy if exists "replies insert" on ticket_replies;
 create policy "replies read" on ticket_replies for select
   using (public.can_view_patient(public.ticket_patient(ticket_id)));
+drop policy if exists "replies insert" on ticket_replies;
 create policy "replies insert" on ticket_replies for insert
   with check (
     sender_user_id = auth.uid()
@@ -283,14 +309,17 @@ drop policy if exists "cases read" on cases;
 drop policy if exists "cases write" on cases;
 create policy "cases read" on cases for select
   using (public.is_platform_admin() or public.is_member_of(clinic_id));
+drop policy if exists "cases insert" on cases;
 create policy "cases insert" on cases for insert
   with check (
     (public.is_platform_admin() or (public.is_member_of(clinic_id) and not public.is_staff_of(clinic_id)))
     and created_by = auth.uid()
   );
+drop policy if exists "cases update" on cases;
 create policy "cases update" on cases for update
   using (public.is_platform_admin() or (public.is_member_of(clinic_id) and not public.is_staff_of(clinic_id)))
   with check (public.is_platform_admin() or (public.is_member_of(clinic_id) and not public.is_staff_of(clinic_id)));
+drop policy if exists "cases delete" on cases;
 create policy "cases delete" on cases for delete
   using (public.is_platform_admin() or public.is_owner_of(clinic_id));
 

@@ -1,10 +1,9 @@
 import type { Patient, ProgressEntry } from "@/lib/types";
+import { localDateOffset } from "@/lib/utils";
 
 /** yyyy-mm-dd for `daysAgo` days before today (local time). */
 function dateAgo(daysAgo: number): string {
-  const d = new Date();
-  d.setDate(d.getDate() - daysAgo);
-  return d.toISOString().slice(0, 10);
+  return localDateOffset(-daysAgo);
 }
 
 /** Build demo progress entries from (daysAgo, pain, completed) triples. */

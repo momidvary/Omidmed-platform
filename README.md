@@ -58,7 +58,20 @@ Real Supabase Auth with role-based, clinic-isolated access:
 - **Data modes**: real mode has no localStorage fallback; the topbar
   shows live storage status (Connected / Saving / Saved / Offline /
   Save failed) and failed saves never clear the form. Set
-  `NEXT_PUBLIC_DATA_MODE=mock` for the auth-free local demo.
+  `NEXT_PUBLIC_DATA_MODE=mock` for the auth-free local demo, which
+  carries a permanent "Demo mode" banner.
+  **Mock mode requires that explicit opt-in.** It is never inferred from
+  missing env vars: because `NEXT_PUBLIC_*` values are inlined at build
+  time, a typo or an unset Production variable would otherwise ship a
+  clinical app with no auth at all. A build with neither a Supabase
+  connection nor `DATA_MODE=mock` refuses to render and shows a
+  "Configuration incomplete" screen instead.
+- **Security headers**: HSTS, `X-Frame-Options: DENY`, `nosniff`,
+  `Referrer-Policy` and a `Permissions-Policy` are set for every route in
+  `apps/web/next.config.ts`. CSP is not set yet — it needs per-request
+  nonces for the Next.js inline bootstrap, so it ships separately.
+- **Session refresh**: `apps/web/proxy.ts` runs `auth.getUser()` on every
+  matched request so expired access tokens are rotated server-side.
 - **راهنمای فارسی**: `docs/RAHNAMA-FA.md` — creating the first admin,
   clinic, staff, and linking patient accounts.
 

@@ -9,6 +9,7 @@ import { Disclaimer, PageIntro } from "@/components/ui/Misc";
 import { useLocale } from "@/lib/store/LocaleContext";
 import { locales, type Locale } from "@/lib/i18n/translations";
 import { isSupabaseConfigured } from "@/lib/supabase/client";
+import { isMockMode } from "@/lib/config";
 
 export default function SettingsPage() {
   const { locale, setLocale, t } = useLocale();
@@ -108,7 +109,11 @@ export default function SettingsPage() {
               }
             />
             <p className="text-sm font-medium text-[var(--color-ink)]">
-              {isSupabaseConfigured ? "Connected" : "Not configured — running in local mode"}
+              {isSupabaseConfigured
+                ? "Connected"
+                : isMockMode
+                  ? "Not configured — demo mode is explicitly enabled"
+                  : "Not configured — the app will not start"}
             </p>
           </div>
           <p className="text-sm text-[var(--color-ink-soft)]">

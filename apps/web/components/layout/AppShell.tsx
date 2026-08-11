@@ -11,7 +11,8 @@ import type { Locale } from "@/lib/i18n/translations";
 import { ClinicianGate } from "@/components/auth/ClinicianGate";
 import { SaveStatusPill } from "@/components/ui/SaveStatusPill";
 import { useAuth } from "@/lib/store/AuthContext";
-import { isMockMode } from "@/lib/config";
+import { isMisconfigured, isMockMode } from "@/lib/config";
+import { ConfigError, DemoBanner } from "@/components/ui/ModeNotice";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -20,10 +21,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const { session, signOut } = useAuth();
 
   // The patient portal is patient-facing (Persian, RTL) and must not show
-  // the clinician sidebar/topbar — it brings its own minimal chrome.
+  // the clinician sidebar/topbar — it brings its own minimal chrome. It
+  // handles the misconfigured case itself.
   if (pathname.startsWith("/patient")) {
     return <>{children}</>;
   }
+
+  // No database configured and demo mode was not asked for: refuse to
+  // render rather than silently serving an unauthenticated workspace.
+  if (isMisconfigured) return <ConfigError />;
 
   const current =
     navItems.find((n) =>
@@ -60,6 +66,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       )}
 
       <div className="flex min-w-0 flex-1 flex-col">
+        <DemoBanner />
         {/* Topbar */}
         <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-[var(--color-border)] bg-white/80 px-4 py-3 backdrop-blur sm:px-6">
           <button

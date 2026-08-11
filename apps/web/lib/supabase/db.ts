@@ -203,16 +203,19 @@ export function insertTicket(
 /**
  * Ask the server to attach the AI triage reply to a ticket. Returns the
  * created reply, or null when the server AI key isn't configured.
+ *
+ * Only the ticket id is sent: the server reads the message from the
+ * stored row, so the reply can never be generated from text the client
+ * made up. Safe to call twice — the route returns the existing reply.
  */
 export async function requestAiReply(
-  ticketId: string,
-  message: string
+  ticketId: string
 ): Promise<{ id: string; content: string; createdAt: string } | null> {
   try {
     const res = await fetch("/api/tickets/ai-reply", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ticketId, message }),
+      body: JSON.stringify({ ticketId }),
     });
     if (!res.ok) return null;
     const json = (await res.json()) as {

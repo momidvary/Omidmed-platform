@@ -14,10 +14,11 @@ import { Button } from "@/components/ui/Button";
 import { Field, Input, Select, Textarea } from "@/components/ui/Form";
 import { Icon } from "@/components/ui/Icon";
 import { Disclaimer, Spinner } from "@/components/ui/Misc";
-import { cn, uid, uuid } from "@/lib/utils";
+import { cn, localDateOffset, toDate, todayLocal, uid, uuid } from "@/lib/utils";
 import { useAuth } from "@/lib/store/AuthContext";
-import { isMockMode } from "@/lib/config";
+import { isMisconfigured, isMockMode } from "@/lib/config";
 import { SaveStatusPill } from "@/components/ui/SaveStatusPill";
+import { ConfigError, DemoBanner } from "@/components/ui/ModeNotice";
 
 const statusLabelsFa = {
   connected: "متصل",
@@ -29,7 +30,7 @@ const statusLabelsFa = {
 
 const fa = (n: number) => n.toLocaleString("fa-IR");
 const faDate = (iso: string) =>
-  new Date(iso).toLocaleDateString("fa-IR", { month: "long", day: "numeric" });
+  toDate(iso).toLocaleDateString("fa-IR", { month: "long", day: "numeric" });
 
 type Tab = "program" | "progress" | "tickets" | "assistant";
 
@@ -44,6 +45,10 @@ export default function PatientPortalPage() {
   const { patient, hydrated } = usePatient();
   const { session, loading } = useAuth();
 
+  // No database configured and demo mode was not asked for: refuse to
+  // render rather than showing fabricated medical records to the public.
+  if (isMisconfigured) return <ConfigError />;
+
   const waiting = !hydrated || (!isMockMode && loading);
   // Signed in but not yet linked to a patient record by the clinic.
   const unlinked = !isMockMode && session && hydrated && !patient;
@@ -53,6 +58,7 @@ export default function PatientPortalPage() {
       dir="rtl"
       className="min-h-screen bg-[var(--color-bg)] font-[family-name:var(--font-vazirmatn)]"
     >
+      <DemoBanner />
       {waiting ? (
         <Spinner label="در حال بارگذاری…" />
       ) : patient ? (
@@ -344,7 +350,7 @@ function PatientDashboard({ patient }: { patient: Patient }) {
 function ProgramTab({ patient }: { patient: Patient }) {
   const { logProgress } = usePatient();
   const [openId, setOpenId] = useState<string | null>(null);
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayLocal();
   const todayEntry = patient.progress.find((e) => e.date === today);
   const [pain, setPain] = useState(todayEntry?.painLevel ?? 3);
 
@@ -463,9 +469,7 @@ function ProgressTab({ patient }: { patient: Patient }) {
   );
   const last14 = sorted.slice(-14);
 
-  const [weekAgo] = useState(() =>
-    new Date(Date.now() - 7 * 864e5).toISOString().slice(0, 10)
-  );
+  const [weekAgo] = useState(() => localDateOffset(-7));
   const thisWeek = sorted.filter((e) => e.date > weekAgo);
   const doneThisWeek = thisWeek.filter((e) => e.completed).length;
   const weekAvgPain =

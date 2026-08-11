@@ -9,7 +9,7 @@ import {
 } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { getSupabase } from "@/lib/supabase/client";
-import { isMockMode } from "@/lib/config";
+import { isMisconfigured, isMockMode } from "@/lib/config";
 
 export type Role =
   | "platform_admin"
@@ -26,10 +26,20 @@ export interface AuthProfile {
   clinicIds: string[];
 }
 
+/**
+ * Why the session could not be resolved.
+ * - "network": the auth server or database was unreachable.
+ * - "no_profile": signed in, but no `profiles` row (trigger never ran).
+ * Both leave `profile` null, and callers must NOT treat that as "allowed".
+ */
+export type AuthError = "network" | "no_profile";
+
 interface AuthContextValue {
   session: Session | null;
   profile: AuthProfile | null;
   loading: boolean;
+  error: AuthError | null;
+  retry: () => void;
   signIn: (email: string, password: string) => Promise<string | null>;
   signUp: (
     email: string,
@@ -41,19 +51,22 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+/** Throws on transport failure; resolves null when there is no profile row. */
 async function loadProfile(userId: string): Promise<AuthProfile | null> {
   const supabase = getSupabase();
   if (!supabase) return null;
-  const { data: p } = await supabase
+  const { data: p, error: profileError } = await supabase
     .from("profiles")
     .select("id, role, full_name")
     .eq("id", userId)
     .maybeSingle();
+  if (profileError) throw profileError;
   if (!p) return null;
-  const { data: memberships } = await supabase
+  const { data: memberships, error: memberError } = await supabase
     .from("clinic_members")
     .select("clinic_id")
     .eq("user_id", userId);
+  if (memberError) throw memberError;
   return {
     id: p.id,
     role: p.role as Role,
@@ -65,43 +78,79 @@ async function loadProfile(userId: string): Promise<AuthProfile | null> {
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<AuthProfile | null>(null);
-  const [loading, setLoading] = useState(!isMockMode);
+  // Only start in the loading state when there is actually something to
+  // load — mock mode and a missing configuration both resolve instantly,
+  // so seeding `true` there would strand the UI on a spinner.
+  const [loading, setLoading] = useState(!isMockMode && !isMisconfigured);
+  const [error, setError] = useState<AuthError | null>(null);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     if (isMockMode) return;
     const supabase = getSupabase();
     if (!supabase) return;
+    let active = true;
 
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
-      if (data.session) {
-        loadProfile(data.session.user.id).then((p) => {
-          setProfile(p);
-          setLoading(false);
-        });
-      } else {
+    // The role gate depends on `profile`, so `loading` must stay true for
+    // the whole session→profile resolution. Otherwise there is a window
+    // where the session exists, the profile does not, and a patient sees
+    // the clinician workspace.
+    async function resolve(next: Session | null) {
+      if (!active) return;
+      setSession(next);
+      if (!next) {
+        setProfile(null);
+        setError(null);
         setLoading(false);
+        return;
       }
-    });
+      setLoading(true);
+      try {
+        const p = await loadProfile(next.user.id);
+        if (!active) return;
+        setProfile(p);
+        setError(p ? null : "no_profile");
+      } catch {
+        if (!active) return;
+        setProfile(null);
+        setError("network");
+      } finally {
+        if (active) setLoading(false);
+      }
+    }
+
+    supabase.auth
+      .getSession()
+      .then(({ data }) => resolve(data.session))
+      .catch(() => {
+        // Never leave the app spinning forever on an unreachable backend.
+        if (!active) return;
+        setError("network");
+        setLoading(false);
+      });
 
     const { data: sub } = supabase.auth.onAuthStateChange(
       (_event, newSession) => {
-        setSession(newSession);
-        if (newSession) {
-          loadProfile(newSession.user.id).then(setProfile);
-        } else {
-          setProfile(null);
-        }
+        void resolve(newSession);
       }
     );
-    return () => sub.subscription.unsubscribe();
-  }, []);
+    return () => {
+      active = false;
+      sub.subscription.unsubscribe();
+    };
+  }, [attempt]);
 
   const value = useMemo<AuthContextValue>(
     () => ({
       session,
       profile,
       loading,
+      error,
+      retry: () => {
+        setError(null);
+        setLoading(true);
+        setAttempt((n) => n + 1);
+      },
       signIn: async (email, password) => {
         const supabase = getSupabase();
         if (!supabase) return "Supabase not configured";
@@ -125,7 +174,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         await getSupabase()?.auth.signOut();
       },
     }),
-    [session, profile, loading]
+    [session, profile, loading, error]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

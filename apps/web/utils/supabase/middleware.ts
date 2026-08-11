@@ -6,14 +6,14 @@ const supabaseKey =
   process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-export const updateSession = (request: NextRequest) => {
+export const updateSession = async (request: NextRequest) => {
   let supabaseResponse = NextResponse.next({
     request: { headers: request.headers },
   });
 
   if (!supabaseUrl || !supabaseKey) return supabaseResponse;
 
-  createServerClient(supabaseUrl, supabaseKey, {
+  const supabase = createServerClient(supabaseUrl, supabaseKey, {
     cookies: {
       getAll() {
         return request.cookies.getAll();
@@ -29,6 +29,12 @@ export const updateSession = (request: NextRequest) => {
       },
     },
   });
+
+  // This call is the entire point of the proxy: it refreshes an expired
+  // access token and, through `setAll` above, writes the rotated cookies
+  // onto the response. Without it the client is constructed and thrown
+  // away, `setAll` never fires, and server-side code sees a stale session.
+  await supabase.auth.getUser();
 
   return supabaseResponse;
 };

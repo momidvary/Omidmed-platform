@@ -157,7 +157,7 @@ export function PatientProvider({ children }: { children: React.ReactNode }) {
         );
         if (!ok) return false;
         updatePatient((p) => ({ ...p, tickets: [bare, ...p.tickets] }));
-        void requestAiReply(ticket.id, ticket.message).then((reply) => {
+        void requestAiReply(ticket.id).then((reply) => {
           if (!reply) return;
           updatePatient((p) => ({
             ...p,

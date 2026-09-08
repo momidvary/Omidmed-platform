@@ -1,4 +1,12 @@
 import { cn } from "@/lib/utils";
+import { cloneElement, useId } from "react";
+
+interface FieldControlProps {
+  id?: string;
+  required?: boolean;
+  "aria-invalid"?: boolean;
+  "aria-describedby"?: string;
+}
 
 export function Field({
   label,
@@ -11,22 +19,50 @@ export function Field({
   hint?: string;
   error?: string;
   required?: boolean;
-  children: React.ReactNode;
+  children: React.ReactElement<FieldControlProps>;
 }) {
+  const generatedId = useId();
+  const controlId = children.props.id ?? generatedId;
+  const hintId = `${controlId}-hint`;
+  const errorId = `${controlId}-error`;
+  const describedBy = [
+    children.props["aria-describedby"],
+    error ? errorId : hint ? hintId : null,
+  ]
+    .filter(Boolean)
+    .join(" ") || undefined;
+  const control = cloneElement(children, {
+    id: controlId,
+    required: required || children.props.required || undefined,
+    "aria-invalid": error ? true : children.props["aria-invalid"],
+    "aria-describedby": describedBy,
+  });
+
   return (
-    <label className="block">
+    <label className="block" htmlFor={controlId}>
       <span className="mb-1.5 flex items-center gap-1 text-xs font-medium text-[var(--color-ink-soft)]">
         {label}
-        {required && <span className="text-[var(--color-danger)]">*</span>}
+        {required && (
+          <span aria-hidden="true" className="text-[var(--color-danger)]">
+            *
+          </span>
+        )}
       </span>
-      {children}
+      {control}
       {hint && !error && (
-        <span className="mt-1 block text-[11px] text-[var(--color-ink-faint)]">
+        <span
+          id={hintId}
+          className="mt-1 block text-[11px] text-[var(--color-ink-faint)]"
+        >
           {hint}
         </span>
       )}
       {error && (
-        <span className="mt-1 block text-[11px] text-[var(--color-danger)]">
+        <span
+          id={errorId}
+          role="alert"
+          className="mt-1 block text-[11px] text-[var(--color-danger)]"
+        >
           {error}
         </span>
       )}

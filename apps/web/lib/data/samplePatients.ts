@@ -47,6 +47,7 @@ export const samplePatients: Patient[] = [
         subject: "کشش پشت زانو",
         message: "موقع سُر دادن پاشنه، پشت زانوم کشش نسبتاً زیادی حس می‌کنم. طبیعیه؟",
         status: "answered",
+        priority: "routine",
         replies: [
           {
             id: "tr_demo_1",

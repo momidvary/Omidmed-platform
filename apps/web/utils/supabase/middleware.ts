@@ -6,14 +6,17 @@ const supabaseKey =
   process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-export const updateSession = (request: NextRequest) => {
+export const updateSession = async (request: NextRequest) => {
   let supabaseResponse = NextResponse.next({
     request: { headers: request.headers },
   });
 
-  if (!supabaseUrl || !supabaseKey) return supabaseResponse;
+  if (!supabaseUrl || !supabaseKey) {
+    supabaseResponse.headers.set("Cache-Control", "private, no-store");
+    return supabaseResponse;
+  }
 
-  createServerClient(supabaseUrl, supabaseKey, {
+  const supabase = createServerClient(supabaseUrl, supabaseKey, {
     cookies: {
       getAll() {
         return request.cookies.getAll();
@@ -29,6 +32,14 @@ export const updateSession = (request: NextRequest) => {
       },
     },
   });
+
+  // Verify the session and refresh expired auth cookies when necessary.
+  // Server-side authorization must use getUser()/getClaims(), not getSession().
+  await supabase.auth.getUser();
+
+  // Clinical pages and authenticated responses must never be stored in a
+  // shared browser/proxy cache.
+  supabaseResponse.headers.set("Cache-Control", "private, no-store");
 
   return supabaseResponse;
 };

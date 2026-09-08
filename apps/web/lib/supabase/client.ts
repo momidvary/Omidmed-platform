@@ -11,8 +11,10 @@ import { createClient } from "@/utils/supabase/client";
  * The publishable key is safe for the browser (protected by Row Level
  * Security). Never expose the secret/service_role key.
  *
- * Until configured, `getSupabase()` returns null and the app runs fully
- * in local/mock mode. Schema: database/schema.sql.
+ * When these variables are absent, `getSupabase()` returns null. The data-mode
+ * policy in lib/config.ts permits a development/demo fallback, but production
+ * fails closed with a configuration notice. Apply every numbered migration in
+ * order; there is no production schema fallback in the client.
  */
 
 export const isSupabaseConfigured = Boolean(

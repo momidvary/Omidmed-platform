@@ -12,6 +12,8 @@ import {
   translate,
   type Locale,
 } from "@/lib/i18n/translations";
+import { usePathname } from "next/navigation";
+import { isPatientPortalPath } from "@/lib/routes";
 
 interface LocaleContextValue {
   locale: Locale;
@@ -26,6 +28,7 @@ const STORAGE_KEY = "physioai:locale:v1";
 
 export function LocaleProvider({ children }: { children: React.ReactNode }) {
   const [locale, setLocaleState] = useState<Locale>("en");
+  const pathname = usePathname();
 
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY) as Locale | null;
@@ -34,6 +37,12 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
       setLocaleState(stored);
     }
   }, []);
+
+  useEffect(() => {
+    const documentLocale = isPatientPortalPath(pathname) ? "fa" : locale;
+    document.documentElement.lang = documentLocale;
+    document.documentElement.dir = localeDir(documentLocale);
+  }, [locale, pathname]);
 
   const value = useMemo<LocaleContextValue>(
     () => ({

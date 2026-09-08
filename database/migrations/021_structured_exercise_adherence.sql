@@ -55,7 +55,7 @@ alter table public.prescription_items
 alter table public.prescription_items
   validate constraint prescription_items_targets_check;
 
-create table public.patient_exercise_completion_events (
+create table if not exists public.patient_exercise_completion_events (
   id uuid primary key default gen_random_uuid(),
   clinic_id uuid not null references public.clinics (id) on delete restrict,
   patient_id uuid not null references public.patients (id) on delete restrict,

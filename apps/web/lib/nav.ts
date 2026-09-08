@@ -9,6 +9,10 @@ export interface NavItem {
 
 export const navItems: NavItem[] = [
   { href: "/", key: "dashboard", icon: "dashboard" },
+  { href: "/patients", key: "patients", icon: "user" },
+  { href: "/clinical-records", key: "clinical-records", icon: "new-case" },
+  { href: "/alerts", key: "alerts", icon: "alert" },
+  { href: "/tickets", key: "tickets", icon: "chat" },
   { href: "/new-case", key: "new-case", icon: "new-case" },
   { href: "/case-analysis", key: "case-analysis", icon: "analysis" },
   { href: "/treatment-planner", key: "treatment-planner", icon: "treatment" },

@@ -1,141 +1,97 @@
-# PhysioAI Assistant
+# PhysioAI
 
-An AI-powered clinical decision-support web app for physiotherapists: clinical
-reasoning, assessment support, treatment planning, exercise prescription,
-red-flag safety screening, and patient education.
+PhysioAI is a multilingual physiotherapy decision-support workspace built with
+Next.js and Supabase. It includes clinic-scoped patient records, care episodes,
+safety screening, clinician-reviewed treatment plans, exercise prescriptions,
+a patient portal and clinical communication workflows.
 
-> **Clinical safety notice** — PhysioAI provides decision-support only. It
-> never gives a definitive medical diagnosis; it produces *possible clinical
-> hypotheses* that must be confirmed by hands-on clinical examination.
+> **Clinical safety notice:** This repository is not a validated medical
+> device, diagnostic service or emergency service. It must not make autonomous
+> treatment decisions. A licensed clinician remains responsible for assessment,
+> escalation and every clinical decision.
 
-## Features
+## Current boundaries
 
-| Page | What it does |
-| --- | --- |
-| **Dashboard** | Quick clinical tools, recent cases, body-region modules |
-| **New Case** | Structured patient intake (complaint, pain, history, goals) |
-| **Case Analysis** | Auto-organised clinical reasoning: subjective/objective findings, hypotheses, differentials, yellow/red flags, missing info, suggested tests & outcome measures |
-| **Treatment Planner** | Stage- and irritability-aware plan: manual therapy, exercise, mobility, strengthening, motor control, balance, education, home program, progression rules |
-| **Exercise Library** | Searchable, filterable exercises with dosage, mistakes, when-to-stop, progression/regression |
-| **AI Assistant** | Chat interface with case-context panel, suggested prompts, copyable answers |
-| **Red Flag Checker** | Category-grouped safety screen with urgent-referral warnings |
-| **Patient Education** | Plain-language handout generator (problem, avoid, exercises, when to call, home advice) |
-| **Settings** | Local preferences, AI-connection notes, data reset |
-| **Patient Portal** (`/patient`) | Persian/RTL patient-facing portal with Supabase email+password sign-in/sign-up: personalized exercise program with Persian instructions, daily session + pain logging, progress dashboard (pain trend chart, adherence, stat tiles), support tickets with a server-generated AI triage reply, and an AI chat that explains the patient's own exercises |
-| **Posture Analysis** | Upload patient photos from three views (front / side / back); the AI screens for common postural deviations per view with severity badges, a summary, and suggested focus areas. Demo engine for now — vision-AI integration point marked. Photos never leave the browser |
+- Production data uses Supabase authentication and Row Level Security. Clinic
+  owners can access their clinic workflows; therapists are limited to assigned
+  patients; linked patients can access only their own patient-facing records.
+  Platform support and clinic staff do not receive implicit clinical-PHI access.
+- Production is fail-closed. Missing Supabase configuration must show a
+  configuration/authentication failure and must never load sample patient data.
+- Mock mode is an explicit local/demo mode. It bypasses real authentication and
+  must never be used with real patient data.
+- The deterministic planning, education and chat templates are decision-support
+  aids, not diagnoses or clinical clearance.
+- Optional OpenAI clinical drafts run only in guarded server routes and are
+  disabled by default. They require persisted safety-cleared context, audit,
+  quota controls and explicit clinician review; they cannot publish treatment.
+- No real posture-vision analysis is connected. The optional internal sandbox
+  is disabled by default, does not inspect pixels and must not be presented as a
+  clinical analysis.
 
-## Languages
+## Canonical documentation
 
-The clinician interface supports **English, فارسی (Persian) and العربية
-(Arabic)** — switch from the topbar selector or Settings. Persian and Arabic
-flip the whole shell to RTL. The chrome, navigation, posture analysis and
-settings are fully translated; deep clinical content (exercise library,
-region modules) is translated progressively. The patient portal is
-Persian-native. Locale choice persists in the browser.
+- [Web application guide](apps/web/README.md) — runtime modes, environment
+  variables, database workflow and verification commands.
+- [Persian setup guide](docs/RAHNAMA-FA.md) — controlled Supabase and deployment
+  setup.
+- [Product readiness](docs/PRODUCT_READINESS_FA.md) — completed work, open
+  clinical/security/operational gates and release criteria.
 
-## Supabase
+These documents are the source of truth. A successful build or deployment is
+not, by itself, approval for real patient data, clinical use or public sale.
 
-Real Supabase Auth with role-based, clinic-isolated access:
+## Local development
 
-- **Roles**: `platform_admin`, `clinic_owner`, `therapist`,
-  `clinic_staff`, `patient` (in `profiles`; escalation blocked by a
-  DB trigger — only platform admins can change roles).
-- **Schema**: `database/migrations/001_schema.sql` (clinics,
-  clinic_members, patients, patient_users, patient_therapists,
-  care_episodes — one patient can have multiple treatment episodes —
-  episode_program, progress, sessions, appointments, exercises, tickets,
-  cases). Run it, then `002_rls.sql`, in the Supabase SQL editor.
-- **RLS**: `database/migrations/002_rls.sql`. No anon policies at all.
-  Each clinic sees only its own data; therapists see their clinic's or
-  assigned patients; patients see only themselves.
-- **Dev seed** (never for production): `database/seed/seed.dev.sql`.
-- **Sign-in**: email + password (clinicians at `/`, patients at
-  `/patient` with sign-up). National-ID login is removed; the national ID
-  is a record field only. Phone OTP requires an SMS provider configured
-  in Supabase (see `docs/RAHNAMA-FA.md`).
-- **Env**: copy `apps/web/.env.local.example` to `.env.local`
-  (URL + publishable key). Same vars on Vercel.
-- **Data modes**: real mode has no localStorage fallback; the topbar
-  shows live storage status (Connected / Saving / Saved / Offline /
-  Save failed) and failed saves never clear the form. Set
-  `NEXT_PUBLIC_DATA_MODE=mock` for the auth-free local demo.
-- **راهنمای فارسی**: `docs/RAHNAMA-FA.md` — creating the first admin,
-  clinic, staff, and linking patient accounts.
-
-## Tech stack
-
-- **Next.js (React 19)** — App Router, functional components, TypeScript
-- **Tailwind CSS 4** — custom medical design tokens, fully responsive
-- All state is **local/mock** (React context + `localStorage`) — no backend
-  required to run
-
-## Run it
+The application package is in `apps/web`. Use the Node.js and npm versions
+declared in its `package.json`.
 
 ```bash
 cd apps/web
-npm install
+npm ci
 npm run dev
-# open http://localhost:3000
 ```
 
-Production build: `npm run build && npm start`.
+Open [http://localhost:3000](http://localhost:3000). With no local Supabase
+configuration, development may use mock mode; do not enter real patient data.
 
-## Project structure
+For Vercel, set the project **Root Directory** to `apps/web`. Public Supabase
+values and server-only secrets must be configured in the correct deployment
+environment. Never expose a service/secret key through a `NEXT_PUBLIC_`
+variable, a client bundle or the repository.
 
-```
-apps/web/
-  app/                      # one folder per page (App Router)
-    page.tsx                # Dashboard
-    new-case/  case-analysis/  treatment-planner/
-    exercise-library/  ai-assistant/  red-flags/
-    patient-education/  settings/
-  components/
-    layout/                 # Sidebar, AppShell (topbar + responsive drawer)
-    ui/                     # Card, Button, Badge, Form, Icon, Misc primitives
-  lib/
-    ai/engine.ts            # mock AI engine — all 🔌 integration points live here
-    data/                   # mock data: exercises, body regions, red flags, sample cases
-    store/CaseContext.tsx   # case state (persisted to localStorage)
-    types.ts  nav.ts  utils.ts
+## Database safety
+
+Database migrations live in `database/migrations`. The tracked runner records
+SHA-256 checksums, serializes concurrent deploys and refuses an untracked or
+non-empty baseline:
+
+```bash
+DATABASE_URL='postgresql://…' node database/scripts/migrate.mjs --allow-baseline
+DATABASE_URL='postgresql://…' node database/scripts/migrate.mjs
 ```
 
-### Demo (mock) mode
+Use `--allow-baseline` only for a verified empty database. The initial schema
+migration is destructive to the legacy demo schema and the runner deliberately
+refuses to adopt an existing untracked schema automatically. Such a database
+needs a backed-up, reviewed DBA reconciliation before any migration is run.
 
-Set `NEXT_PUBLIC_DATA_MODE=mock` to run without auth or a database: the
-patient portal then offers two demo patients (knee rehab / low back pain)
-from `apps/web/lib/data/samplePatients.ts`, stored only in the browser.
-This mode is for development and demos — real mode never falls back to
-localStorage.
+`database/seed/seed.dev.sql` is development-only and must never be loaded into
+production.
 
-### Database files
+## Verification
 
-| File | Purpose |
-| --- | --- |
-| `database/migrations/001_schema.sql` | Core schema (roles, clinics, patients, care episodes…) |
-| `database/migrations/002_rls.sql` | Row Level Security — no anon access |
-| `database/migrations/003_security_fixes.sql` | Admin bootstrap, granular role access, reply hardening, patient logs vs clinical measurements |
-| `database/seed/seed.dev.sql` | Development-only demo data |
-| `database/tests/rls_tests.sql` | Runnable RLS isolation test scenarios |
-| `docs/RAHNAMA-FA.md` | Persian step-by-step setup guide |
+Run from `apps/web` before proposing a change:
 
-Run migrations sequentially (001 → 002 → 003) in the Supabase SQL editor.
-The first `platform_admin` is created once via
-`select public.bootstrap_platform_admin('<user-uuid>');` — SQL editor or
-service role only, refuses to run twice.
+```bash
+npm run lint
+npm run typecheck
+npm test
+npm run build
+npm run test:e2e
+```
 
-## Connecting a real AI later
-
-Every AI-generated output flows through `apps/web/lib/ai/engine.ts`
-(`buildReasoning`, `buildTreatmentPlan`, `buildEducation`, `buildChatReply`,
-`buildPatientChatReply`, `buildTicketAutoReply`).
-Each function is marked with a `🔌 REAL AI API INTEGRATION POINT` comment —
-swap its body for a call to your AI provider that returns the same typed
-shape, and the UI works unchanged. Keep API keys server-side.
-
-## Roadmap
-
-- Persian (RTL) UI
-- Real AI provider integration (server-side)
-- Multi-user accounts & cloud persistence (Supabase)
-- Progress tracking and outcome-measure charts
-- Printable/PDF patient handouts
+Repository CI also checks the database migrations, security regression suite
+and development seed in disposable infrastructure. Real Supabase roles,
+provider integrations, backup/restore and clinical release gates still require
+controlled staging verification.

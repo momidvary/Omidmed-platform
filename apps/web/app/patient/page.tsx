@@ -8,16 +8,17 @@ import {
   buildTicketAutoReply,
   patientSuggestedPrompts,
 } from "@/lib/ai/engine";
-import type { ChatMessage, Patient, Ticket } from "@/lib/types";
+import type { ChatMessage, Patient, ProgressEntry, Ticket } from "@/lib/types";
 import { Card, CardBody } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Field, Input, Select, Textarea } from "@/components/ui/Form";
 import { Icon } from "@/components/ui/Icon";
 import { Disclaimer, Spinner } from "@/components/ui/Misc";
-import { cn, uid, uuid } from "@/lib/utils";
+import { cn, localDateValue, uid, uuid } from "@/lib/utils";
 import { useAuth } from "@/lib/store/AuthContext";
 import { isMockMode } from "@/lib/config";
 import { SaveStatusPill } from "@/components/ui/SaveStatusPill";
+import { detectSafetySignals } from "@/lib/clinical/safety";
 
 const statusLabelsFa = {
   connected: "متصل",
@@ -33,6 +34,29 @@ const faDate = (iso: string) =>
 
 type Tab = "program" | "progress" | "tickets" | "assistant";
 
+export type DailyAggregateCompletionChoice =
+  | "complete"
+  | "incomplete"
+  | null;
+
+/**
+ * Build the legacy daily aggregate only from an explicit patient choice.
+ * Pain is intentionally independent: neither a low nor a high score implies
+ * whether the whole program was completed.
+ */
+export function buildDailyAggregateProgressEntry(
+  date: string,
+  painLevel: number,
+  completionChoice: DailyAggregateCompletionChoice
+): ProgressEntry | null {
+  if (completionChoice === null) return null;
+  return {
+    date,
+    painLevel,
+    completed: completionChoice === "complete",
+  };
+}
+
 const tabs: { id: Tab; label: string; icon: React.ComponentProps<typeof Icon>["name"] }[] = [
   { id: "program", label: "برنامه من", icon: "exercise" },
   { id: "progress", label: "پیشرفت من", icon: "analysis" },
@@ -41,12 +65,27 @@ const tabs: { id: Tab; label: string; icon: React.ComponentProps<typeof Icon>["n
 ];
 
 export default function PatientPortalPage() {
-  const { patient, hydrated } = usePatient();
+  const {
+    patient,
+    patients,
+    hydrated,
+    loadError,
+    selectPatient,
+    reloadPatients,
+  } = usePatient();
   const { session, loading } = useAuth();
 
   const waiting = !hydrated || (!isMockMode && loading);
   // Signed in but not yet linked to a patient record by the clinic.
-  const unlinked = !isMockMode && session && hydrated && !patient;
+  const unlinked =
+    !isMockMode && session && hydrated && !loadError && patients.length === 0;
+  const needsSelection =
+    !isMockMode &&
+    session &&
+    hydrated &&
+    !loadError &&
+    patients.length > 1 &&
+    !patient;
 
   return (
     <div
@@ -55,13 +94,93 @@ export default function PatientPortalPage() {
     >
       {waiting ? (
         <Spinner label="در حال بارگذاری…" />
+      ) : !isMockMode && loadError ? (
+        <PortalLoadError onRetry={reloadPatients} />
       ) : patient ? (
-        <PatientDashboard patient={patient} />
+        <PatientDashboard
+          key={`${patient.id}:${patient.episodeId ?? "no-episode"}`}
+          patient={patient}
+        />
+      ) : needsSelection ? (
+        <LinkedPatientPicker patients={patients} onSelect={selectPatient} />
       ) : unlinked ? (
         <UnlinkedNotice />
       ) : (
         <PatientEntry />
       )}
+    </div>
+  );
+}
+
+function PortalLoadError({ onRetry }: { onRetry: () => void }) {
+  const { signOut } = useAuth();
+  return (
+    <div className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center px-5 py-10 text-center">
+      <Card>
+        <CardBody className="space-y-4">
+          <p role="alert" className="text-sm font-semibold text-[var(--color-danger)]">
+            اطلاعات پرتال بارگذاری نشد
+          </p>
+          <p className="text-xs leading-relaxed text-[var(--color-ink-soft)]">
+            این وضعیت به معنی نداشتن پرونده نیست. اتصال اینترنت را بررسی کنید و
+            دوباره تلاش کنید؛ اطلاعات بیمار قبلی نمایش داده نمی‌شود.
+          </p>
+          <Button className="w-full" onClick={onRetry}>
+            تلاش دوباره
+          </Button>
+          <Button variant="secondary" className="w-full" onClick={signOut}>
+            خروج از حساب
+          </Button>
+        </CardBody>
+      </Card>
+    </div>
+  );
+}
+
+function LinkedPatientPicker({
+  patients,
+  onSelect,
+}: {
+  patients: Patient[];
+  onSelect: (patientId: string) => void;
+}) {
+  const { signOut } = useAuth();
+  return (
+    <div className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center px-5 py-10">
+      <Card>
+        <CardBody className="space-y-4">
+          <div>
+            <h1 className="text-base font-bold text-[var(--color-ink)]">
+              انتخاب پرونده بیمار
+            </h1>
+            <p className="mt-1 text-xs leading-relaxed text-[var(--color-ink-soft)]">
+              این حساب به چند بیمار متصل است. برای جلوگیری از ثبت اطلاعات در
+              پرونده اشتباه، بیمار را صریحاً انتخاب کنید.
+            </p>
+          </div>
+          <div className="space-y-2">
+            {patients.map((candidate) => (
+              <button
+                key={candidate.id}
+                type="button"
+                onClick={() => onSelect(candidate.id)}
+                className="w-full rounded-xl border border-[var(--color-border)] bg-white px-4 py-3 text-right transition-colors hover:border-[var(--color-primary)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)]"
+              >
+                <span className="block text-sm font-semibold text-[var(--color-ink)]">
+                  {candidate.nameFa}
+                </span>
+                <span className="mt-1 block text-xs text-[var(--color-ink-soft)]">
+                  {candidate.conditionFa}
+                </span>
+              </button>
+            ))}
+          </div>
+          <Button variant="secondary" className="w-full" onClick={signOut}>
+            خروج از حساب
+          </Button>
+        </CardBody>
+      </Card>
+      <Disclaimer fa className="mt-6" />
     </div>
   );
 }
@@ -77,9 +196,9 @@ function UnlinkedNotice() {
             حساب شما هنوز به پرونده‌ای متصل نشده است
           </p>
           <p className="text-xs leading-relaxed text-[var(--color-ink-soft)]">
-            ورود شما موفق بود، اما کلینیک هنوز حساب شما را به پرونده درمانی‌تان
-            متصل نکرده است. لطفاً با کلینیک خود تماس بگیرید و ایمیل ثبت‌نامی‌تان
-            را اعلام کنید.
+            ورود شما موفق بود، اما کلینیک هنوز حساب شما را به پرونده‌ای دارای
+            دوره درمان فعال متصل نکرده است. لطفاً با کلینیک تماس بگیرید و ایمیل
+            ثبت‌نامی‌تان را اعلام کنید.
           </p>
           <Button variant="secondary" className="w-full" onClick={signOut}>
             خروج از حساب
@@ -235,6 +354,14 @@ function PatientAuth() {
           <Button type="submit" className="w-full" disabled={busy}>
             {busy ? "لطفاً صبر کنید…" : mode === "signin" ? "ورود به پرتال" : "ساخت حساب"}
           </Button>
+          {mode === "signin" && (
+            <a
+              href="/auth/forgot-password"
+              className="block text-center text-xs text-[var(--color-primary-strong)] underline"
+            >
+              بازیابی رمز عبور
+            </a>
+          )}
         </form>
 
         {notice && (
@@ -254,10 +381,12 @@ function PatientAuth() {
 /* ── Dashboard shell ───────────────────────────────────────────── */
 
 function PatientDashboard({ patient }: { patient: Patient }) {
-  const { closeDemoPatient } = usePatient();
+  const { closeDemoPatient, patients, selectPatient } = usePatient();
   const { signOut } = useAuth();
   const [tab, setTab] = useState<Tab>("program");
-  const openTickets = patient.tickets.filter((t) => t.status === "open").length;
+  const openTickets = patient.tickets.filter(
+    (ticket) => ticket.status === "open" || ticket.status === "acknowledged"
+  ).length;
 
   return (
     <div className="mx-auto w-full max-w-3xl px-4 pb-10 sm:px-6">
@@ -272,6 +401,20 @@ function PatientDashboard({ patient }: { patient: Patient }) {
             سلام، {patient.nameFa} 👋
           </h1>
         </div>
+        {!isMockMode && patients.length > 1 && (
+          <Select
+            aria-label="تعویض پرونده بیمار"
+            value={patient.id}
+            onChange={(event) => selectPatient(event.target.value)}
+            className="max-w-44"
+          >
+            {patients.map((candidate) => (
+              <option key={candidate.id} value={candidate.id}>
+                {candidate.nameFa}
+              </option>
+            ))}
+          </Select>
+        )}
         <SaveStatusPill labels={statusLabelsFa} />
         <Button
           variant="secondary"
@@ -294,6 +437,22 @@ function PatientDashboard({ patient }: { patient: Patient }) {
             </span>
             {patient.therapistNoteFa}
           </p>
+          {patient.prescription && (
+            <div className="space-y-2 border-t border-[var(--color-border)] pt-3 text-xs leading-relaxed">
+              <p className="text-[var(--color-ink-soft)]">
+                نسخه برنامه {fa(patient.prescription.version)} · بازبینی بعدی:{" "}
+                {faDate(patient.prescription.reviewDate)}
+              </p>
+              <p className="rounded-lg bg-[var(--color-warn-soft)] px-3 py-2 text-[var(--color-warn)]">
+                <span className="font-semibold">احتیاط‌ها: </span>
+                {patient.prescription.precautionsFa}
+              </p>
+              <p className="rounded-lg bg-[var(--color-danger-soft)] px-3 py-2 text-[var(--color-danger)]">
+                <span className="font-semibold">چه زمانی تمرین را متوقف کنم: </span>
+                {patient.prescription.stopRulesFa}
+              </p>
+            </div>
+          )}
         </CardBody>
       </Card>
 
@@ -344,9 +503,54 @@ function PatientDashboard({ patient }: { patient: Patient }) {
 function ProgramTab({ patient }: { patient: Patient }) {
   const { logProgress } = usePatient();
   const [openId, setOpenId] = useState<string | null>(null);
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localDateValue();
   const todayEntry = patient.progress.find((e) => e.date === today);
   const [pain, setPain] = useState(todayEntry?.painLevel ?? 3);
+  const [completionChoice, setCompletionChoice] =
+    useState<DailyAggregateCompletionChoice>(null);
+  const [savingProgress, setSavingProgress] = useState(false);
+  const [progressError, setProgressError] = useState<string | null>(null);
+  const [progressNotice, setProgressNotice] = useState<string | null>(null);
+  const [programPaused, setProgramPaused] = useState(
+    (todayEntry?.painLevel ?? 0) >= 7
+  );
+
+  async function saveProgress() {
+    if (savingProgress) return;
+    setProgressError(null);
+    setProgressNotice(null);
+    const entry = buildDailyAggregateProgressEntry(
+      today,
+      pain,
+      completionChoice
+    );
+    if (!entry) {
+      setProgressError(
+        "پیش از ثبت، مشخص کنید کل برنامه امروز کامل انجام شده است یا کامل انجام نشده است."
+      );
+      return;
+    }
+    setSavingProgress(true);
+    const saved = await logProgress(entry);
+    setSavingProgress(false);
+    if (!saved) {
+      setProgressError(
+        "ثبت گزارش انجام نشد. اتصال اینترنت را بررسی کنید و دوباره تلاش کنید."
+      );
+      return;
+    }
+    setCompletionChoice(null);
+    if (pain >= 7) {
+      setProgramPaused(true);
+      setProgressNotice(
+        isMockMode
+          ? "در حالت نمایشی فقط توقف برنامه شبیه‌سازی شد و هیچ هشدار واقعی برای درمانگر ارسال نشد."
+          : "گزارش ثبت شد، یک هشدار بالینی برای درمانگر مسئول ساخته شد و برنامه تا بررسی ایمنی متوقف است. برای وضعیت اورژانسی منتظر پاسخ برنامه نمانید."
+      );
+    } else {
+      setProgressNotice("گزارش امروز با موفقیت ثبت شد.");
+    }
+  }
 
   return (
     <div className="space-y-4">
@@ -357,13 +561,62 @@ function ProgramTab({ patient }: { patient: Patient }) {
             <h3 className="text-sm font-bold text-[var(--color-ink)]">
               جلسه امروز
             </h3>
-            {todayEntry?.completed && (
-              <span className="flex items-center gap-1 text-xs font-medium text-[var(--color-success)]">
-                <Icon name="check" width={14} height={14} />
-                ثبت شد
+            {todayEntry && (
+              <span
+                className={cn(
+                  "flex items-center gap-1 text-xs font-medium",
+                  todayEntry.completed
+                    ? "text-[var(--color-success)]"
+                    : "text-[var(--color-ink-soft)]"
+                )}
+              >
+                {todayEntry.completed && (
+                  <Icon name="check" width={14} height={14} />
+                )}
+                آخرین گزارش: {todayEntry.completed ? "کامل" : "کامل‌نشده"}
               </span>
             )}
           </div>
+          <p className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-xs leading-relaxed text-[var(--color-ink-soft)]">
+            این فرم یک گزارش کلی روزانه است و انجام هر تمرین را جداگانه ثبت
+            نمی‌کند. وضعیت واقعی کل برنامه را خودتان انتخاب کنید؛ نمره درد این
+            انتخاب را تعیین یا تغییر نمی‌دهد.
+          </p>
+          <fieldset className="space-y-2">
+            <legend className="text-xs font-bold text-[var(--color-ink)]">
+              وضعیت کل برنامه امروز
+            </legend>
+            <label className="flex cursor-pointer items-start gap-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-xs text-[var(--color-ink-soft)]">
+              <input
+                type="radio"
+                name="daily-program-completion"
+                value="complete"
+                checked={completionChoice === "complete"}
+                disabled={savingProgress}
+                onChange={() => {
+                  setCompletionChoice("complete");
+                  setProgressError(null);
+                  setProgressNotice(null);
+                }}
+              />
+              <span>کل برنامه تمرینی امروز کامل انجام شد.</span>
+            </label>
+            <label className="flex cursor-pointer items-start gap-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-xs text-[var(--color-ink-soft)]">
+              <input
+                type="radio"
+                name="daily-program-completion"
+                value="incomplete"
+                checked={completionChoice === "incomplete"}
+                disabled={savingProgress}
+                onChange={() => {
+                  setCompletionChoice("incomplete");
+                  setProgressError(null);
+                  setProgressNotice(null);
+                }}
+              />
+              <span>کل برنامه تمرینی امروز کامل انجام نشد.</span>
+            </label>
+          </fieldset>
           <label className="block text-xs text-[var(--color-ink-soft)]">
             میزان درد بعد از تمرین: <strong>{fa(pain)} از ۱۰</strong>
             <input
@@ -371,27 +624,98 @@ function ProgramTab({ patient }: { patient: Patient }) {
               min={0}
               max={10}
               value={pain}
-              onChange={(e) => setPain(Number(e.target.value))}
+              onChange={(e) => {
+                setPain(Number(e.target.value));
+                setProgressNotice(null);
+              }}
               dir="ltr"
               className="mt-2 h-2 w-full cursor-pointer appearance-none rounded-full bg-gradient-to-r from-[var(--color-success)] via-[var(--color-warn)] to-[var(--color-danger)]"
             />
           </label>
+          {pain >= 7 && (
+            <div
+              role="alert"
+              className="rounded-xl bg-[var(--color-danger-soft)] px-3 py-2 text-xs leading-relaxed text-[var(--color-danger)]"
+            >
+              درد شدید است. تمرین را فعلاً ادامه ندهید و همین امروز با
+              فیزیوتراپیست یا مرکز درمانی تماس بگیرید. اگر درد قفسه سینه، تنگی
+              نفس شدید، ضعف پیشرونده، بی‌اختیاری جدید یا بی‌حسی ناحیه زینی
+              دارید، منتظر پاسخ داخل برنامه نمانید و با اورژانس ۱۱۵ تماس بگیرید.
+            </div>
+          )}
+          {progressError && (
+            <p role="alert" className="text-xs text-[var(--color-danger)]">
+              {progressError}
+            </p>
+          )}
+          {progressNotice && (
+            <p
+              role="status"
+              className={cn(
+                "rounded-xl px-3 py-2 text-xs leading-relaxed",
+                pain >= 7
+                  ? "bg-[var(--color-warn-soft)] text-[var(--color-ink)]"
+                  : "bg-[var(--color-success-soft)] text-[var(--color-success)]"
+              )}
+            >
+              {progressNotice}
+            </p>
+          )}
           <Button
             size="sm"
-            onClick={() =>
-              logProgress({ date: today, painLevel: pain, completed: true })
-            }
+            onClick={saveProgress}
+            disabled={savingProgress || completionChoice === null}
           >
             <Icon name="check" width={14} height={14} />
-            {todayEntry?.completed ? "به‌روزرسانی جلسه امروز" : "تمرین‌های امروز را انجام دادم"}
+            {savingProgress
+              ? "در حال ذخیره…"
+              : pain >= 7
+                ? "ثبت گزارش کلی و درد شدید"
+                : todayEntry
+                  ? "به‌روزرسانی گزارش کلی امروز"
+                  : "ثبت گزارش کلی امروز"}
           </Button>
         </CardBody>
       </Card>
 
       {/* Prescribed exercises */}
-      {patient.program.map((item) => {
-        const content = exerciseFa[item.exerciseId];
-        if (!content) return null;
+      {programPaused ? (
+        <Card className="border-[var(--color-danger)]/30 bg-[var(--color-danger-soft)]">
+          <CardBody>
+            <div className="flex items-start gap-3">
+              <Icon name="alert" width={20} height={20} />
+              <div>
+                <h3 className="text-sm font-bold text-[var(--color-danger)]">
+                  برنامه تمرینی متوقف است
+                </h3>
+                <p className="mt-1 text-xs leading-relaxed text-[var(--color-ink-soft)]">
+                  تا ارزیابی مجدد و فعال‌سازی توسط درمانگر، تمرین‌های نسخه را
+                  ادامه ندهید. این پیام جایگزین تماس با اورژانس نیست.
+                </p>
+              </div>
+            </div>
+          </CardBody>
+        </Card>
+      ) : patient.program.map((item) => {
+        const content =
+          item.contentSnapshot ??
+          (isMockMode ? exerciseFa[item.exerciseId] : undefined);
+        if (!content) {
+          return (
+            <Card key={item.exerciseId} className="border-[var(--color-danger)]/30">
+              <CardBody>
+                <p className="text-sm font-bold text-[var(--color-danger)]">
+                  راهنمای فارسی این تمرین در دسترس نیست
+                </p>
+                <p className="mt-2 text-xs leading-relaxed text-[var(--color-ink-soft)]">
+                  کد تمرین: {item.exerciseId} — {item.dosageFa}. تا زمانی که
+                  فیزیوتراپیست روش صحیح را توضیح نداده است، این تمرین را انجام
+                  ندهید و از بخش تیکت‌ها درخواست راهنما کنید.
+                </p>
+              </CardBody>
+            </Card>
+          );
+        }
         const open = openId === item.exerciseId;
         return (
           <Card key={item.exerciseId}>
@@ -464,10 +788,11 @@ function ProgressTab({ patient }: { patient: Patient }) {
   const last14 = sorted.slice(-14);
 
   const [weekAgo] = useState(() =>
-    new Date(Date.now() - 7 * 864e5).toISOString().slice(0, 10)
+    localDateValue(new Date(Date.now() - 7 * 864e5))
   );
   const thisWeek = sorted.filter((e) => e.date > weekAgo);
   const doneThisWeek = thisWeek.filter((e) => e.completed).length;
+  const incompleteThisWeek = thisWeek.length - doneThisWeek;
   const weekAvgPain =
     thisWeek.length > 0
       ? thisWeek.reduce((s, e) => s + e.painLevel, 0) / thisWeek.length
@@ -480,8 +805,8 @@ function ProgressTab({ patient }: { patient: Patient }) {
       {/* Stat tiles */}
       <div className="grid grid-cols-3 gap-3">
         <StatTile
-          value={`${fa(doneThisWeek)} / ${fa(patient.weeklyTarget)}`}
-          label="جلسات این هفته"
+          value={`${fa(thisWeek.length)} گزارش`}
+          label={`${fa(doneThisWeek)} کامل · ${fa(incompleteThisWeek)} کامل‌نشده`}
         />
         <StatTile
           value={weekAvgPain === null ? "—" : fa(Math.round(weekAvgPain * 10) / 10)}
@@ -499,6 +824,11 @@ function ProgressTab({ patient }: { patient: Patient }) {
           good={painChange !== null && painChange < 0}
         />
       </div>
+      <p className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-xs leading-relaxed text-[var(--color-ink-soft)]">
+        هدف نسخه {fa(patient.weeklyTarget)} روز در هفته است. تعداد گزارش‌های
+        ثبت‌شده جدا از این هدف نمایش داده می‌شود؛ نبود گزارش به معنی انجام‌نشدن
+        تمرین نیست و از این داده‌های کلی درصد پایبندی محاسبه نمی‌شود.
+      </p>
 
       {/* Pain trend */}
       <Card>
@@ -507,7 +837,7 @@ function ProgressTab({ patient }: { patient: Patient }) {
             روند درد شما
           </h3>
           <p className="mb-4 text-xs text-[var(--color-ink-faint)]">
-            نمره درد (۰ تا ۱۰) که بعد از هر جلسه ثبت کرده‌اید — {fa(last14.length)} جلسه اخیر
+            نمره درد (۰ تا ۱۰) در روزهایی که گزارش کرده‌اید — {fa(last14.length)} گزارش اخیر
           </p>
           {last14.length >= 2 ? (
             <PainTrendChart entries={last14} />
@@ -519,14 +849,16 @@ function ProgressTab({ patient }: { patient: Patient }) {
         </CardBody>
       </Card>
 
-      {/* Adherence */}
+      {/* Explicit daily aggregate reports; missing days are unknown. */}
       <Card>
         <CardBody>
           <h3 className="mb-1 text-sm font-bold text-[var(--color-ink)]">
-            پایبندی به تمرین‌ها
+            گزارش‌های کلی روزانه
           </h3>
           <p className="mb-4 text-xs text-[var(--color-ink-faint)]">
-            {fa(last14.length)} جلسه اخیر — دایره پُر با علامت ✓ یعنی برنامه آن روز کامل انجام شده
+            فقط {fa(last14.length)} روز گزارش‌شده نمایش داده می‌شود. علامت ✓
+            یعنی بیمار صریحاً انجام کامل کل برنامه آن روز را ثبت کرده است؛ روز
+            بدون گزارش، وضعیت نامشخص دارد و عدم پایبندی محسوب نمی‌شود.
           </p>
           <div dir="ltr" className="flex flex-wrap justify-center gap-2">
             {last14.map((e) => (
@@ -688,16 +1020,27 @@ function PainTrendChart({
 /* ── Tab 3: tickets ────────────────────────────────────────────── */
 
 function TicketsTab({ patient }: { patient: Patient }) {
-  const { addTicket } = usePatient();
+  const { addTicket, replyToTicket } = usePatient();
   const [exerciseId, setExerciseId] = useState("");
   const [subject, setSubject] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
   const [sending, setSending] = useState(false);
+  const [replyDrafts, setReplyDrafts] = useState<Record<string, string>>({});
+  const [replyingTicketId, setReplyingTicketId] = useState<string | null>(null);
+  const [replyErrors, setReplyErrors] = useState<Record<string, string>>({});
+  const safetySignals = useMemo(
+    () => detectSafetySignals(message),
+    [message]
+  );
+  const hasEmergencySignal = safetySignals.some(
+    (signal) => signal.disposition === "emergency"
+  );
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    if (sending) return;
     if (!subject.trim() || !message.trim()) {
       setError("موضوع و متن پیام را بنویسید.");
       return;
@@ -713,6 +1056,11 @@ function TicketsTab({ patient }: { patient: Patient }) {
       subject: subject.trim(),
       message: message.trim(),
       status: "open",
+      priority: hasEmergencySignal
+        ? "emergency"
+        : safetySignals.length > 0
+          ? "urgent"
+          : "routine",
       replies: [
         {
           id: uuid(),
@@ -734,6 +1082,31 @@ function TicketsTab({ patient }: { patient: Patient }) {
     setExerciseId("");
     setSent(true);
     setTimeout(() => setSent(false), 2500);
+  }
+
+  async function submitReply(event: React.FormEvent, ticketId: string) {
+    event.preventDefault();
+    if (replyingTicketId) return;
+    const content = (replyDrafts[ticketId] ?? "").trim();
+    if (!content) {
+      setReplyErrors((current) => ({
+        ...current,
+        [ticketId]: "متن پاسخ را بنویسید.",
+      }));
+      return;
+    }
+    setReplyingTicketId(ticketId);
+    setReplyErrors((current) => ({ ...current, [ticketId]: "" }));
+    const ok = await replyToTicket(ticketId, content);
+    setReplyingTicketId(null);
+    if (!ok) {
+      setReplyErrors((current) => ({
+        ...current,
+        [ticketId]: "پاسخ ذخیره نشد؛ متن شما پاک نشده است. دوباره تلاش کنید.",
+      }));
+      return;
+    }
+    setReplyDrafts((current) => ({ ...current, [ticketId]: "" }));
   }
 
   return (
@@ -765,6 +1138,8 @@ function TicketsTab({ patient }: { patient: Patient }) {
               <Field label="موضوع" required>
                 <Input
                   value={subject}
+                  maxLength={160}
+                  required
                   onChange={(e) => {
                     setSubject(e.target.value);
                     setError(null);
@@ -776,6 +1151,8 @@ function TicketsTab({ patient }: { patient: Patient }) {
             <Field label="توضیح" required error={error ?? undefined}>
               <Textarea
                 value={message}
+                maxLength={4000}
+                required
                 onChange={(e) => {
                   setMessage(e.target.value);
                   setError(null);
@@ -783,7 +1160,17 @@ function TicketsTab({ patient }: { patient: Patient }) {
                 placeholder="بنویسید چه اتفاقی افتاد، کجا و چه زمانی…"
               />
             </Field>
-            <Button type="submit" size="sm">
+            {safetySignals.length > 0 && (
+              <div
+                role="alert"
+                className="rounded-xl bg-[var(--color-danger-soft)] px-3 py-2 text-xs leading-relaxed text-[var(--color-danger)]"
+              >
+                {hasEmergencySignal
+                  ? "این توضیح می‌تواند نشانه یک وضعیت اورژانسی باشد. منتظر پاسخ تیکت نمانید؛ فعالیت را متوقف کنید و همین حالا با اورژانس ۱۱۵ یا نزدیک‌ترین مرکز اورژانس تماس بگیرید."
+                  : "این توضیح نیازمند بررسی سریع پزشکی است. فعالیت را متوقف کنید و امروز با فیزیوتراپیست یا مرکز درمانی تماس بگیرید؛ تیکت جای ارزیابی فوری را نمی‌گیرد."}
+              </div>
+            )}
+            <Button type="submit" size="sm" disabled={sending}>
               <Icon name="send" width={14} height={14} className="-scale-x-100" />
               {sending ? "در حال ارسال…" : sent ? "ارسال شد ✓" : "ارسال تیکت"}
             </Button>
@@ -815,12 +1202,18 @@ function TicketsTab({ patient }: { patient: Patient }) {
                 <span
                   className={cn(
                     "shrink-0 rounded-full px-2.5 py-1 text-[10px] font-medium",
-                    t.status === "answered"
+                    t.status === "answered" || t.status === "closed"
                       ? "bg-[var(--color-success-soft)] text-[var(--color-success)]"
                       : "bg-[var(--color-warn-soft)] text-[var(--color-warn)]"
                   )}
                 >
-                  {t.status === "answered" ? "پاسخ داده شد" : "در انتظار فیزیوتراپیست"}
+                  {t.status === "closed"
+                    ? "بسته شده"
+                    : t.status === "answered"
+                      ? "پاسخ داده شد"
+                      : t.status === "acknowledged"
+                        ? "دیده شده؛ در حال بررسی"
+                        : "در انتظار فیزیوتراپیست"}
                 </span>
               </div>
               <p className="rounded-xl bg-[var(--color-surface-muted)] px-3.5 py-2.5 text-[13px] leading-relaxed text-[var(--color-ink)]">
@@ -846,6 +1239,56 @@ function TicketsTab({ patient }: { patient: Patient }) {
                   {r.content}
                 </div>
               ))}
+              {t.status === "closed" ? (
+                <p className="rounded-xl bg-[var(--color-surface-muted)] px-3.5 py-2.5 text-xs text-[var(--color-ink-soft)]">
+                  این گفت‌وگو بسته شده است. برای موضوع جدید یک تیکت تازه بسازید.
+                  {t.closureNote ? ` یادداشت پایان: ${t.closureNote}` : ""}
+                </p>
+              ) : (
+                <form
+                  className="space-y-2 border-t border-[var(--color-border)] pt-3"
+                  onSubmit={(event) => submitReply(event, t.id)}
+                >
+                  <Field
+                    label="پاسخ شما"
+                    error={replyErrors[t.id] || undefined}
+                  >
+                    <Textarea
+                      value={replyDrafts[t.id] ?? ""}
+                      maxLength={4000}
+                      required
+                      onChange={(event) => {
+                        const value = event.target.value;
+                        setReplyDrafts((current) => ({
+                          ...current,
+                          [t.id]: value,
+                        }));
+                        setReplyErrors((current) => ({
+                          ...current,
+                          [t.id]: "",
+                        }));
+                      }}
+                      placeholder="اگر توضیح یا علامت تازه‌ای دارید اینجا بنویسید…"
+                    />
+                  </Field>
+                  <Button
+                    type="submit"
+                    size="sm"
+                    variant="secondary"
+                    disabled={replyingTicketId !== null}
+                  >
+                    <Icon
+                      name="send"
+                      width={14}
+                      height={14}
+                      className="-scale-x-100"
+                    />
+                    {replyingTicketId === t.id
+                      ? "در حال ارسال…"
+                      : "ارسال پاسخ"}
+                  </Button>
+                </form>
+              )}
             </CardBody>
           </Card>
         ))

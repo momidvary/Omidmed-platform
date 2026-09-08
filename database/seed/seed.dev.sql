@@ -1,9 +1,24 @@
 -- PhysioAI — DEVELOPMENT-ONLY seed data.
--- ⚠ Never run this on a production project. Run after both migrations.
+-- ⚠ Never run this on a production project. Run after all migrations.
 --
--- Run order: 001_schema.sql → 002_rls.sql → 003_security_fixes.sql → this file.
+-- Run order: 001_schema.sql → 002_rls.sql → 003_security_fixes.sql
+--            → 004_security_hardening.sql → 005_ai_governance.sql
+--            → 006_case_episode_linkage.sql
+--            → 007_treatment_plan_workflow.sql
+--            → 008_exercise_prescriptions.sql
+--            → 009_ai_request_reservations.sql
+--            → 010_ai_review_hardening.sql
+--            → 011_treatment_plan_validation.sql
+--            → 012_access_and_ai_race_hardening.sql
+--            → 013_clinical_safety_and_portal_controls.sql
+--            → 014_clinical_alerts.sql
+--            → 015_patient_onboarding_and_episode_lifecycle.sql
+--            → 016_exercise_catalog_and_date_validation.sql
+--            → 017_ticket_workflow_and_escalation.sql
+--            → 018_clinical_documentation_and_outcomes.sql
+--            → 020_case_assessment_versioning.sql → this file.
 -- It creates one demo clinic, two patients, care episodes, programs,
--- two weeks of progress, and one answered ticket. It does NOT create
+-- two weeks of progress, and one open ticket. It does NOT create
 -- auth users (create those in Dashboard → Authentication → Add user,
 -- then link them — see docs/RAHNAMA-FA.md).
 
@@ -57,24 +72,35 @@ insert into tickets (id, patient_id, episode_id, exercise_id, subject, message, 
   ('33333333-3333-4333-8333-333333333333', '11111111-1111-4111-8111-111111111111',
    'eeeeeee1-1111-4111-8111-eeeeeeeeeee1', 'ex_heel_slides', 'کشش پشت زانو',
    'موقع سُر دادن پاشنه، پشت زانوم کشش نسبتاً زیادی حس می‌کنم. طبیعیه؟',
-   'answered', now() - interval '3 days')
+   'open', now() - interval '3 days')
 on conflict (id) do nothing;
 
+/*
+ * A therapist reply must have a real sender_user_id after migration 004.
+ * The development seed intentionally has no Auth user IDs, so it leaves this
+ * ticket open. Add a reply only after linking a real therapist account.
 insert into ticket_replies (ticket_id, sender, content, created_at) values
   ('33333333-3333-4333-8333-333333333333', 'therapist',
    'سلام رضا جان. کشش ملایم پشت زانو در این مرحله طبیعی است، به شرطی که بعد از تمرین ظرف چند دقیقه آرام شود. اگر دردِ تیز یا ورم بیشتر شد، دامنه را کمتر کنید و به من خبر دهید.',
    now() - interval '2 days');
+*/
 
-insert into cases (clinic_id, name, age, gender, region, main_complaint, pain_location,
+insert into cases (id, clinic_id, patient_id, episode_id,
+                   name, age, gender, region, main_complaint, pain_location,
                    pain_intensity, duration, mechanism, aggravating, easing,
                    functional_limitations, patient_goal) values
-  ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'Sara Ahmadi', 42, 'female', 'low-back',
+  ('cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+   'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+   '22222222-2222-4222-8222-222222222222',
+   'eeeeeee2-2222-4222-8222-eeeeeeeeeee2',
+   'Sara Ahmadi', 42, 'female', 'low-back',
    'Persistent low back pain radiating to the right buttock',
    'Lower back, right side', 6, '8 weeks',
    'Gradual onset after prolonged desk work',
    'Sitting > 30 min, forward bending', 'Walking, lying supine',
    'Difficulty sitting at work, cannot lift child',
-   'Return to pain-free desk work and light exercise');
+   'Return to pain-free desk work and light exercise')
+on conflict (id) do nothing;
 
 -- ── Linking templates (fill in the real user ids) ────────────────
 -- After creating auth users in the dashboard, link them like this:

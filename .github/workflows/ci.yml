@@ -1,0 +1,131 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  database-security:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_PASSWORD: physioai_ci_only
+          POSTGRES_DB: physioai_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d physioai_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: physioai_ci_only
+      PGDATABASE: physioai_ci
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.18.0
+      - name: Apply migrations 001 through 021
+        run: |
+          psql -X -v ON_ERROR_STOP=1 -f database/tests/local_supabase_bootstrap.sql
+          node database/scripts/migrate.mjs --allow-baseline
+      - name: Verify migration ledger and checksum replay
+        run: node database/scripts/migrate.mjs
+      - name: Prove hardening migrations are idempotent
+        run: |
+          psql -X -v ON_ERROR_STOP=1 -f database/migrations/004_security_hardening.sql
+          psql -X -v ON_ERROR_STOP=1 -f database/migrations/005_ai_governance.sql
+          psql -X -v ON_ERROR_STOP=1 -f database/migrations/006_case_episode_linkage.sql
+          psql -X -v ON_ERROR_STOP=1 -f database/migrations/007_treatment_plan_workflow.sql
+          psql -X -v ON_ERROR_STOP=1 -f database/migrations/008_exercise_prescriptions.sql
+          psql -X -v ON_ERROR_STOP=1 -f database/migrations/009_ai_request_reservations.sql
+          psql -X -v ON_ERROR_STOP=1 -f database/migrations/010_ai_review_hardening.sql
+          psql -X -v ON_ERROR_STOP=1 -f database/migrations/011_treatment_plan_validation.sql
+          psql -X -v ON_ERROR_STOP=1 -f database/migrations/012_access_and_ai_race_hardening.sql
+          psql -X -v ON_ERROR_STOP=1 -f database/migrations/013_clinical_safety_and_portal_controls.sql
+          psql -X -v ON_ERROR_STOP=1 -f database/migrations/014_clinical_alerts.sql
+          psql -X -v ON_ERROR_STOP=1 -f database/migrations/015_patient_onboarding_and_episode_lifecycle.sql
+          psql -X -v ON_ERROR_STOP=1 -f database/migrations/016_exercise_catalog_and_date_validation.sql
+          psql -X -v ON_ERROR_STOP=1 -f database/migrations/017_ticket_workflow_and_escalation.sql
+          psql -X -v ON_ERROR_STOP=1 -f database/migrations/018_clinical_documentation_and_outcomes.sql
+          psql -X -v ON_ERROR_STOP=1 -f database/migrations/019_notification_outbox.sql
+          psql -X -v ON_ERROR_STOP=1 -f database/migrations/020_case_assessment_versioning.sql
+          psql -X -v ON_ERROR_STOP=1 -f database/migrations/021_structured_exercise_adherence.sql
+      - name: Validate every deferred constraint on the clean schema
+        run: |
+          psql -X -v ON_ERROR_STOP=1 <<'SQL'
+          do $$
+          declare
+            item record;
+          begin
+            for item in
+              select namespace.nspname, relation.relname, constraint_row.conname
+              from pg_catalog.pg_constraint constraint_row
+              join pg_catalog.pg_class relation on relation.oid = constraint_row.conrelid
+              join pg_catalog.pg_namespace namespace on namespace.oid = relation.relnamespace
+              where namespace.nspname = 'public'
+                and not constraint_row.convalidated
+            loop
+              execute format(
+                'alter table %I.%I validate constraint %I',
+                item.nspname, item.relname, item.conname
+              );
+            end loop;
+          end $$;
+          SQL
+      - name: Run RLS and cross-tenant exploit suite
+        run: psql -X -v ON_ERROR_STOP=1 -f database/tests/security_ci_tests.sql
+      - name: Verify development seed against final schema
+        run: psql -X -v ON_ERROR_STOP=1 -f database/seed/seed.dev.sql
+
+  web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: apps/web
+    env:
+      NEXT_PUBLIC_DATA_MODE: mock
+      NEXT_PUBLIC_ENABLE_POSTURE_SANDBOX: "false"
+      NEXT_PUBLIC_ENABLE_CLINICAL_AI_DRAFTS: "false"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.18.0
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - name: Use pinned npm
+        run: npm install --global npm@11.16.0
+      - run: npm ci
+      - run: npm audit --omit=dev
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-failure-artifacts
+          path: |
+            apps/web/playwright-report
+            apps/web/test-results
+          if-no-files-found: ignore
+          retention-days: 7

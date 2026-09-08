@@ -1,0 +1,75 @@
+name: Staging real-mode E2E
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: staging-real-e2e
+  cancel-in-progress: false
+
+jobs:
+  real-mode:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: staging
+    defaults:
+      run:
+        working-directory: apps/web
+    env:
+      REAL_E2E_BASE_URL: ${{ vars.REAL_E2E_BASE_URL }}
+      REAL_E2E_EXPECTED_HOST: ${{ vars.REAL_E2E_EXPECTED_HOST }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.18.0
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - name: Verify staging configuration is present
+        env:
+          REAL_E2E_OWNER_EMAIL: ${{ secrets.REAL_E2E_OWNER_EMAIL }}
+          REAL_E2E_OWNER_PASSWORD: ${{ secrets.REAL_E2E_OWNER_PASSWORD }}
+          REAL_E2E_THERAPIST_EMAIL: ${{ secrets.REAL_E2E_THERAPIST_EMAIL }}
+          REAL_E2E_THERAPIST_PASSWORD: ${{ secrets.REAL_E2E_THERAPIST_PASSWORD }}
+          REAL_E2E_STAFF_EMAIL: ${{ secrets.REAL_E2E_STAFF_EMAIL }}
+          REAL_E2E_STAFF_PASSWORD: ${{ secrets.REAL_E2E_STAFF_PASSWORD }}
+          REAL_E2E_PATIENT_EMAIL: ${{ secrets.REAL_E2E_PATIENT_EMAIL }}
+          REAL_E2E_PATIENT_PASSWORD: ${{ secrets.REAL_E2E_PATIENT_PASSWORD }}
+        run: |
+          test -n "$REAL_E2E_BASE_URL"
+          test -n "$REAL_E2E_EXPECTED_HOST"
+          test -n "$REAL_E2E_OWNER_EMAIL"
+          test -n "$REAL_E2E_OWNER_PASSWORD"
+          test -n "$REAL_E2E_THERAPIST_EMAIL"
+          test -n "$REAL_E2E_THERAPIST_PASSWORD"
+          test -n "$REAL_E2E_STAFF_EMAIL"
+          test -n "$REAL_E2E_STAFF_PASSWORD"
+          test -n "$REAL_E2E_PATIENT_EMAIL"
+          test -n "$REAL_E2E_PATIENT_PASSWORD"
+      - name: Use pinned npm
+        run: npm install --global npm@11.16.0
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Run real-mode browser tests
+        env:
+          REAL_E2E_OWNER_EMAIL: ${{ secrets.REAL_E2E_OWNER_EMAIL }}
+          REAL_E2E_OWNER_PASSWORD: ${{ secrets.REAL_E2E_OWNER_PASSWORD }}
+          REAL_E2E_THERAPIST_EMAIL: ${{ secrets.REAL_E2E_THERAPIST_EMAIL }}
+          REAL_E2E_THERAPIST_PASSWORD: ${{ secrets.REAL_E2E_THERAPIST_PASSWORD }}
+          REAL_E2E_STAFF_EMAIL: ${{ secrets.REAL_E2E_STAFF_EMAIL }}
+          REAL_E2E_STAFF_PASSWORD: ${{ secrets.REAL_E2E_STAFF_PASSWORD }}
+          REAL_E2E_PATIENT_EMAIL: ${{ secrets.REAL_E2E_PATIENT_EMAIL }}
+          REAL_E2E_PATIENT_PASSWORD: ${{ secrets.REAL_E2E_PATIENT_PASSWORD }}
+        run: npm run test:e2e:real
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: staging-real-e2e-failure-artifacts
+          path: |
+            apps/web/playwright-real-report
+            apps/web/test-results
+          if-no-files-found: ignore
+          retention-days: 7

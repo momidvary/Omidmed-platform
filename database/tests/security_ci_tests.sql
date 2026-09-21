@@ -2026,6 +2026,7 @@ begin
   end if;
 end $$;
 
+\ir adherence_retry_tests.sql
 rollback;
 
 select 'PASS: automated security and tenant regression suite' as result;

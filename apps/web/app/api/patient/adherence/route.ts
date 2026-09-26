@@ -8,7 +8,7 @@ export const runtime = "nodejs";
 
 const MAX_REQUEST_BYTES = 8_192;
 const adherenceRequestSchema = z
-  .object({
+  .strictObject({
     patientId: z.uuid(),
     episodeId: z.uuid(),
     prescriptionItemId: z.uuid(),
@@ -45,7 +45,13 @@ function json(body: Record<string, unknown>, status = 200) {
 
 function firstRow(value: unknown): Record<string, unknown> | null {
   const row = Array.isArray(value) ? value[0] : value;
-  return row && typeof row === "object" ? (row as Record<string, unknown>) : null;
+  const parsed = z.object({
+    event_id: z.uuid(),
+    local_date: z.iso.date(),
+    prescription_status: z.enum(["published", "suspended", "revoked"]),
+    alert_created: z.boolean(),
+  }).safeParse(row);
+  return parsed.success ? parsed.data : null;
 }
 
 export async function POST(request: Request) {
@@ -60,7 +66,31 @@ export async function POST(request: Request) {
 
   let body: unknown;
   try {
-    body = await request.json();
+    const reader = request.body?.getReader();
+    if (!reader) return json({ error: "invalid_body" }, 400);
+    const chunks: Uint8Array[] = [];
+    let bytes = 0;
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        bytes += value.byteLength;
+        if (bytes > MAX_REQUEST_BYTES) {
+          await reader.cancel().catch(() => undefined);
+          return json({ error: "request_too_large" }, 413);
+        }
+        chunks.push(value);
+      }
+    } finally {
+      reader.releaseLock();
+    }
+    const buffer = new Uint8Array(bytes);
+    let offset = 0;
+    for (const chunk of chunks) {
+      buffer.set(chunk, offset);
+      offset += chunk.byteLength;
+    }
+    body = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(buffer));
   } catch {
     return json({ error: "invalid_body" }, 400);
   }
@@ -95,7 +125,7 @@ export async function POST(request: Request) {
     p_non_completion_reason: value.nonCompletionReason?.trim() || null,
   });
   if (result.error) {
-    const status = result.error.code === "42501" ? 403 : result.error.code === "23514" || result.error.code === "22023" ? 422 : 500;
+    const status = result.error.code === "23505" ? 409 : result.error.code === "42501" ? 403 : result.error.code === "23514" || result.error.code === "22023" ? 422 : 500;
     return json({ error: "adherence_event_rejected" }, status);
   }
   const row = firstRow(result.data);

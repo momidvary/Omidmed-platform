@@ -25,6 +25,7 @@ import { localDateValue, uid } from "@/lib/utils";
 
 interface DraftItem extends PrescriptionItemInput {
   rowId: string;
+  scheduledWeekdays: number[];
 }
 
 function plusDays(days: number): string {
@@ -34,7 +35,7 @@ function plusDays(days: number): string {
 }
 
 function emptyItem(): DraftItem {
-  return { rowId: uid("rx"), exerciseId: "", dosageFa: "", daysPerWeek: 5 };
+  return { rowId: uid("rx"), exerciseId: "", dosageFa: "", daysPerWeek: 0, scheduledWeekdays: [] };
 }
 
 export function PrescriptionBuilder({
@@ -63,6 +64,7 @@ export function PrescriptionBuilder({
   const [endDate, setEndDate] = useState(plusDays(42));
   const [reviewDate, setReviewDate] = useState(plusDays(14));
   const [precautions, setPrecautions] = useState("");
+  const [scheduleTimezone, setScheduleTimezone] = useState("");
   const [stopRules, setStopRules] = useState("");
   const [items, setItems] = useState<DraftItem[]>([emptyItem()]);
   const [stored, setStored] = useState<PrescriptionMutationResult | null>(null);
@@ -120,6 +122,12 @@ export function PrescriptionBuilder({
   }
 
   function validate(): string | null {
+    try {
+      if (!scheduleTimezone.trim()) return "Enter the patient's timezone.";
+      new Intl.DateTimeFormat("en", { timeZone: scheduleTimezone.trim() });
+    } catch {
+      return "Enter a valid timezone, for example Asia/Tehran.";
+    }
     if (!safetyCleared) return "The case safety screen is no longer clear.";
     if (!startDate || !reviewDate || reviewDate < startDate) {
       return "Review date must be on or after the start date.";
@@ -172,7 +180,9 @@ export function PrescriptionBuilder({
       precautions,
       stopRules,
       reviewDate,
-      items: items.map(({ exerciseId, dosageFa, daysPerWeek }) => ({
+      scheduleTimezone: scheduleTimezone.trim(),
+      items: items.map(({ exerciseId, dosageFa, daysPerWeek, scheduledWeekdays }) => ({
+        scheduledWeekdays,
         exerciseId,
         dosageFa: dosageFa.trim(),
         daysPerWeek,
@@ -228,6 +238,10 @@ export function PrescriptionBuilder({
         icon={<Icon name="exercise" width={18} height={18} />}
       />
       <CardBody className="space-y-5">
+        <Field label="Patient timezone" required hint="Use the patient's local timezone, for example Asia/Tehran.">
+          <Input value={scheduleTimezone} disabled={busy} placeholder="Asia/Tehran"
+            onChange={(event) => { setScheduleTimezone(event.target.value); invalidateStored(); }} />
+        </Field>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <Field label="Start date" required>
             <Input
@@ -330,20 +344,18 @@ export function PrescriptionBuilder({
                   placeholder="مثلاً ۳ ست × ۱۰ تکرار"
                 />
               </Field>
-              <Field label="Days/week" required>
-                <Input
-                  type="number"
-                  min={1}
-                  max={7}
-                  value={item.daysPerWeek}
-                  disabled={busy}
-                  onChange={(event) =>
-                    updateItem(item.rowId, {
-                      daysPerWeek: Number(event.target.value),
-                    })
-                  }
-                />
-              </Field>
+              <fieldset className="space-y-1">
+                <legend>Exercise days</legend>
+                {["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"].map((label, day) => (
+                  <label key={day} className="flex items-center gap-2 text-xs">
+                    <input type="checkbox" checked={item.scheduledWeekdays.includes(day)} disabled={busy}
+                      onChange={(event) => {
+                        const days = event.target.checked ? [...item.scheduledWeekdays, day].sort() : item.scheduledWeekdays.filter((value) => value !== day);
+                        updateItem(item.rowId, { scheduledWeekdays: days, daysPerWeek: days.length });
+                      }} />{label}
+                  </label>
+                ))}
+              </fieldset>
               <Button
                 type="button"
                 variant="ghost"
@@ -448,6 +460,7 @@ export function PrescriptionBuilder({
             {scopedHistory.records.map((record) => (
               <div key={record.id} className="flex flex-wrap items-center gap-2 text-xs">
                 <span>Version {record.version}</span>
+                <span>{record.scheduleTimezone ?? "Legacy schedule"}</span>
                 <Badge
                   tone={
                     record.status === "published"

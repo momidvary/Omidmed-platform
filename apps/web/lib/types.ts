@@ -505,6 +505,7 @@ export type PrescriptionStatus =
   | "revoked";
 
 export interface PrescriptionItemInput {
+  scheduledWeekdays?: number[];
   exerciseId: string;
   exerciseVersion?: number;
   contentSnapshot?: PatientExerciseContent;
@@ -513,6 +514,7 @@ export interface PrescriptionItemInput {
 }
 
 export interface PrescriptionRecord {
+  scheduleTimezone: string | null;
   id: string;
   treatmentPlanId: string;
   episodeId: string;

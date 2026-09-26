@@ -2014,9 +2014,9 @@ export async function fetchPrescriptionHistory(
         .select(
           `id, treatment_plan_id, episode_id, version, status, start_date,
            end_date, precautions, stop_rules, review_date, created_at,
-           published_at, revoked_at,
+           published_at, revoked_at, schedule_timezone,
            prescription_items ( exercise_id, exercise_version, content_snapshot,
-             dosage_fa, days_per_week, sort_order )`
+             dosage_fa, days_per_week, scheduled_weekdays, sort_order )`
         )
         .eq("episode_id", episodeId)
         .order("version", { ascending: false })
@@ -2043,6 +2043,7 @@ export async function fetchPrescriptionHistory(
       createdAt: row.created_at,
       publishedAt: row.published_at,
       revokedAt: row.revoked_at,
+      scheduleTimezone: row.schedule_timezone,
       items: ([...((row.prescription_items as Row[]) ?? [])])
         .sort((a, b) => Number(a.sort_order ?? 0) - Number(b.sort_order ?? 0))
         .map((item) => ({
@@ -2051,6 +2052,7 @@ export async function fetchPrescriptionHistory(
           contentSnapshot: item.content_snapshot as PrescriptionItemInput["contentSnapshot"],
           dosageFa: item.dosage_fa as string,
           daysPerWeek: item.days_per_week as number,
+          scheduledWeekdays: (item.scheduled_weekdays as number[] | null) ?? undefined,
         })),
     }));
   } catch {
@@ -2060,6 +2062,7 @@ export async function fetchPrescriptionHistory(
 }
 
 export async function savePrescriptionDraft({
+  scheduleTimezone,
   treatmentPlanId,
   startDate,
   endDate,
@@ -2075,6 +2078,7 @@ export async function savePrescriptionDraft({
   stopRules: string;
   reviewDate: string;
   items: PrescriptionItemInput[];
+  scheduleTimezone: string;
 }): Promise<PrescriptionMutationResult | null> {
   if (
     !treatmentPlanId ||
@@ -2095,7 +2099,8 @@ export async function savePrescriptionDraft({
       report("save_failed");
       return null;
     }
-    const { data, error } = await supabase.rpc("save_prescription_draft", {
+    const { data, error } = await supabase.rpc("save_scheduled_prescription_draft", {
+      p_schedule_timezone: scheduleTimezone,
       p_treatment_plan_id: treatmentPlanId,
       p_start_date: startDate,
       p_end_date: endDate,

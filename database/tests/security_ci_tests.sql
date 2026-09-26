@@ -731,13 +731,38 @@ begin
   end;
 
   select prescription_id into v_prescription_one
-  from public.save_prescription_draft(
+  from public.save_scheduled_prescription_draft(
     v_plan_two, current_date, current_date + 30,
     'Follow the documented precautions',
     'Stop and contact the clinic if symptoms worsen',
     current_date + 14,
-    '[{"exerciseId":"ex_quad_sets","dosageFa":"3 sets x 10 reps","daysPerWeek":5}]'::jsonb
+    '[{"exerciseId":"ex_quad_sets","dosageFa":"3 sets x 10 reps","daysPerWeek":5,"scheduledWeekdays":[0,1,2,3,4]}]'::jsonb,
+    'Asia/Tehran'
   );
+  declare
+    before_count bigint;
+  begin
+    select count(*) into before_count from public.exercise_prescriptions;
+    begin
+      perform public.save_scheduled_prescription_draft(
+        v_plan_two, current_date, current_date + 30, 'Precautions documented',
+        'Stop if symptoms worsen', current_date + 14,
+        '[{"exerciseId":"ex_quad_sets","dosageFa":"3 sets x 10 reps","daysPerWeek":2,"scheduledWeekdays":[1,1]}]'::jsonb,
+        'Asia/Tehran');
+      raise exception 'FAIL: duplicate weekdays accepted';
+    exception when invalid_parameter_value then null;
+    end;
+    if (select count(*) from public.exercise_prescriptions) <> before_count then
+      raise exception 'FAIL: invalid schedule left a partial prescription';
+    end if;
+  end;
+  if not exists (select 1 from public.exercise_prescriptions
+      where id = v_prescription_one and schedule_timezone = 'Asia/Tehran')
+     or not exists (select 1 from public.prescription_items
+      where prescription_id = v_prescription_one
+        and scheduled_weekdays = array[0,1,2,3,4]::smallint[]) then
+    raise exception 'FAIL: precise prescription schedule was not persisted';
+  end if;
   perform public.publish_prescription(v_prescription_one);
   if not exists (
     select 1

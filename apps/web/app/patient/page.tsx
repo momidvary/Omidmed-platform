@@ -19,6 +19,7 @@ import { useAuth } from "@/lib/store/AuthContext";
 import { isMockMode } from "@/lib/config";
 import { SaveStatusPill } from "@/components/ui/SaveStatusPill";
 import { detectSafetySignals } from "@/lib/clinical/safety";
+import { ExerciseAdherenceForm } from "@/components/clinical/ExerciseAdherenceForm";
 
 const statusLabelsFa = {
   connected: "متصل",
@@ -554,7 +555,8 @@ function ProgramTab({ patient }: { patient: Patient }) {
 
   return (
     <div className="space-y-4">
-      {/* Today's session log */}
+      {/* Legacy aggregate remains available only for demo/unstructured prescriptions. */}
+      {(isMockMode || !patient.prescription?.scheduleTimezone) && (
       <Card className="border-[var(--color-primary)]/30 bg-[var(--color-primary-tint)]">
         <CardBody className="space-y-3">
           <div className="flex items-center justify-between">
@@ -678,6 +680,7 @@ function ProgramTab({ patient }: { patient: Patient }) {
         </CardBody>
       </Card>
 
+      )}
       {/* Prescribed exercises */}
       {programPaused ? (
         <Card className="border-[var(--color-danger)]/30 bg-[var(--color-danger-soft)]">
@@ -746,7 +749,7 @@ function ProgramTab({ patient }: { patient: Patient }) {
                 </span>
               </div>
             </button>
-            {open && (
+            <div hidden={!open}>
               <CardBody className="space-y-3 border-t border-[var(--color-border)]">
                 <div>
                   <h4 className="mb-1.5 text-xs font-bold text-[var(--color-ink-faint)]">
@@ -769,8 +772,10 @@ function ProgramTab({ patient }: { patient: Patient }) {
                 <p className="rounded-lg bg-[var(--color-danger-soft)] px-3 py-2 text-[12px] leading-relaxed text-[var(--color-danger)]">
                   {content.whenToStop}
                 </p>
+                {!isMockMode && <ExerciseAdherenceForm key={item.prescriptionItemId}
+                  patient={patient} item={item} onPaused={() => setProgramPaused(true)} />}
               </CardBody>
-            )}
+            </div>
           </Card>
         );
       })}

@@ -5,6 +5,18 @@ import {
 } from "@/lib/supabase/db";
 
 describe("patient portal episode policy", () => {
+  it("uses the prescription timezone across the UTC midnight boundary", () => {
+    const prescription = { id: "local-day", status: "published",
+      start_date: "2026-10-02", end_date: "2026-10-02", schedule_timezone: "Asia/Tehran" };
+    expect(selectCurrentPublishedPrescription([prescription], "2026-10-01",
+      new Date("2026-10-01T22:00:00Z"))?.id).toBe("local-day");
+    expect(selectCurrentPublishedPrescription([prescription], "2026-10-02",
+      new Date("2026-10-02T22:00:00Z"))).toBeUndefined();
+  });
+  it("fails closed for invalid stored timezones", () => {
+    expect(selectCurrentPublishedPrescription([{ status: "published", start_date: "2026-10-01",
+      schedule_timezone: "Invalid/Timezone" }], "2026-10-01")).toBeUndefined();
+  });
   it("selects only the newest explicitly active episode", () => {
     const episodes = [
       {

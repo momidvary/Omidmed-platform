@@ -113,17 +113,32 @@ export function selectPortalActiveEpisode<T extends PortalRow>(
  */
 export function selectCurrentPublishedPrescription<T extends PortalRow>(
   prescriptions: readonly T[],
-  today: string
+  today: string,
+  now: Date = new Date()
 ): T | undefined {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(today)) return undefined;
 
   return [...prescriptions]
     .filter((prescription) => {
       if (prescription.status !== "published") return false;
+      let prescriptionDate = today;
+      if (prescription.schedule_timezone !== null && prescription.schedule_timezone !== undefined) {
+        if (typeof prescription.schedule_timezone !== "string" || !prescription.schedule_timezone) return false;
+        try {
+          const parts = new Intl.DateTimeFormat("en-US", {
+            timeZone: prescription.schedule_timezone, calendar: "iso8601",
+            numberingSystem: "latn", year: "numeric", month: "2-digit", day: "2-digit",
+          }).formatToParts(now);
+          const part = (type: string) => parts.find((value) => value.type === type)?.value;
+          prescriptionDate = `${part("year")}-${part("month")}-${part("day")}`;
+        } catch {
+          return false;
+        }
+      }
       if (
         typeof prescription.start_date !== "string" ||
         !/^\d{4}-\d{2}-\d{2}$/.test(prescription.start_date) ||
-        prescription.start_date > today
+        prescription.start_date > prescriptionDate
       ) {
         return false;
       }
@@ -134,7 +149,7 @@ export function selectCurrentPublishedPrescription<T extends PortalRow>(
         endDate === undefined ||
         (typeof endDate === "string" &&
           /^\d{4}-\d{2}-\d{2}$/.test(endDate) &&
-          endDate >= today)
+          endDate >= prescriptionDate)
       );
     })
     .sort((a, b) => {
@@ -188,9 +203,9 @@ export async function fetchMyPatients(userId: string): Promise<Patient[] | null>
            care_episodes ( id, title_fa, weekly_target, status, started_at,
              patient_daily_logs ( date, pain_level, completed ),
              exercise_prescriptions ( id, version, status, start_date, end_date,
-               precautions, stop_rules, review_date, published_at,
-               prescription_items ( exercise_id, exercise_version, content_snapshot,
-                 dosage_fa, days_per_week, sort_order ) ) ),
+               precautions, stop_rules, review_date, published_at, schedule_timezone,
+               prescription_items ( id, exercise_id, exercise_version, content_snapshot,
+                 dosage_fa, days_per_week, scheduled_weekdays, sort_order ) ) ),
            tickets ( id, episode_id, exercise_id, subject, message, status, priority,
              acknowledged_by, acknowledged_at, closed_by, closed_at, closure_note,
              created_at,
@@ -247,6 +262,7 @@ export async function fetchMyPatients(userId: string): Promise<Patient[] | null>
           prescription: publishedPrescription
             ? {
                 id: publishedPrescription.id as string,
+                scheduleTimezone: (publishedPrescription.schedule_timezone as string | null) ?? undefined,
                 version: publishedPrescription.version as number,
                 startDate: publishedPrescription.start_date as string,
                 endDate:
@@ -258,6 +274,8 @@ export async function fetchMyPatients(userId: string): Promise<Patient[] | null>
               }
             : undefined,
           program: prescribedRows.map((row) => ({
+            prescriptionItemId: row.id as string,
+            scheduledWeekdays: (row.scheduled_weekdays as number[] | null) ?? undefined,
             exerciseId: row.exercise_id as string,
             exerciseVersion: row.exercise_version as number,
             contentSnapshot: row.content_snapshot as Patient["program"][number]["contentSnapshot"],

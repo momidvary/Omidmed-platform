@@ -764,6 +764,12 @@ begin
     raise exception 'FAIL: precise prescription schedule was not persisted';
   end if;
   perform public.publish_prescription(v_prescription_one);
+  begin
+    insert into public.patient_daily_logs (episode_id, date, pain_level, completed)
+    values ('40000000-0000-4000-8000-000000000001', current_date, 2, true);
+    raise exception 'FAIL: legacy aggregate accepted for structured prescription';
+  exception when check_violation then null;
+  end;
   if not exists (
     select 1
     from public.prescription_items item

@@ -183,6 +183,8 @@ export interface ChatMessage {
 // ── Patient portal ──────────────────────────────────────────────
 
 export interface PrescribedExercise {
+  prescriptionItemId?: string;
+  scheduledWeekdays?: number[];
   exerciseId: string;
   exerciseVersion?: number;
   /** Immutable reviewed patient instructions stored with the prescription. */
@@ -201,6 +203,7 @@ export interface PatientExerciseContent {
 }
 
 export interface PatientPrescriptionSummary {
+  scheduleTimezone?: string;
   id: string;
   version: number;
   startDate: string;

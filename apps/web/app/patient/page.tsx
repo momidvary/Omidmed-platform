@@ -20,6 +20,7 @@ import { isMockMode } from "@/lib/config";
 import { SaveStatusPill } from "@/components/ui/SaveStatusPill";
 import { detectSafetySignals } from "@/lib/clinical/safety";
 import { ExerciseAdherenceForm } from "@/components/clinical/ExerciseAdherenceForm";
+import { ExerciseAdherenceHistory } from "@/components/clinical/ExerciseAdherenceHistory";
 
 const statusLabelsFa = {
   connected: "متصل",
@@ -808,6 +809,8 @@ function ProgressTab({ patient }: { patient: Patient }) {
   return (
     <div className="space-y-4">
       {/* Stat tiles */}
+      {!isMockMode && <ExerciseAdherenceHistory patient={patient} />}
+      {!isMockMode && <h3 className="text-sm font-bold">گزارش‌های کلی روزانهٔ پیشین</h3>}
       <div className="grid grid-cols-3 gap-3">
         <StatTile
           value={`${fa(thisWeek.length)} گزارش`}

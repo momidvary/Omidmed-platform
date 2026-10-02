@@ -183,6 +183,9 @@ export interface ChatMessage {
 // ── Patient portal ──────────────────────────────────────────────
 
 export interface PrescribedExercise {
+  targetSets?: number;
+  targetReps?: number;
+  targetDurationSeconds?: number;
   prescriptionItemId?: string;
   scheduledWeekdays?: number[];
   exerciseId: string;
@@ -508,6 +511,9 @@ export type PrescriptionStatus =
   | "revoked";
 
 export interface PrescriptionItemInput {
+  targetSets?: number;
+  targetReps?: number;
+  targetDurationSeconds?: number;
   scheduledWeekdays?: number[];
   exerciseId: string;
   exerciseVersion?: number;

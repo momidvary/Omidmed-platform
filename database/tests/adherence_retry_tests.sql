@@ -56,6 +56,31 @@ begin
   update public.exercise_prescriptions set status = 'published',
     suspended_by = null, suspended_at = null, suspension_alert_id = null
   where id = rx.id;
+  update public.prescription_items set target_sets = 3, target_reps = 10 where id = item_id;
+  begin
+    perform public.record_exercise_completion_event(actor, rx.patient_id, rx.episode_id,
+      item_id, 'complete', 1::smallint, gen_random_uuid(), 2::smallint, 10::smallint);
+    raise exception 'FAIL: completion below sets target accepted';
+  exception when check_violation then null;
+  end;
+  begin
+    perform public.record_exercise_completion_event(actor, rx.patient_id, rx.episode_id,
+      item_id, 'complete', 1::smallint, gen_random_uuid());
+    raise exception 'FAIL: missing prescribed measurements accepted';
+  exception when check_violation then null;
+  end;
+  perform public.record_exercise_completion_event(actor, rx.patient_id, rx.episode_id,
+    item_id, 'complete', 1::smallint, gen_random_uuid(), 3::smallint, 10::smallint);
+  update public.prescription_items set target_sets = null, target_reps = null,
+    target_duration_seconds = 60 where id = item_id;
+  begin
+    perform public.record_exercise_completion_event(actor, rx.patient_id, rx.episode_id,
+      item_id, 'complete', 1::smallint, gen_random_uuid(), null, null, 30);
+    raise exception 'FAIL: completion below duration target accepted';
+  exception when check_violation then null;
+  end;
+  perform public.record_exercise_completion_event(actor, rx.patient_id, rx.episode_id,
+    item_id, 'complete', 1::smallint, gen_random_uuid(), null, null, 60);
   update public.prescription_items set scheduled_weekdays = array[
     ((extract(dow from clock_timestamp() at time zone 'Asia/Tehran')::int + 1) % 7)::smallint
   ] where id = item_id;

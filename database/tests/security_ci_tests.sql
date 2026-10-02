@@ -736,7 +736,7 @@ begin
     'Follow the documented precautions',
     'Stop and contact the clinic if symptoms worsen',
     current_date + 14,
-    '[{"exerciseId":"ex_quad_sets","dosageFa":"3 sets x 10 reps","daysPerWeek":5,"scheduledWeekdays":[0,1,2,3,4]}]'::jsonb,
+    '[{"exerciseId":"ex_quad_sets","dosageFa":"3 sets x 10 reps","daysPerWeek":5,"scheduledWeekdays":[0,1,2,3,4],"targetSets":3,"targetReps":10}]'::jsonb,
     'Asia/Tehran'
   );
   declare

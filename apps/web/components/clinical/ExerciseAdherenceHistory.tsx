@@ -40,6 +40,8 @@ function HistoryPage({ patient }: { patient: Patient }) {
               <p>{exercise?.contentSnapshot?.name ?? "تمرین نسخهٔ قبلی؛ نام در دسترس نیست"}</p>
               <p>{labels[event.status]} · درد: {event.pain_level.toLocaleString("fa-IR")} از ۱۰</p>
               <p className="text-xs">{event.local_date} · {event.timezone_snapshot}</p>
+              {event.completed_sets != null && <p className="text-xs">{event.completed_sets} ست · حداقل {event.completed_reps} تکرار در هر ست</p>}
+              {event.completed_duration_seconds != null && <p className="text-xs">مدت انجام‌شده: {event.completed_duration_seconds} ثانیه</p>}
             </li>;
           })}</ul>}
         <p className="text-xs">این موارد گزارش‌های ثبت‌شده‌اند؛ نبود گزارش به معنی انجام‌نشدن تمرین نیست.</p>

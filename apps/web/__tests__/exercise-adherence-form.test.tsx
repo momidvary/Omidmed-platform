@@ -13,6 +13,19 @@ function fill() {
   fireEvent.change(screen.getByRole("spinbutton"), { target: { value: "8" } });
 }
 describe("per-exercise reporting", () => {
+  it("requires and sends the prescribed measurements", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: false, status: 422 });
+    vi.stubGlobal("fetch", fetchMock);
+    render(<ExerciseAdherenceForm patient={patient} item={{ ...item, targetSets: 3, targetReps: 10 }} onPaused={() => {}} />);
+    fireEvent.change(screen.getByRole("combobox"), { target: { value: "complete" } });
+    fireEvent.change(screen.getByLabelText(/درد پس/), { target: { value: "2" } });
+    expect(screen.getByRole("button")).toBeDisabled();
+    fireEvent.change(screen.getByLabelText(/^ست انجام‌شده/), { target: { value: "3" } });
+    fireEvent.change(screen.getByLabelText(/کمترین تعداد/), { target: { value: "10" } });
+    fireEvent.click(screen.getByRole("button"));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledOnce());
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toMatchObject({ completedSets: 3, completedReps: 10, completedDurationSeconds: null });
+  });
   it("requires explicit status and pain before submitting", () => {
     render(<ExerciseAdherenceForm patient={patient} item={item} onPaused={() => {}} />);
     expect(screen.getByRole("button")).toBeDisabled();

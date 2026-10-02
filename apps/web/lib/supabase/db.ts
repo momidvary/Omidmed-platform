@@ -205,7 +205,7 @@ export async function fetchMyPatients(userId: string): Promise<Patient[] | null>
              exercise_prescriptions ( id, version, status, start_date, end_date,
                precautions, stop_rules, review_date, published_at, schedule_timezone,
                prescription_items ( id, exercise_id, exercise_version, content_snapshot,
-                 dosage_fa, days_per_week, scheduled_weekdays, sort_order ) ) ),
+                 dosage_fa, days_per_week, scheduled_weekdays, target_sets, target_reps, target_duration_seconds, sort_order ) ) ),
            tickets ( id, episode_id, exercise_id, subject, message, status, priority,
              acknowledged_by, acknowledged_at, closed_by, closed_at, closure_note,
              created_at,
@@ -276,6 +276,9 @@ export async function fetchMyPatients(userId: string): Promise<Patient[] | null>
           program: prescribedRows.map((row) => ({
             prescriptionItemId: row.id as string,
             scheduledWeekdays: (row.scheduled_weekdays as number[] | null) ?? undefined,
+            targetSets: (row.target_sets as number | null) ?? undefined,
+            targetReps: (row.target_reps as number | null) ?? undefined,
+            targetDurationSeconds: (row.target_duration_seconds as number | null) ?? undefined,
             exerciseId: row.exercise_id as string,
             exerciseVersion: row.exercise_version as number,
             contentSnapshot: row.content_snapshot as Patient["program"][number]["contentSnapshot"],
@@ -2034,7 +2037,7 @@ export async function fetchPrescriptionHistory(
            end_date, precautions, stop_rules, review_date, created_at,
            published_at, revoked_at, schedule_timezone,
            prescription_items ( exercise_id, exercise_version, content_snapshot,
-             dosage_fa, days_per_week, scheduled_weekdays, sort_order )`
+             dosage_fa, days_per_week, scheduled_weekdays, target_sets, target_reps, target_duration_seconds, sort_order )`
         )
         .eq("episode_id", episodeId)
         .order("version", { ascending: false })
@@ -2071,6 +2074,9 @@ export async function fetchPrescriptionHistory(
           dosageFa: item.dosage_fa as string,
           daysPerWeek: item.days_per_week as number,
           scheduledWeekdays: (item.scheduled_weekdays as number[] | null) ?? undefined,
+          targetSets: (item.target_sets as number | null) ?? undefined,
+          targetReps: (item.target_reps as number | null) ?? undefined,
+          targetDurationSeconds: (item.target_duration_seconds as number | null) ?? undefined,
         })),
     }));
   } catch {

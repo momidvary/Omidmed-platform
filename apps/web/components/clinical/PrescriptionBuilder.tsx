@@ -122,6 +122,13 @@ export function PrescriptionBuilder({
   }
 
   function validate(): string | null {
+    const integer = (value: number | undefined, max: number, min = 1) =>
+      value !== undefined && Number.isInteger(value) && value >= min && value <= max;
+    if (items.some((item) => item.targetDurationSeconds !== undefined
+      ? !integer(item.targetDurationSeconds, 21600, 5)
+      : !integer(item.targetSets, 50) || !integer(item.targetReps, 1000))) {
+      return "Enter sets and repetitions per set, or total duration in seconds, for each exercise.";
+    }
     try {
       if (!scheduleTimezone.trim()) return "Enter the patient's timezone.";
       new Intl.DateTimeFormat("en", { timeZone: scheduleTimezone.trim() });
@@ -181,7 +188,8 @@ export function PrescriptionBuilder({
       stopRules,
       reviewDate,
       scheduleTimezone: scheduleTimezone.trim(),
-      items: items.map(({ exerciseId, dosageFa, daysPerWeek, scheduledWeekdays }) => ({
+      items: items.map(({ exerciseId, dosageFa, daysPerWeek, scheduledWeekdays, targetSets, targetReps, targetDurationSeconds }) => ({
+        targetSets, targetReps, targetDurationSeconds,
         scheduledWeekdays,
         exerciseId,
         dosageFa: dosageFa.trim(),
@@ -344,6 +352,25 @@ export function PrescriptionBuilder({
                   placeholder="مثلاً ۳ ست × ۱۰ تکرار"
                 />
               </Field>
+              <div className="space-y-2">
+                <Field label="Target measurement" required>
+                  <Select value={item.targetDurationSeconds === undefined ? "reps" : "duration"} disabled={busy}
+                    onChange={(event) => updateItem(item.rowId, event.target.value === "duration"
+                      ? { targetSets: undefined, targetReps: undefined, targetDurationSeconds: 0 }
+                      : { targetSets: undefined, targetReps: undefined, targetDurationSeconds: undefined })}>
+                    <option value="reps">Sets and repetitions per set</option><option value="duration">Total duration (seconds)</option>
+                  </Select>
+                </Field>
+                {item.targetDurationSeconds !== undefined ? <Field label="Total seconds" required>
+                  <Input type="number" min={5} max={21600} value={item.targetDurationSeconds || ""} disabled={busy}
+                    onChange={(event) => updateItem(item.rowId, { targetDurationSeconds: Number(event.target.value) })} />
+                </Field> : <>
+                  <Field label="Sets" required><Input type="number" min={1} max={50} value={item.targetSets ?? ""} disabled={busy}
+                    onChange={(event) => updateItem(item.rowId, { targetSets: Number(event.target.value) })} /></Field>
+                  <Field label="Repetitions per set" required><Input type="number" min={1} max={1000} value={item.targetReps ?? ""} disabled={busy}
+                    onChange={(event) => updateItem(item.rowId, { targetReps: Number(event.target.value) })} /></Field>
+                </>}
+              </div>
               <fieldset className="space-y-1">
                 <legend>Exercise days</legend>
                 {["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"].map((label, day) => (

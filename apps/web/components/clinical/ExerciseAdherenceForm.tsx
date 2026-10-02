@@ -17,6 +17,9 @@ export function ExerciseAdherenceForm({ patient, item, onPaused }: {
 }) {
   const [status, setStatus] = useState("");
   const [pain, setPain] = useState("");
+  const [sets, setSets] = useState("");
+  const [reps, setReps] = useState("");
+  const [seconds, setSeconds] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [saved, setSaved] = useState(false);
@@ -31,6 +34,9 @@ export function ExerciseAdherenceForm({ patient, item, onPaused }: {
     if (!pending.current) {
       if (!status || pain === "") return;
       pending.current = JSON.stringify({
+        completedSets: item.targetSets === undefined ? null : Number(sets),
+        completedReps: item.targetReps === undefined ? null : Number(reps),
+        completedDurationSeconds: item.targetDurationSeconds === undefined ? null : Number(seconds),
         patientId: patient.id, episodeId: patient.episodeId,
         prescriptionItemId: item.prescriptionItemId, status,
         painLevel: Number(pain), clientSubmissionId: crypto.randomUUID(),
@@ -49,7 +55,7 @@ export function ExerciseAdherenceForm({ patient, item, onPaused }: {
           pending.current = null;
           setUncertain(false);
           setMessage(response.status === 422
-            ? "ثبت پذیرفته نشد؛ ممکن است امروز در برنامهٔ این تمرین نباشد. برنامه را بررسی کنید."
+            ? "ثبت پذیرفته نشد؛ روزهای برنامه و مقدار انجام‌شده را بررسی کنید. اگر به هدف نرسیده‌اید، وضعیت «بخشی انجام شد» را انتخاب کنید."
             : "ثبت پذیرفته نشد. صفحه و وضعیت ورود را به‌روز کنید.");
           return;
         }
@@ -74,6 +80,17 @@ export function ExerciseAdherenceForm({ patient, item, onPaused }: {
       ["یکشنبه", "دوشنبه", "سه‌شنبه", "چهارشنبه", "پنجشنبه", "جمعه", "شنبه"][day]).join("، ")}</p>
     <fieldset disabled={busy || uncertain || saved} className="space-y-2">
       <legend className="text-sm">وضعیت انجام تمرین</legend>
+      {item.targetDurationSeconds !== undefined ? <label className="block text-xs">
+        مدت انجام‌شده به ثانیه (هدف: {item.targetDurationSeconds})
+        <input type="number" min={0} max={21600} value={seconds} onChange={(e) => setSeconds(e.target.value)} className="mx-2 w-20 border p-1" />
+      </label> : item.targetSets !== undefined && <>
+        <label className="block text-xs">ست انجام‌شده (هدف: {item.targetSets})
+          <input type="number" min={0} max={50} value={sets} onChange={(e) => setSets(e.target.value)} className="mx-2 w-20 border p-1" />
+        </label>
+        <label className="block text-xs">کمترین تعداد تکرار در هر ست انجام‌شده (هدف: {item.targetReps})
+          <input type="number" min={0} max={1000} value={reps} onChange={(e) => setReps(e.target.value)} className="mx-2 w-20 border p-1" />
+        </label>
+      </>}
       <label className="block text-xs">وضعیت
         <select value={status} onChange={(e) => setStatus(e.target.value)} className="mx-2 border p-1">
           <option value="">انتخاب کنید</option><option value="complete">کامل انجام شد</option>
@@ -89,7 +106,9 @@ export function ExerciseAdherenceForm({ patient, item, onPaused }: {
       تمرین را متوقف کنید و با درمانگر یا مرکز درمانی تماس بگیرید. برای علائم اورژانسی منتظر پاسخ برنامه نمانید.
     </p>}
     <Button size="sm" onClick={submit} disabled={busy || saved || (!uncertain &&
-      (!status || pain === "" || !Number.isInteger(Number(pain)) || Number(pain) < 0 || Number(pain) > 10))}>
+      (!status || pain === "" || (item.targetSets !== undefined && (sets === "" || reps === "")) ||
+      (item.targetDurationSeconds !== undefined && seconds === "") ||
+      !Number.isInteger(Number(pain)) || Number(pain) < 0 || Number(pain) > 10))}>
       {busy ? "در حال ثبت…" : uncertain ? "تلاش مجدد همان درخواست" : saved ? "ثبت شد" : "ثبت گزارش این تمرین"}
     </Button>
     {message && <p role="status" className="text-xs">{message}</p>}

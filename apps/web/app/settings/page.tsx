@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Card, CardBody, CardHeader } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Field, Input, Select } from "@/components/ui/Form";
@@ -9,42 +9,64 @@ import { Disclaimer, PageIntro } from "@/components/ui/Misc";
 import { useLocale } from "@/lib/store/LocaleContext";
 import { locales, type Locale } from "@/lib/i18n/translations";
 import { isSupabaseConfigured } from "@/lib/supabase/client";
+import { hasDataConfigurationError, isMockMode } from "@/lib/config";
+import { useAuth } from "@/lib/store/AuthContext";
 
-const SETTINGS_KEY = "physioai:settings:v1";
+interface BrowserSettings {
+  clinicName: string;
+  therapistName: string;
+  units: "metric" | "imperial";
+}
+
+function readBrowserSettings(): BrowserSettings {
+  const fallback: BrowserSettings = {
+    clinicName: "",
+    therapistName: "",
+    units: "metric",
+  };
+  if (typeof window === "undefined") return fallback;
+  try {
+    const raw = localStorage.getItem("physioai:settings:v1");
+    if (!raw) return fallback;
+    const stored = JSON.parse(raw) as Partial<BrowserSettings>;
+    return {
+      clinicName: typeof stored.clinicName === "string" ? stored.clinicName : "",
+      therapistName:
+        typeof stored.therapistName === "string" ? stored.therapistName : "",
+      units:
+        stored.units === "metric" || stored.units === "imperial"
+          ? stored.units
+          : "metric",
+    };
+  } catch {
+    return fallback;
+  }
+}
 
 export default function SettingsPage() {
   const { locale, setLocale, t } = useLocale();
-  const [clinicName, setClinicName] = useState("");
-  const [therapistName, setTherapistName] = useState("");
-  const [units, setUnits] = useState("metric");
+  const { profile, activeClinicId } = useAuth();
+  const [initialSettings] = useState(readBrowserSettings);
+  const [clinicName, setClinicName] = useState(initialSettings.clinicName);
+  const [therapistName, setTherapistName] = useState(
+    initialSettings.therapistName
+  );
+  const [units, setUnits] = useState(initialSettings.units);
   const [saved, setSaved] = useState(false);
   const [cleared, setCleared] = useState(false);
-
-  // Restore saved preferences (browser-only; cannot run during SSR).
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(SETTINGS_KEY);
-      if (!raw) return;
-      const saved = JSON.parse(raw) as {
-        clinicName?: string;
-        therapistName?: string;
-        units?: string;
-      };
-      /* eslint-disable react-hooks/set-state-in-effect -- one-time localStorage hydration */
-      setClinicName(saved.clinicName ?? "");
-      setTherapistName(saved.therapistName ?? "");
-      setUnits(saved.units === "imperial" ? "imperial" : "metric");
-      /* eslint-enable react-hooks/set-state-in-effect */
-    } catch {
-      /* ignore corrupt storage */
-    }
-  }, []);
+  const clinicalAiUiEnabled =
+    process.env.NEXT_PUBLIC_ENABLE_CLINICAL_AI_DRAFTS === "true";
+  const activeClinic =
+    profile?.clinics.find((clinic) => clinic.id === activeClinicId) ?? null;
 
   function save() {
-    // Local-only preferences for the MVP; wire to a backend later.
+    // Language/units are browser preferences. Mock-only display names are
+    // deliberately never presented as real profile/clinic mutations.
     localStorage.setItem(
-      SETTINGS_KEY,
-      JSON.stringify({ clinicName, therapistName, units })
+      "physioai:settings:v1",
+      JSON.stringify(
+        isMockMode ? { clinicName, therapistName, units } : { units }
+      )
     );
     setSaved(true);
     setTimeout(() => setSaved(false), 1500);
@@ -53,11 +75,14 @@ export default function SettingsPage() {
   function clearData() {
     localStorage.removeItem("physioai:cases:v1");
     localStorage.removeItem("physioai:patients:v2");
-    localStorage.removeItem(SETTINGS_KEY);
+    localStorage.removeItem("physioai:settings:v1");
     setCleared(true);
     setTimeout(() => {
       setCleared(false);
-      window.location.href = "/";
+      // Full reload: client-side navigation would keep the in-memory case
+      // and patient state and write it straight back to localStorage.
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- a full reload is required here (see above)
+      window.location.assign("/");
     }, 800);
   }
 
@@ -65,7 +90,11 @@ export default function SettingsPage() {
     <div className="space-y-6">
       <PageIntro
         title="Settings"
-        description="Clinic preferences and local data. All data in this MVP stays in your browser."
+        description={
+          isMockMode
+            ? "Browser-only preferences for the explicit demo environment."
+            : "Authenticated account context and non-clinical browser preferences."
+        }
       />
 
       <Card>
@@ -74,20 +103,45 @@ export default function SettingsPage() {
           icon={<Icon name="settings" width={18} height={18} />}
         />
         <CardBody className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Field label="Clinic name">
-            <Input
-              value={clinicName}
-              onChange={(e) => setClinicName(e.target.value)}
-              placeholder="e.g. City Physio Clinic"
-            />
-          </Field>
-          <Field label="Therapist name">
-            <Input
-              value={therapistName}
-              onChange={(e) => setTherapistName(e.target.value)}
-              placeholder="e.g. Dr. Omidvary"
-            />
-          </Field>
+          {isMockMode ? (
+            <>
+              <Field label="Demo clinic name">
+                <Input
+                  value={clinicName}
+                  onChange={(e) => setClinicName(e.target.value)}
+                  placeholder="e.g. City Physio Clinic"
+                />
+              </Field>
+              <Field label="Demo therapist name">
+                <Input
+                  value={therapistName}
+                  onChange={(e) => setTherapistName(e.target.value)}
+                  placeholder="e.g. Dr. Omidvary"
+                />
+              </Field>
+            </>
+          ) : (
+            <dl className="grid gap-3 rounded-xl bg-[var(--color-surface-muted)] p-4 text-sm sm:col-span-2 sm:grid-cols-3">
+              <div>
+                <dt className="text-xs text-[var(--color-ink-faint)]">Authenticated profile</dt>
+                <dd className="mt-1 font-medium text-[var(--color-ink)]">
+                  {profile?.fullName || "Unavailable"}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs text-[var(--color-ink-faint)]">Role</dt>
+                <dd className="mt-1 font-medium text-[var(--color-ink)]">
+                  {profile?.role ?? "Unavailable"}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs text-[var(--color-ink-faint)]">Active clinic</dt>
+                <dd className="mt-1 font-medium text-[var(--color-ink)]">
+                  {activeClinic?.name ?? "No clinic selected"}
+                </dd>
+              </div>
+            </dl>
+          )}
           <Field label={t("settings.language")} hint={t("settings.language.hint")}>
             <Select
               value={locale}
@@ -101,7 +155,12 @@ export default function SettingsPage() {
             </Select>
           </Field>
           <Field label="Units">
-            <Select value={units} onChange={(e) => setUnits(e.target.value)}>
+            <Select
+              value={units}
+              onChange={(e) =>
+                setUnits(e.target.value === "imperial" ? "imperial" : "metric")
+              }
+            >
               <option value="metric">Metric (kg, cm)</option>
               <option value="imperial">Imperial (lb, in)</option>
             </Select>
@@ -110,7 +169,7 @@ export default function SettingsPage() {
         <div className="border-t border-[var(--color-border)] px-5 py-4">
           <Button onClick={save}>
             <Icon name="check" width={16} height={16} />
-            {saved ? "Saved!" : "Save preferences"}
+            {saved ? "Saved!" : "Save browser preferences"}
           </Button>
         </div>
       </Card>
@@ -131,22 +190,28 @@ export default function SettingsPage() {
               }
             />
             <p className="text-sm font-medium text-[var(--color-ink)]">
-              {isSupabaseConfigured ? "Connected" : "Not configured — running in local mode"}
+              {hasDataConfigurationError
+                ? "Configuration error — cloud mode is unavailable"
+                : isMockMode
+                  ? "Explicit demo mode — no cloud writes"
+                  : isSupabaseConfigured
+                    ? "Cloud configuration loaded"
+                    : "Cloud configuration unavailable"}
             </p>
           </div>
           <p className="text-sm text-[var(--color-ink-soft)]">
-            To connect: copy{" "}
+            {isMockMode
+              ? "Demo data stays in this browser and is never represented as a cloud save. To test real authentication and RLS, copy "
+              : "Clinical records on this screen are not stored in browser preferences. Deployment configuration comes from "}
+            <span className="sr-only">configuration file </span>
             <code className="rounded bg-[var(--color-surface-muted)] px-1.5 py-0.5 text-xs">
               apps/web/.env.local.example
             </code>{" "}
-            to <code className="rounded bg-[var(--color-surface-muted)] px-1.5 py-0.5 text-xs">.env.local</code>,
-            fill in your project URL and publishable key from Supabase →
-            Project Settings → API, and run the migrations in{" "}
+            and migrations in{" "}
             <code className="rounded bg-[var(--color-surface-muted)] px-1.5 py-0.5 text-xs">
               database/migrations/
             </code>{" "}
-            in order in the Supabase SQL editor. See the Persian setup guide
-            in{" "}
+            through the tracked migration runner. See the Persian setup guide in{" "}
             <code className="rounded bg-[var(--color-surface-muted)] px-1.5 py-0.5 text-xs">
               docs/RAHNAMA-FA.md
             </code>
@@ -158,29 +223,22 @@ export default function SettingsPage() {
       <Card>
         <CardHeader
           title="AI Connection"
-          subtitle="Where the real AI API will plug in"
+          subtitle="Audited clinical-draft capability"
           icon={<Icon name="sparkle" width={18} height={18} />}
         />
         <CardBody className="space-y-3">
           <p className="text-sm text-[var(--color-ink-soft)]">
-            This MVP runs on a built-in mock engine so it works fully offline.
-            To connect a real AI provider, implement the functions in{" "}
-            <code className="rounded bg-[var(--color-surface-muted)] px-1.5 py-0.5 text-xs">
-              apps/web/lib/ai/engine.ts
-            </code>{" "}
-            — each integration point is marked with a{" "}
-            <code className="rounded bg-[var(--color-surface-muted)] px-1.5 py-0.5 text-xs">
-              🔌 REAL AI API INTEGRATION POINT
-            </code>{" "}
-            comment. Keep API keys server-side in environment variables.
+            {clinicalAiUiEnabled
+              ? "The browser gate for audited clinical drafts is enabled. Server approval, provider configuration, quota reservation, stored-case safety and clinician review are still verified on every request; this indicator does not prove provider availability."
+              : "Audited clinical drafts are disabled in this deployment. Deterministic templates are not represented as a connected diagnostic AI service."}
           </p>
-          <Field label="AI API key (disabled in MVP)">
+          <Field label="AI API key">
             <Input disabled placeholder="Configure via server environment variables — never in the browser" />
           </Field>
         </CardBody>
       </Card>
 
-      <Card>
+      {isMockMode && <Card>
         <CardHeader
           title="Local Data"
           subtitle="Cases are stored only in this browser"
@@ -195,7 +253,7 @@ export default function SettingsPage() {
             {cleared ? "Cleared…" : "Clear local data"}
           </Button>
         </CardBody>
-      </Card>
+      </Card>}
 
       <Disclaimer />
     </div>

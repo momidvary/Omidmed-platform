@@ -11,7 +11,10 @@ export const updateSession = async (request: NextRequest) => {
     request: { headers: request.headers },
   });
 
-  if (!supabaseUrl || !supabaseKey) return supabaseResponse;
+  if (!supabaseUrl || !supabaseKey) {
+    supabaseResponse.headers.set("Cache-Control", "private, no-store");
+    return supabaseResponse;
+  }
 
   const supabase = createServerClient(supabaseUrl, supabaseKey, {
     cookies: {
@@ -30,15 +33,13 @@ export const updateSession = async (request: NextRequest) => {
     },
   });
 
-  // Required: this call validates the session and refreshes an expired
-  // access token, writing the new cookies via setAll above. Without it
-  // the server (e.g. /api/tickets/ai-reply) can see a stale session.
-  try {
-    await supabase.auth.getUser();
-  } catch {
-    // Network problems must not break page loads; the browser client
-    // refreshes the session on its own.
-  }
+  // Verify the session and refresh expired auth cookies when necessary.
+  // Server-side authorization must use getUser()/getClaims(), not getSession().
+  await supabase.auth.getUser();
+
+  // Clinical pages and authenticated responses must never be stored in a
+  // shared browser/proxy cache.
+  supabaseResponse.headers.set("Cache-Control", "private, no-store");
 
   return supabaseResponse;
 };

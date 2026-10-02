@@ -2,20 +2,13 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useAuth, type Role } from "@/lib/store/AuthContext";
-import { isMockMode } from "@/lib/config";
+import { useAuth } from "@/lib/store/AuthContext";
+import { hasDataConfigurationError, isMockMode } from "@/lib/config";
 import { Card, CardBody } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Field, Input } from "@/components/ui/Form";
 import { Icon } from "@/components/ui/Icon";
 import { Spinner } from "@/components/ui/Misc";
-
-const STAFF_ROLES: Role[] = [
-  "platform_admin",
-  "clinic_owner",
-  "therapist",
-  "clinic_staff",
-];
 
 /**
  * Wraps the clinician app. In Supabase mode it requires a signed-in user
@@ -23,31 +16,48 @@ const STAFF_ROLES: Role[] = [
  * Mock mode (dev/demo) passes straight through.
  */
 export function ClinicianGate({ children }: { children: React.ReactNode }) {
-  const { session, profile, loading, signOut } = useAuth();
+  const {
+    session,
+    profile,
+    activeClinicId,
+    loading,
+    profileLoadError,
+    retryProfile,
+    signOut,
+  } = useAuth();
 
   if (isMockMode) return <>{children}</>;
+  if (hasDataConfigurationError) {
+    return (
+      <AccessNotice
+        message="PhysioAI is not configured for secure production use. Supabase authentication is required; contact the platform administrator."
+        onSignOut={async () => undefined}
+        showSignOut={false}
+      />
+    );
+  }
   if (loading) return <Spinner label="Loading…" />;
+  if (profileLoadError) {
+    return (
+      <AccessNotice
+        message="We could not securely load your account profile and clinic memberships. No clinical workspace was opened. Check the connection and try again."
+        onRetry={retryProfile}
+        onSignOut={signOut}
+      />
+    );
+  }
   if (!session) return <ClinicianLogin />;
 
   if (!profile) {
     return (
-      <div className="mx-auto max-w-md py-16 text-center">
-        <p className="text-sm text-[var(--color-ink-soft)]">
-          Your account profile could not be loaded. Check your connection,
-          or ask the clinic administrator to confirm your account was set up
-          (migrations run, profile created).
-        </p>
-        <div className="mt-4 flex justify-center gap-3">
-          <Button onClick={() => window.location.reload()}>Retry</Button>
-          <Button variant="secondary" onClick={signOut}>
-            Sign out
-          </Button>
-        </div>
-      </div>
+      <AccessNotice
+        message="Your account does not have a valid PhysioAI profile. Ask the platform administrator to provision it, then sign in again."
+        onSignOut={signOut}
+      />
     );
   }
 
-  if (!STAFF_ROLES.includes(profile.role)) {
+  if (profile.role === "patient") {
     return (
       <div className="mx-auto max-w-md py-16 text-center">
         <p className="text-sm text-[var(--color-ink-soft)]">
@@ -69,7 +79,64 @@ export function ClinicianGate({ children }: { children: React.ReactNode }) {
     );
   }
 
+  if (
+    !["platform_admin", "clinic_owner", "therapist", "clinic_staff"].includes(
+      profile.role
+    )
+  ) {
+    return (
+      <AccessNotice
+        message="This account is not authorised to use the clinician workspace."
+        onSignOut={signOut}
+      />
+    );
+  }
+
+  if (!activeClinicId) {
+    return (
+      <AccessNotice
+        message={
+          profile.clinicIds.length === 0
+            ? "This account is not assigned to a clinic. Ask a clinic owner to add the membership."
+            : "Select the active clinic from the top bar before opening clinical records."
+        }
+        onSignOut={signOut}
+      />
+    );
+  }
+
   return <>{children}</>;
+}
+
+function AccessNotice({
+  message,
+  onSignOut,
+  onRetry,
+  showSignOut = true,
+}: {
+  message: string;
+  onSignOut: () => Promise<void>;
+  onRetry?: () => void;
+  showSignOut?: boolean;
+}) {
+  return (
+    <div className="mx-auto max-w-md py-16 text-center">
+      <p
+        role={onRetry ? "alert" : undefined}
+        className="text-sm text-[var(--color-ink-soft)]"
+      >
+        {message}
+      </p>
+      <div className="mt-4 flex flex-wrap justify-center gap-3">
+        {onRetry && <Button onClick={onRetry}>Try again</Button>}
+        {showSignOut && (
+          <Button variant="secondary" onClick={onSignOut}>
+            Sign out
+          </Button>
+        )}
+      </div>
+    </div>
+  );
 }
 
 function ClinicianLogin() {
@@ -127,6 +194,12 @@ function ClinicianLogin() {
             <Button type="submit" className="w-full" disabled={busy}>
               {busy ? "Signing in…" : "Sign in"}
             </Button>
+            <Link
+              href="/auth/forgot-password"
+              className="block text-center text-xs text-[var(--color-primary-strong)] underline"
+            >
+              Forgot password?
+            </Link>
           </form>
           <p className="mt-4 text-center text-xs text-[var(--color-ink-faint)]">
             Patient?{" "}

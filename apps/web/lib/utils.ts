@@ -12,16 +12,12 @@ export function formatDate(iso: string): string {
   });
 }
 
-/**
- * Local calendar date as yyyy-mm-dd. Use instead of
- * `toISOString().slice(0, 10)`, which gives the UTC date — wrong for
- * part of the day in non-UTC time zones (e.g. 00:00–03:30 in Iran).
- */
-export function localISODate(d: Date = new Date()): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
+/** Calendar date in the user's local timezone (not UTC). */
+export function localDateValue(date = new Date()): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 /** Simple id generator for mock/local data. */

@@ -4,13 +4,15 @@ import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useCases } from "@/lib/store/CaseContext";
 import { buildReasoning, delay } from "@/lib/ai/engine";
+import { hasClinicalSafetyClearance } from "@/lib/clinical/safety";
 import { bodyRegions, getRegion } from "@/lib/data/bodyRegions";
 import type { BodyRegionId, ClinicalReasoning } from "@/lib/types";
 import { Card, CardBody, CardHeader } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
-import { ButtonLink } from "@/components/ui/Button";
+import { Button, ButtonLink } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Form";
 import { Icon } from "@/components/ui/Icon";
+import { CaseAssessmentHistory } from "@/components/clinical/CaseAssessmentHistory";
 import {
   BulletList,
   Disclaimer,
@@ -20,7 +22,15 @@ import {
 } from "@/components/ui/Misc";
 
 export function CaseAnalysisClient() {
-  const { cases, currentCase, setCurrentCase, hydrated } = useCases();
+  const {
+    cases,
+    currentCase,
+    setCurrentCase,
+    hydrated,
+    loadError,
+    reloadCases,
+    applyAssessmentSnapshot,
+  } = useCases();
   const searchParams = useSearchParams();
   const regionParam = searchParams.get("region") as BodyRegionId | null;
 
@@ -32,6 +42,9 @@ export function CaseAnalysisClient() {
   } | null>(null);
   const loading =
     !!currentCase && reasoning?.caseId !== currentCase.id;
+  const safetyCleared = hasClinicalSafetyClearance(
+    currentCase?.safetyScreen
+  );
 
   // Region browser can be used stand-alone (from dashboard module links).
   // The URL param provides the default; a manual selection overrides it.
@@ -63,14 +76,30 @@ export function CaseAnalysisClient() {
 
   if (!hydrated) return <Spinner label="Loading cases…" />;
 
+  if (loadError) {
+    return (
+      <EmptyState
+        icon="alert"
+        title="Cases could not be verified"
+        description="The clinical case list failed to load. No empty-state or assessment actions are shown until the authenticated database request succeeds."
+        action={
+          <Button type="button" onClick={reloadCases}>
+            Retry cases
+          </Button>
+        }
+      />
+    );
+  }
+
   return (
     <div className="space-y-6">
       <PageIntro
         title="Case Analysis"
-        description="Structured clinical reasoning generated from the intake — organised as possible clinical hypotheses to confirm with your examination."
+        description="Deterministic intake template — possible hypotheses to verify independently, not a diagnosis or validated AI analysis."
         action={
           cases.length > 0 ? (
             <Select
+              aria-label="Patient case"
               value={currentCase?.id ?? ""}
               onChange={(e) => setCurrentCase(e.target.value || null)}
               className="w-64"
@@ -97,6 +126,19 @@ export function CaseAnalysisClient() {
 
       {currentCase && (
         <>
+          <div
+            role={safetyCleared ? "status" : "alert"}
+            className={
+              safetyCleared
+                ? "rounded-2xl border border-[var(--color-success)]/30 bg-[var(--color-success-soft)] px-5 py-4 text-sm text-[var(--color-success)]"
+                : "rounded-2xl border border-[var(--color-danger)]/30 bg-[var(--color-danger-soft)] px-5 py-4 text-sm text-[var(--color-danger)]"
+            }
+          >
+            {safetyCleared
+              ? "Structured safety screen is clear. Continue to monitor and verify throughout examination."
+              : `Safety clearance is absent (${currentCase.safetyScreen?.disposition ?? "not-screened"}). Resolve the documented pathway before treatment advice or patient education.`}
+          </div>
+
           {/* Case summary strip */}
           <Card>
             <CardBody className="flex flex-wrap items-center gap-x-6 gap-y-2">
@@ -126,15 +168,29 @@ export function CaseAnalysisClient() {
                 )}
               </div>
               <div className="ms-auto flex gap-2">
-                <ButtonLink href="/treatment-planner" variant="secondary" size="sm">
-                  Plan treatment
-                </ButtonLink>
-                <ButtonLink href="/patient-education" variant="secondary" size="sm">
-                  Patient handout
-                </ButtonLink>
+                {safetyCleared ? (
+                  <>
+                    <ButtonLink href="/treatment-planner" variant="secondary" size="sm">
+                      Plan treatment
+                    </ButtonLink>
+                    <ButtonLink href="/patient-education" variant="secondary" size="sm">
+                      Patient handout
+                    </ButtonLink>
+                  </>
+                ) : (
+                  <span className="rounded-xl bg-[var(--color-danger-soft)] px-3 py-2 text-xs font-medium text-[var(--color-danger)]">
+                    Advice locked pending safety clearance
+                  </span>
+                )}
               </div>
             </CardBody>
           </Card>
+
+          <CaseAssessmentHistory
+            key={currentCase.id}
+            patientCase={currentCase}
+            onSnapshotApplied={applyAssessmentSnapshot}
+          />
 
           {loading && (
             <Card>
@@ -144,23 +200,31 @@ export function CaseAnalysisClient() {
 
           {!loading && reasoning && (
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-              <ReasonCard title="Subjective Findings" icon="user" items={reasoning.data.subjective} />
-              <ReasonCard title="Objective Findings (to examine)" icon="analysis" items={reasoning.data.objective} />
-              <ReasonCard
-                title="Possible Clinical Hypotheses"
-                icon="sparkle"
-                items={reasoning.data.hypotheses}
-                tone="primary"
-                footer="These are hypotheses, not a diagnosis — confirm with clinical examination."
-              />
-              <ReasonCard title="Differential Diagnosis Ideas" icon="analysis" items={reasoning.data.differentials} />
-              <ReasonCard title="Yellow Flags (psychosocial)" icon="flag" items={reasoning.data.yellowFlags} tone="warn" />
+              {safetyCleared && (
+                <>
+                  <ReasonCard title="Subjective Findings" icon="user" items={reasoning.data.subjective} />
+                  <ReasonCard title="Objective Findings (to examine)" icon="analysis" items={reasoning.data.objective} />
+                  <ReasonCard
+                    title="Possible Clinical Hypotheses"
+                    icon="sparkle"
+                    items={reasoning.data.hypotheses}
+                    tone="primary"
+                    footer="Template hypotheses only, not a diagnosis — confirm independently with examination."
+                  />
+                  <ReasonCard title="Differential Diagnosis Ideas" icon="analysis" items={reasoning.data.differentials} />
+                  <ReasonCard title="Yellow Flags (psychosocial)" icon="flag" items={reasoning.data.yellowFlags} tone="warn" />
+                </>
+              )}
               <ReasonCard title="Red Flags (safety)" icon="alert" items={reasoning.data.redFlags} tone="danger" footer="Refer to physician / emergency care if clinically indicated." />
               <ReasonCard title="Missing Information to Ask" icon="search" items={reasoning.data.missingInfo} />
-              <ReasonCard title="Suggested Physical Tests" icon="check" items={reasoning.data.suggestedTests} tone="primary" />
-              <div className="lg:col-span-2">
-                <ReasonCard title="Suggested Outcome Measures" icon="clock" items={reasoning.data.outcomeMeasures} />
-              </div>
+              {safetyCleared && (
+                <>
+                  <ReasonCard title="Suggested Physical Tests" icon="check" items={reasoning.data.suggestedTests} tone="primary" />
+                  <div className="lg:col-span-2">
+                    <ReasonCard title="Suggested Outcome Measures" icon="clock" items={reasoning.data.outcomeMeasures} />
+                  </div>
+                </>
+              )}
             </div>
           )}
         </>

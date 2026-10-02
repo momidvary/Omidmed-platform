@@ -1,11 +1,11 @@
 import type { Patient, ProgressEntry } from "@/lib/types";
-import { localISODate } from "@/lib/utils";
+import { localDateValue } from "@/lib/utils";
 
 /** yyyy-mm-dd for `daysAgo` days before today (local time). */
 function dateAgo(daysAgo: number): string {
   const d = new Date();
   d.setDate(d.getDate() - daysAgo);
-  return localISODate(d);
+  return localDateValue(d);
 }
 
 /** Build demo progress entries from (daysAgo, pain, completed) triples. */
@@ -49,6 +49,7 @@ export const samplePatients: Patient[] = [
         subject: "کشش پشت زانو",
         message: "موقع سُر دادن پاشنه، پشت زانوم کشش نسبتاً زیادی حس می‌کنم. طبیعیه؟",
         status: "answered",
+        priority: "routine",
         replies: [
           {
             id: "tr_demo_1",

@@ -22,6 +22,10 @@ interface PatientContextValue {
   /** The active patient (mock demo selection, or the signed-in patient). */
   patient: Patient | null;
   hydrated: boolean;
+  /** Supabase mode: the last load failed (network/query), not "unlinked". */
+  loadFailed: boolean;
+  /** Supabase mode: retry loading the signed-in patient's record. */
+  reload: () => void;
   /** Mock mode only: open a demo patient by index. */
   openDemoPatient: (index: number) => void;
   closeDemoPatient: () => void;
@@ -40,6 +44,7 @@ interface PatientState {
   demoPatientId: string | null;
   /** Supabase mode: the signed-in user's patient record. */
   remotePatient: Patient | null;
+  loadFailed: boolean;
   hydrated: boolean;
 }
 
@@ -68,8 +73,11 @@ export function PatientProvider({ children }: { children: React.ReactNode }) {
     patients: samplePatients,
     demoPatientId: null,
     remotePatient: null,
+    loadFailed: false,
     hydrated: false,
   });
+  const [reloadKey, setReloadKey] = useState(0);
+  const userId = session?.user.id ?? null;
 
   // Mock mode: local demo data.
   useEffect(() => {
@@ -78,18 +86,38 @@ export function PatientProvider({ children }: { children: React.ReactNode }) {
     setState((prev) => ({ ...prev, ...loadPersisted(), hydrated: true }));
   }, []);
 
-  // Supabase mode: load the signed-in user's patient record.
+  // Supabase mode: load the signed-in user's patient record. Keyed on the
+  // user id (not the session object) so hourly token refreshes don't
+  // refetch and reset the portal.
   useEffect(() => {
     if (isMockMode) return;
-    if (!session) {
+    if (!userId) {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- reset on sign-out
-      setState((prev) => ({ ...prev, remotePatient: null, hydrated: true }));
+      setState((prev) => ({
+        ...prev,
+        remotePatient: null,
+        loadFailed: false,
+        hydrated: true,
+      }));
       return;
     }
-    fetchMyPatient(session.user.id).then((p) => {
-      setState((prev) => ({ ...prev, remotePatient: p, hydrated: true }));
+    let cancelled = false;
+    // Show the loading state until the record arrives, instead of briefly
+    // rendering the "not linked yet" notice.
+    setState((prev) => ({ ...prev, hydrated: false }));
+    fetchMyPatient(userId).then(({ patient, failed }) => {
+      if (cancelled) return;
+      setState((prev) => ({
+        ...prev,
+        remotePatient: patient,
+        loadFailed: failed,
+        hydrated: true,
+      }));
     });
-  }, [session]);
+    return () => {
+      cancelled = true;
+    };
+  }, [userId, reloadKey]);
 
   useEffect(() => {
     if (!state.hydrated || !isMockMode) return;
@@ -119,6 +147,8 @@ export function PatientProvider({ children }: { children: React.ReactNode }) {
     return {
       patient,
       hydrated: state.hydrated,
+      loadFailed: state.loadFailed,
+      reload: () => setReloadKey((k) => k + 1),
       openDemoPatient: (index) => {
         const target = state.patients[index];
         if (isMockMode && target) {
@@ -157,7 +187,7 @@ export function PatientProvider({ children }: { children: React.ReactNode }) {
         );
         if (!ok) return false;
         updatePatient((p) => ({ ...p, tickets: [bare, ...p.tickets] }));
-        void requestAiReply(ticket.id, ticket.message).then((reply) => {
+        void requestAiReply(ticket.id).then((reply) => {
           if (!reply) return;
           updatePatient((p) => ({
             ...p,

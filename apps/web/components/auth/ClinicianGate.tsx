@@ -2,13 +2,20 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useAuth } from "@/lib/store/AuthContext";
+import { useAuth, type Role } from "@/lib/store/AuthContext";
 import { isMockMode } from "@/lib/config";
 import { Card, CardBody } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Field, Input } from "@/components/ui/Form";
 import { Icon } from "@/components/ui/Icon";
 import { Spinner } from "@/components/ui/Misc";
+
+const STAFF_ROLES: Role[] = [
+  "platform_admin",
+  "clinic_owner",
+  "therapist",
+  "clinic_staff",
+];
 
 /**
  * Wraps the clinician app. In Supabase mode it requires a signed-in user
@@ -22,7 +29,25 @@ export function ClinicianGate({ children }: { children: React.ReactNode }) {
   if (loading) return <Spinner label="Loading…" />;
   if (!session) return <ClinicianLogin />;
 
-  if (profile?.role === "patient") {
+  if (!profile) {
+    return (
+      <div className="mx-auto max-w-md py-16 text-center">
+        <p className="text-sm text-[var(--color-ink-soft)]">
+          Your account profile could not be loaded. Check your connection,
+          or ask the clinic administrator to confirm your account was set up
+          (migrations run, profile created).
+        </p>
+        <div className="mt-4 flex justify-center gap-3">
+          <Button onClick={() => window.location.reload()}>Retry</Button>
+          <Button variant="secondary" onClick={signOut}>
+            Sign out
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!STAFF_ROLES.includes(profile.role)) {
     return (
       <div className="mx-auto max-w-md py-16 text-center">
         <p className="text-sm text-[var(--color-ink-soft)]">

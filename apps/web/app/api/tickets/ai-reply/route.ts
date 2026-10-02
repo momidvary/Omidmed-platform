@@ -18,14 +18,14 @@ import { buildTicketAutoReply } from "@/lib/ai/engine";
  * real AI call here (server-side, keys stay in env).
  */
 export async function POST(req: Request) {
-  let body: { ticketId?: string; message?: string };
+  let body: { ticketId?: unknown };
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: "invalid body" }, { status: 400 });
   }
-  const { ticketId, message } = body;
-  if (!ticketId || typeof message !== "string") {
+  const { ticketId } = body;
+  if (typeof ticketId !== "string" || !ticketId) {
     return NextResponse.json({ error: "invalid body" }, { status: 400 });
   }
 
@@ -47,23 +47,41 @@ export async function POST(req: Request) {
   if (!user) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
+  // The message is read from the stored ticket — never trusted from the
+  // request body.
   const { data: ticket } = await userClient
     .from("tickets")
-    .select("id")
+    .select("id, message")
     .eq("id", ticketId)
     .maybeSingle();
   if (!ticket) {
     return NextResponse.json({ error: "ticket not found" }, { status: 404 });
   }
 
-  const admin = createSupabaseClient(url, secret);
+  const admin = createSupabaseClient(url, secret, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+
+  // At most one AI triage reply per ticket (the route can't be replayed
+  // to flood a ticket with AI messages).
+  const { data: existing } = await admin
+    .from("ticket_replies")
+    .select("id")
+    .eq("ticket_id", ticketId)
+    .eq("sender", "ai")
+    .limit(1)
+    .maybeSingle();
+  if (existing) {
+    return NextResponse.json({ error: "already replied" }, { status: 409 });
+  }
+
   const { data, error } = await admin
     .from("ticket_replies")
     .insert({
       ticket_id: ticketId,
       sender: "ai",
       sender_user_id: null,
-      content: buildTicketAutoReply(message),
+      content: buildTicketAutoReply(ticket.message as string),
     })
     .select("id, content, created_at")
     .single();

@@ -72,29 +72,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const supabase = getSupabase();
     if (!supabase) return;
 
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
-      if (data.session) {
-        loadProfile(data.session.user.id).then((p) => {
-          setProfile(p);
-          setLoading(false);
-        });
-      } else {
-        setLoading(false);
-      }
-    });
+    // onAuthStateChange also emits INITIAL_SESSION on subscribe, so it is
+    // the single source. The profile is (re)loaded only when the user
+    // changes — token refreshes must not blank the app.
+    let currentUserId: string | null | undefined;
+    let active = true;
 
     const { data: sub } = supabase.auth.onAuthStateChange(
       (_event, newSession) => {
         setSession(newSession);
-        if (newSession) {
-          loadProfile(newSession.user.id).then(setProfile);
-        } else {
+        const userId = newSession?.user.id ?? null;
+        if (userId === currentUserId) return;
+        currentUserId = userId;
+
+        if (!userId) {
           setProfile(null);
+          setLoading(false);
+          return;
         }
+        setProfile(null);
+        setLoading(true);
+        // Defer Supabase calls out of the auth callback (avoids the
+        // supabase-js auth-lock deadlock).
+        setTimeout(() => {
+          loadProfile(userId)
+            .catch(() => null)
+            .then((p) => {
+              if (!active || currentUserId !== userId) return;
+              setProfile(p);
+              setLoading(false);
+            });
+        }, 0);
       }
     );
-    return () => sub.subscription.unsubscribe();
+    return () => {
+      active = false;
+      sub.subscription.unsubscribe();
+    };
   }, []);
 
   const value = useMemo<AuthContextValue>(

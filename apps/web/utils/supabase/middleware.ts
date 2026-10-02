@@ -6,14 +6,14 @@ const supabaseKey =
   process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-export const updateSession = (request: NextRequest) => {
+export const updateSession = async (request: NextRequest) => {
   let supabaseResponse = NextResponse.next({
     request: { headers: request.headers },
   });
 
   if (!supabaseUrl || !supabaseKey) return supabaseResponse;
 
-  createServerClient(supabaseUrl, supabaseKey, {
+  const supabase = createServerClient(supabaseUrl, supabaseKey, {
     cookies: {
       getAll() {
         return request.cookies.getAll();
@@ -29,6 +29,16 @@ export const updateSession = (request: NextRequest) => {
       },
     },
   });
+
+  // Required: this call validates the session and refreshes an expired
+  // access token, writing the new cookies via setAll above. Without it
+  // the server (e.g. /api/tickets/ai-reply) can see a stale session.
+  try {
+    await supabase.auth.getUser();
+  } catch {
+    // Network problems must not break page loads; the browser client
+    // refreshes the session on its own.
+  }
 
   return supabaseResponse;
 };

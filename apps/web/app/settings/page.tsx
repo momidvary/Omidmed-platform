@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Card, CardBody, CardHeader } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Field, Input, Select } from "@/components/ui/Form";
@@ -10,6 +10,8 @@ import { useLocale } from "@/lib/store/LocaleContext";
 import { locales, type Locale } from "@/lib/i18n/translations";
 import { isSupabaseConfigured } from "@/lib/supabase/client";
 
+const SETTINGS_KEY = "physioai:settings:v1";
+
 export default function SettingsPage() {
   const { locale, setLocale, t } = useLocale();
   const [clinicName, setClinicName] = useState("");
@@ -18,10 +20,30 @@ export default function SettingsPage() {
   const [saved, setSaved] = useState(false);
   const [cleared, setCleared] = useState(false);
 
+  // Restore saved preferences (browser-only; cannot run during SSR).
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(SETTINGS_KEY);
+      if (!raw) return;
+      const saved = JSON.parse(raw) as {
+        clinicName?: string;
+        therapistName?: string;
+        units?: string;
+      };
+      /* eslint-disable react-hooks/set-state-in-effect -- one-time localStorage hydration */
+      setClinicName(saved.clinicName ?? "");
+      setTherapistName(saved.therapistName ?? "");
+      setUnits(saved.units === "imperial" ? "imperial" : "metric");
+      /* eslint-enable react-hooks/set-state-in-effect */
+    } catch {
+      /* ignore corrupt storage */
+    }
+  }, []);
+
   function save() {
     // Local-only preferences for the MVP; wire to a backend later.
     localStorage.setItem(
-      "physioai:settings:v1",
+      SETTINGS_KEY,
       JSON.stringify({ clinicName, therapistName, units })
     );
     setSaved(true);
@@ -30,7 +52,8 @@ export default function SettingsPage() {
 
   function clearData() {
     localStorage.removeItem("physioai:cases:v1");
-    localStorage.removeItem("physioai:settings:v1");
+    localStorage.removeItem("physioai:patients:v2");
+    localStorage.removeItem(SETTINGS_KEY);
     setCleared(true);
     setTimeout(() => {
       setCleared(false);

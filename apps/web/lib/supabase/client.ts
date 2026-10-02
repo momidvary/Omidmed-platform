@@ -12,7 +12,7 @@ import { createClient } from "@/utils/supabase/client";
  * Security). Never expose the secret/service_role key.
  *
  * Until configured, `getSupabase()` returns null and the app runs fully
- * in local/mock mode. Schema: database/schema.sql.
+ * in local/mock mode. Schema: database/migrations/ (001 → 002 → 003).
  */
 
 export const isSupabaseConfigured = Boolean(

@@ -6,7 +6,7 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  // Skip static assets; run on app routes so future Supabase Auth
-  // sessions stay refreshed.
+  // Skip static assets; run on app routes so Supabase Auth sessions
+  // stay refreshed.
   matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)"],
 };

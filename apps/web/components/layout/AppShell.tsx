@@ -21,7 +21,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   // The patient portal is patient-facing (Persian, RTL) and must not show
   // the clinician sidebar/topbar — it brings its own minimal chrome.
-  if (pathname.startsWith("/patient")) {
+  // Match the segment exactly: "/patient-education" is a clinician page
+  // and must keep the shell and the ClinicianGate.
+  if (pathname === "/patient" || pathname.startsWith("/patient/")) {
     return <>{children}</>;
   }
 

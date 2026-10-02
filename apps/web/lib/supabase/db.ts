@@ -58,8 +58,19 @@ function withTimeout<T>(promise: PromiseLike<T>, ms = 6000): Promise<T | null> {
 /**
  * Load the patient record linked to the signed-in user, with the most
  * recent active care episode and its program / progress / tickets.
+ * `failed` is true when the request itself failed (timeout, network,
+ * query error) — distinct from "no linked record yet" (patient null).
  */
-export async function fetchMyPatient(userId: string): Promise<Patient | null> {
+export async function fetchMyPatient(
+  userId: string
+): Promise<{ patient: Patient | null; failed: boolean }> {
+  const patient = await loadMyPatient(userId);
+  return patient === "failed"
+    ? { patient: null, failed: true }
+    : { patient, failed: false };
+}
+
+async function loadMyPatient(userId: string): Promise<Patient | null | "failed"> {
   const supabase = getSupabase();
   if (!supabase) return null;
   try {
@@ -71,9 +82,9 @@ export async function fetchMyPatient(userId: string): Promise<Patient | null> {
         .limit(1)
         .maybeSingle()
     );
-    if (!linkResult) {
+    if (!linkResult || linkResult.error) {
       report("offline");
-      return null;
+      return "failed";
     }
     if (!linkResult.data) return null;
     const patientId = linkResult.data.patient_id as string;
@@ -92,9 +103,9 @@ export async function fetchMyPatient(userId: string): Promise<Patient | null> {
         .eq("id", patientId)
         .maybeSingle()
     );
-    if (!result) {
+    if (!result || result.error) {
       report("offline");
-      return null;
+      return "failed";
     }
     const p = result.data;
     if (!p) return null;
@@ -149,7 +160,7 @@ export async function fetchMyPatient(userId: string): Promise<Patient | null> {
     };
   } catch {
     report("offline");
-    return null;
+    return "failed";
   }
 }
 
@@ -205,14 +216,13 @@ export function insertTicket(
  * created reply, or null when the server AI key isn't configured.
  */
 export async function requestAiReply(
-  ticketId: string,
-  message: string
+  ticketId: string
 ): Promise<{ id: string; content: string; createdAt: string } | null> {
   try {
     const res = await fetch("/api/tickets/ai-reply", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ticketId, message }),
+      body: JSON.stringify({ ticketId }),
     });
     if (!res.ok) return null;
     const json = (await res.json()) as {

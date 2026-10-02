@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/Button";
 import { Field, Input, Select, Textarea } from "@/components/ui/Form";
 import { Icon } from "@/components/ui/Icon";
 import { Disclaimer, Spinner } from "@/components/ui/Misc";
-import { cn, uid, uuid } from "@/lib/utils";
+import { cn, localISODate, uid, uuid } from "@/lib/utils";
 import { useAuth } from "@/lib/store/AuthContext";
 import { isMockMode } from "@/lib/config";
 import { SaveStatusPill } from "@/components/ui/SaveStatusPill";
@@ -41,12 +41,11 @@ const tabs: { id: Tab; label: string; icon: React.ComponentProps<typeof Icon>["n
 ];
 
 export default function PatientPortalPage() {
-  const { patient, hydrated } = usePatient();
+  const { patient, hydrated, loadFailed } = usePatient();
   const { session, loading } = useAuth();
 
   const waiting = !hydrated || (!isMockMode && loading);
-  // Signed in but not yet linked to a patient record by the clinic.
-  const unlinked = !isMockMode && session && hydrated && !patient;
+  const signedInNoRecord = !isMockMode && session && hydrated && !patient;
 
   return (
     <div
@@ -57,11 +56,42 @@ export default function PatientPortalPage() {
         <Spinner label="در حال بارگذاری…" />
       ) : patient ? (
         <PatientDashboard patient={patient} />
-      ) : unlinked ? (
+      ) : signedInNoRecord && loadFailed ? (
+        <LoadFailedNotice />
+      ) : signedInNoRecord ? (
+        // Signed in but not yet linked to a patient record by the clinic.
         <UnlinkedNotice />
       ) : (
         <PatientEntry />
       )}
+    </div>
+  );
+}
+
+/** Signed in, but loading the record failed (network / server). */
+function LoadFailedNotice() {
+  const { reload } = usePatient();
+  const { signOut } = useAuth();
+  return (
+    <div className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center px-5 py-10 text-center">
+      <Card>
+        <CardBody className="space-y-4">
+          <p className="text-sm font-semibold text-[var(--color-ink)]">
+            اطلاعات پرونده بارگذاری نشد
+          </p>
+          <p className="text-xs leading-relaxed text-[var(--color-ink-soft)]">
+            ارتباط با سرور برقرار نشد. اتصال اینترنت خود را بررسی کنید و دوباره
+            تلاش کنید.
+          </p>
+          <Button className="w-full" onClick={reload}>
+            تلاش دوباره
+          </Button>
+          <Button variant="secondary" className="w-full" onClick={signOut}>
+            خروج از حساب
+          </Button>
+        </CardBody>
+      </Card>
+      <Disclaimer fa className="mt-6" />
     </div>
   );
 }
@@ -344,7 +374,7 @@ function PatientDashboard({ patient }: { patient: Patient }) {
 function ProgramTab({ patient }: { patient: Patient }) {
   const { logProgress } = usePatient();
   const [openId, setOpenId] = useState<string | null>(null);
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localISODate();
   const todayEntry = patient.progress.find((e) => e.date === today);
   const [pain, setPain] = useState(todayEntry?.painLevel ?? 3);
 
@@ -464,7 +494,7 @@ function ProgressTab({ patient }: { patient: Patient }) {
   const last14 = sorted.slice(-14);
 
   const [weekAgo] = useState(() =>
-    new Date(Date.now() - 7 * 864e5).toISOString().slice(0, 10)
+    localISODate(new Date(Date.now() - 7 * 864e5))
   );
   const thisWeek = sorted.filter((e) => e.date > weekAgo);
   const doneThisWeek = thisWeek.filter((e) => e.completed).length;
@@ -698,6 +728,7 @@ function TicketsTab({ patient }: { patient: Patient }) {
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    if (sending) return;
     if (!subject.trim() || !message.trim()) {
       setError("موضوع و متن پیام را بنویسید.");
       return;
@@ -783,7 +814,7 @@ function TicketsTab({ patient }: { patient: Patient }) {
                 placeholder="بنویسید چه اتفاقی افتاد، کجا و چه زمانی…"
               />
             </Field>
-            <Button type="submit" size="sm">
+            <Button type="submit" size="sm" disabled={sending}>
               <Icon name="send" width={14} height={14} className="-scale-x-100" />
               {sending ? "در حال ارسال…" : sent ? "ارسال شد ✓" : "ارسال تیکت"}
             </Button>

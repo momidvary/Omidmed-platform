@@ -54,6 +54,7 @@ function loadPersisted(): Pick<CaseState, "cases" | "currentCaseId"> {
 
 export function CaseProvider({ children }: { children: React.ReactNode }) {
   const { session, profile } = useAuth();
+  const userId = session?.user.id ?? null;
   const [state, setState] = useState<CaseState>({
     cases: isMockMode ? sampleCases : [],
     currentCaseId: null,
@@ -68,21 +69,28 @@ export function CaseProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   // Supabase mode: the database (scoped by RLS) is the only source.
+  // Keyed on the user id so token refreshes don't trigger a refetch.
   useEffect(() => {
     if (isMockMode) return;
-    if (!session) {
+    if (!userId) {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- reset on sign-out
       setState({ cases: [], currentCaseId: null, hydrated: true });
       return;
     }
+    let cancelled = false;
+    setState((prev) => ({ ...prev, hydrated: false }));
     fetchCases().then((rows) => {
+      if (cancelled) return;
       setState((prev) => ({
         ...prev,
         cases: rows ?? prev.cases,
         hydrated: true,
       }));
     });
-  }, [session]);
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
 
   // Persist locally only in mock mode.
   useEffect(() => {

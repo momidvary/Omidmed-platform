@@ -3,6 +3,7 @@
 -- 1) Create the account first: Authentication → Users → Add user →
 --    Create new user (tick "Auto Confirm User").
 -- 2) Replace you@example.com below with that account's email, then Run.
+--    Also restores missing profiles for every other existing account.
 --    Only the email is required. Safe to re-run.
 --    Tip: do not type Persian/Arabic text between the quotes here — RTL
 --    editing moves the quote marks and causes "syntax error at or near".
@@ -31,12 +32,15 @@ begin
     raise exception 'No user with email %. Create it in Authentication → Users first (and check the spelling).', v_email;
   end if;
 
-  -- Accounts created before the migrations have no profile row yet.
+  -- Accounts created before the migrations (or before 01_reset) have no
+  -- profile row: the sign-up trigger only fires for new users. Restore
+  -- them all with the default role 'patient' (what sign-up would give);
+  -- otherwise those accounts cannot sign in or be linked to a patient.
   insert into public.profiles (id, full_name)
-  select v_user_id,
-         coalesce(nullif(trim(v_full_name), ''),
+  select u.id,
+         coalesce(case when u.id = v_user_id then nullif(trim(v_full_name), '') end,
                   u.raw_user_meta_data ->> 'full_name', '')
-  from auth.users u where u.id = v_user_id
+  from auth.users u
   on conflict (id) do nothing;
 
   if exists (
@@ -50,7 +54,16 @@ begin
       full_name = coalesce(nullif(trim(v_full_name), ''), full_name)
   where id = v_user_id;
 
-  select id into v_clinic_id from public.clinics where name = v_clinic_name limit 1;
+  -- Re-runs must not create a second clinic: reuse the clinic this
+  -- account already owns (whatever it was named or renamed to).
+  select membership.clinic_id into v_clinic_id
+  from public.clinic_members membership
+  where membership.user_id = v_user_id
+  order by membership.created_at
+  limit 1;
+  if v_clinic_id is null then
+    select id into v_clinic_id from public.clinics where name = v_clinic_name limit 1;
+  end if;
   if v_clinic_id is null then
     insert into public.clinics (name, city)
     values (v_clinic_name, v_clinic_city)

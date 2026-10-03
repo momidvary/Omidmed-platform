@@ -975,17 +975,20 @@ export function revokePatientAccountLink(
 
 export async function invitePatientAccount(
   input: InvitePatientAccountInput
-): Promise<{ ok: boolean; status?: string }> {
+): Promise<{ ok: boolean; status?: string; reason?: string }> {
   try {
     const response = await fetch("/api/patients/invite", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(input),
     });
-    const payload = (await response.json()) as { status?: string };
-    return { ok: response.ok, status: payload.status };
+    const payload = (await response.json()) as {
+      status?: string;
+      reason?: string;
+    };
+    return { ok: response.ok, status: payload.status, reason: payload.reason };
   } catch {
-    return { ok: false };
+    return { ok: false, reason: "network" };
   }
 }
 

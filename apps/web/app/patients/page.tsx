@@ -165,6 +165,27 @@ function validatePatientForm(form: PatientFormDraft): {
   };
 }
 
+function inviteFailureMessage(reason: string | undefined): string {
+  switch (reason) {
+    case "account_not_eligible":
+      return "This email belongs to an account that cannot be a patient login: a clinic staff account, an account without a patient profile (e.g. created before the database was reset — run 03_first_clinic_owner.sql again to restore profiles), or the account already represents another patient.";
+    case "invite_email_failed":
+      return "No account exists for this email and Supabase could not send the invitation email (the built-in mailer allows only a few emails per hour). Ask the patient to sign up at /patient first, then link the same email here — or configure custom SMTP in Supabase.";
+    case "rate_limited":
+      return "Too many invitations were requested for this patient or email. Wait and try again later.";
+    case "not_configured":
+      return "Invitations are not configured on the server: set SUPABASE_SECRET_KEY (server-only) and restart / redeploy.";
+    case "not_permitted":
+      return "Only a clinic owner of this patient's clinic can link portal accounts, and archived patients cannot be linked.";
+    case "unauthorized":
+      return "Your session expired. Sign in again and retry.";
+    case "network":
+      return "The server could not be reached. Check the connection and retry.";
+    default:
+      return "The account could not be linked. Check the email, relationship and expiry, then retry.";
+  }
+}
+
 function formatDate(value: string): string {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "Unknown";
@@ -1033,8 +1054,7 @@ function PatientManagementPanel({
     if (!invitation.ok) {
       setStatus({
         tone: "error",
-        message:
-          "The invitation failed or was rate-limited. Verify the server secret, owner access and migration 015.",
+        message: inviteFailureMessage(invitation.reason),
       });
       return;
     }

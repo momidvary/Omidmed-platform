@@ -87,14 +87,17 @@ export async function POST(request: Request) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const secret = process.env.SUPABASE_SECRET_KEY;
   if (!url || !secret) {
-    return json({ error: "patient invitations are not configured" }, 503);
+    return json(
+      { error: "patient invitations are not configured", reason: "not_configured" },
+      503
+    );
   }
 
   const userClient = createServerClient(await cookies());
   const {
     data: { user },
   } = await userClient.auth.getUser();
-  if (!user) return json({ error: "unauthorized" }, 401);
+  if (!user) return json({ error: "unauthorized", reason: "unauthorized" }, 401);
 
   const linkParams = {
     p_patient_id: patientId,
@@ -108,9 +111,21 @@ export async function POST(request: Request) {
     linkParams
   );
   if (firstLink.error) {
+    // 42501: caller is not an owner of this patient's clinic.
+    // 23514: the account is not a patient-only account (staff, no profile,
+    //        or already the "self" account of another patient).
+    const code = firstLink.error.code;
     return json(
-      { error: "patient link is not permitted" },
-      firstLink.error.code === "42501" ? 403 : 422
+      {
+        error: "patient link is not permitted",
+        reason:
+          code === "42501"
+            ? "not_permitted"
+            : code === "23514"
+              ? "account_not_eligible"
+              : "invalid",
+      },
+      code === "42501" ? 403 : 422
     );
   }
   const firstStatus = firstRpcRow(firstLink.data)?.link_status;
@@ -118,7 +133,7 @@ export async function POST(request: Request) {
     return json({ status: "linked-existing" });
   }
   if (firstStatus !== "account-not-found") {
-    return json({ error: "patient link failed" }, 500);
+    return json({ error: "patient link failed", reason: "link_failed" }, 500);
   }
 
   const reservation = await userClient.rpc("reserve_patient_invitation", {
@@ -126,9 +141,13 @@ export async function POST(request: Request) {
     p_email: email,
   });
   if (reservation.error) {
+    const rateLimited = reservation.error.code === "P0001";
     return json(
-      { error: "invitation is temporarily unavailable" },
-      reservation.error.code === "P0001" ? 429 : 403
+      {
+        error: "invitation is temporarily unavailable",
+        reason: rateLimited ? "rate_limited" : "not_permitted",
+      },
+      rateLimited ? 429 : 403
     );
   }
 
@@ -150,7 +169,15 @@ export async function POST(request: Request) {
     finalLink.error ||
     (finalStatus !== "linked" && finalStatus !== "already-linked")
   ) {
-    return json({ error: "invitation could not be linked" }, 502);
+    return json(
+      {
+        error: "invitation could not be linked",
+        // Without a created Auth user the invitation email itself failed
+        // (Supabase's built-in mailer allows only a few emails per hour).
+        reason: invitation.error ? "invite_email_failed" : "link_failed",
+      },
+      502
+    );
   }
   return json({ status: invitation.error ? "linked-existing" : "invited" });
 }

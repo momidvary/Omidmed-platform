@@ -56,11 +56,24 @@ parts.push(`-- GENERATED FILE — do not edit. Rebuild with:
 -- 01_reset_app_schema.sql). Paste the whole file and press Run once.
 
 do $preflight$
+declare
+  v_applied int;
+  v_pending text;
 begin
   if to_regclass('public.schema_migrations') is not null then
+    execute $q$select count(*) from public.schema_migrations where status = 'applied'$q$
+      into v_applied;
+    execute $q$select string_agg(filename, ', ' order by version)
+                from public.schema_migrations where status <> 'applied'$q$
+      into v_pending;
+    if v_applied >= ${migrations.length} and v_pending is null then
+      raise exception using
+        errcode = '55000',
+        message = format('Already installed: all %s migrations are applied. Nothing to do here; continue with 03_first_clinic_owner.sql (later upgrades: node database/scripts/migrate.mjs).', v_applied);
+    end if;
     raise exception using
       errcode = '55000',
-      message = 'Migrations were already applied (schema_migrations exists). Upgrade with node database/scripts/migrate.mjs instead.';
+      message = format('A previous run stopped part-way: %s of ${migrations.length} migrations applied; unfinished: %s. Run 01_reset_app_schema.sql, then this file again. If it stops again, send the FIRST error shown.', v_applied, coalesce(v_pending, 'none recorded'));
   end if;
   if to_regclass('public.profiles') is not null
      or to_regclass('public.clinics') is not null

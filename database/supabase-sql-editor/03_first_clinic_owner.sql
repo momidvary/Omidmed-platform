@@ -2,7 +2,11 @@
 --
 -- 1) Create the account first: Authentication → Users → Add user →
 --    Create new user (tick "Auto Confirm User").
--- 2) Edit the four values below, then Run. Safe to re-run.
+-- 2) Replace you@example.com below with that account's email, then Run.
+--    Only the email is required. Safe to re-run.
+--    Tip: do not type Persian/Arabic text between the quotes here — RTL
+--    editing moves the quote marks and causes "syntax error at or near".
+--    Leave the defaults; names can be changed later.
 --
 -- The owner is a clinician account (role clinic_owner) and can manage
 -- patients, therapists and programmes. platform_admin is a separate,
@@ -11,12 +15,12 @@
 
 do $setup$
 declare
-  -- ▼▼▼ EDIT THESE ▼▼▼
+  -- ▼▼▼ EDIT THE EMAIL ▼▼▼
   v_email       text := 'you@example.com';
-  v_full_name   text := 'نام و نام خانوادگی';
-  v_clinic_name text := 'نام کلینیک';
-  v_clinic_city text := 'تهران';
-  -- ▲▲▲ EDIT THESE ▲▲▲
+  -- ▲▲▲ (optional below) ▲▲▲
+  v_full_name   text := '';           -- empty = keep the name from sign-up
+  v_clinic_name text := 'My Clinic';
+  v_clinic_city text := null;
   v_user_id   uuid;
   v_clinic_id uuid;
 begin
@@ -29,7 +33,10 @@ begin
 
   -- Accounts created before the migrations have no profile row yet.
   insert into public.profiles (id, full_name)
-  values (v_user_id, v_full_name)
+  select v_user_id,
+         coalesce(nullif(trim(v_full_name), ''),
+                  u.raw_user_meta_data ->> 'full_name', '')
+  from auth.users u where u.id = v_user_id
   on conflict (id) do nothing;
 
   if exists (
@@ -39,7 +46,8 @@ begin
   end if;
 
   update public.profiles
-  set role = 'clinic_owner', full_name = v_full_name
+  set role = 'clinic_owner',
+      full_name = coalesce(nullif(trim(v_full_name), ''), full_name)
   where id = v_user_id;
 
   select id into v_clinic_id from public.clinics where name = v_clinic_name limit 1;

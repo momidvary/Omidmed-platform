@@ -2,16 +2,16 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { createClient as createServerClient } from "@/utils/supabase/server";
+import { normalizeIranianMobile } from "@/lib/phone";
 
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const RELATIONSHIPS = new Set(["self", "parent", "guardian", "caregiver"]);
 const MAX_REQUEST_BYTES = 2_048;
 
 interface InviteBody {
   patientId?: unknown;
-  email?: unknown;
+  phone?: unknown;
   relationship?: unknown;
   expiresAt?: unknown;
   authorityAttested?: unknown;
@@ -36,6 +36,16 @@ function firstRpcRow(value: unknown): Record<string, unknown> | null {
     : null;
 }
 
+/*
+ * Link a patient-portal account by MOBILE NUMBER (clinic owners only).
+ *
+ * The patient signs in at /patient with that number and an SMS one-time
+ * code (Supabase phone auth). If no Auth account has the number yet, one is
+ * created here with the service key — phone marked confirmed, no SMS sent —
+ * and then linked. Authorization (owner of the patient's clinic, consent
+ * attestation, patient-only account) is enforced by the database RPC under
+ * the caller's own session; the service key only creates the Auth user.
+ */
 export async function POST(request: Request) {
   const requestUrl = new URL(request.url);
   const origin = request.headers.get("origin");
@@ -61,8 +71,8 @@ export async function POST(request: Request) {
 
   const patientId =
     typeof body.patientId === "string" ? body.patientId : "";
-  const email =
-    typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
+  const phone =
+    typeof body.phone === "string" ? normalizeIranianMobile(body.phone) : null;
   const relationship =
     typeof body.relationship === "string" ? body.relationship : "";
   const expiresAt =
@@ -73,22 +83,21 @@ export async function POST(request: Request) {
 
   if (
     !UUID_PATTERN.test(patientId) ||
-    email.length > 254 ||
-    !EMAIL_PATTERN.test(email) ||
+    !phone ||
     !RELATIONSHIPS.has(relationship) ||
     body.authorityAttested !== true ||
     (expiryTime !== null &&
       (!Number.isFinite(expiryTime) || expiryTime <= Date.now())) ||
     (relationship !== "self" && expiryTime === null)
   ) {
-    return json({ error: "invalid body" }, 400);
+    return json({ error: "invalid body", reason: "invalid" }, 400);
   }
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const secret = process.env.SUPABASE_SECRET_KEY;
   if (!url || !secret) {
     return json(
-      { error: "patient invitations are not configured", reason: "not_configured" },
+      { error: "patient account linking is not configured", reason: "not_configured" },
       503
     );
   }
@@ -101,83 +110,69 @@ export async function POST(request: Request) {
 
   const linkParams = {
     p_patient_id: patientId,
-    p_email: email,
+    p_phone: phone,
     p_relationship: relationship,
     p_expires_at: expiresAt,
     p_authority_attested: true,
   };
-  const firstLink = await userClient.rpc(
-    "link_patient_account_by_email",
-    linkParams
-  );
-  if (firstLink.error) {
-    // 42501: caller is not an owner of this patient's clinic.
-    // 23514: the account is not a patient-only account (staff, no profile,
-    //        or already the "self" account of another patient).
-    const code = firstLink.error.code;
-    return json(
-      {
-        error: "patient link is not permitted",
-        reason:
-          code === "42501"
-            ? "not_permitted"
-            : code === "23514"
-              ? "account_not_eligible"
-              : "invalid",
-      },
-      code === "42501" ? 403 : 422
-    );
+
+  async function link() {
+    const result = await userClient.rpc("link_patient_account_by_phone", linkParams);
+    if (result.error) {
+      // 42501: caller is not an owner of this patient's clinic.
+      // 23514: not a patient-only account (staff, no profile, or already
+      //        the "self" account of another patient).
+      const code = result.error.code;
+      return {
+        failure: json(
+          {
+            error: "patient link is not permitted",
+            reason:
+              code === "42501"
+                ? "not_permitted"
+                : code === "23514"
+                  ? "account_not_eligible"
+                  : "invalid",
+          },
+          code === "42501" ? 403 : 422
+        ),
+        status: null,
+      };
+    }
+    return {
+      failure: null,
+      status: firstRpcRow(result.data)?.link_status as string | undefined,
+    };
   }
-  const firstStatus = firstRpcRow(firstLink.data)?.link_status;
-  if (firstStatus === "linked" || firstStatus === "already-linked") {
+
+  const first = await link();
+  if (first.failure) return first.failure;
+  if (first.status === "linked" || first.status === "already-linked") {
     return json({ status: "linked-existing" });
   }
-  if (firstStatus !== "account-not-found") {
+  if (first.status !== "account-not-found") {
     return json({ error: "patient link failed", reason: "link_failed" }, 500);
   }
 
-  const reservation = await userClient.rpc("reserve_patient_invitation", {
-    p_patient_id: patientId,
-    p_email: email,
-  });
-  if (reservation.error) {
-    const rateLimited = reservation.error.code === "P0001";
-    return json(
-      {
-        error: "invitation is temporarily unavailable",
-        reason: rateLimited ? "rate_limited" : "not_permitted",
-      },
-      rateLimited ? 429 : 403
-    );
-  }
-
+  // No Auth account has this number yet: create it (no SMS is sent; the
+  // patient requests a code when signing in), then link it.
   const admin = createSupabaseClient(url, secret, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
-  const invitation = await admin.auth.admin.inviteUserByEmail(email, {
-    redirectTo: `${requestUrl.origin}/auth/update-password`,
+  const created = await admin.auth.admin.createUser({
+    phone,
+    phone_confirm: true,
   });
 
-  // If another request created the Auth user first, the second link attempt
-  // still produces one idempotent portal grant without exposing account state.
-  const finalLink = await userClient.rpc(
-    "link_patient_account_by_email",
-    linkParams
-  );
-  const finalStatus = firstRpcRow(finalLink.data)?.link_status;
-  if (
-    finalLink.error ||
-    (finalStatus !== "linked" && finalStatus !== "already-linked")
-  ) {
-    return json(
-      {
-        error: "invitation could not be linked",
-        // Without a created Auth user the invitation email itself failed
-        // (Supabase's built-in mailer allows only a few emails per hour).
-        reason: invitation.error ? "invite_email_failed" : "link_failed",
-      },
-      502
-    );
+  // A concurrent request may have created the account first; the second
+  // link attempt is idempotent either way.
+  const second = await link();
+  if (second.failure) return second.failure;
+  if (second.status === "linked" || second.status === "already-linked") {
+    return json({ status: created.error ? "linked-existing" : "created" });
   }
-  return json({ status: invitation.error ? "linked-existing" : "invited" });
+  return json(
+    { error: "portal account could not be created", reason: "create_failed" },
+    502
+  );
 }

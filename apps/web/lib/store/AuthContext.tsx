@@ -41,9 +41,45 @@ interface AuthContextValue {
     password: string,
     fullName: string
   ) => Promise<string | null>;
+  /**
+   * Patient portal: send a sign-in code by SMS. Accounts are created by the
+   * clinic (never here), so an unknown number gets "not_registered".
+   */
+  sendPhoneOtp: (e164: string) => Promise<PhoneOtpError | null>;
+  verifyPhoneOtp: (e164: string, code: string) => Promise<PhoneOtpError | null>;
   requestPasswordReset: (email: string) => Promise<string | null>;
   updatePassword: (password: string) => Promise<string | null>;
   signOut: () => Promise<void>;
+}
+
+export type PhoneOtpError =
+  | "not_registered"
+  | "invalid_code"
+  | "too_many"
+  | "sms_failed"
+  | "not_enabled"
+  | "network"
+  | "generic";
+
+/** Map a Supabase Auth error to a stable, user-presentable category. */
+export function classifyPhoneOtpError(error: {
+  code?: string;
+  status?: number;
+  message?: string;
+}): PhoneOtpError {
+  const code = error.code ?? "";
+  const message = (error.message ?? "").toLowerCase();
+  if (code === "otp_disabled" || code === "user_not_found" || message.includes("signups not allowed")) {
+    return "not_registered";
+  }
+  if (code === "otp_expired" || code === "invalid_credentials" || message.includes("expired") || message.includes("invalid")) {
+    return "invalid_code";
+  }
+  if (code.startsWith("over_") || error.status === 429) return "too_many";
+  if (code === "phone_provider_disabled" || message.includes("provider is disabled")) return "not_enabled";
+  if (code === "sms_send_failed" || code.startsWith("hook_") || message.includes("sms")) return "sms_failed";
+  if (error.status === 0 || message.includes("fetch")) return "network";
+  return "generic";
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -243,6 +279,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           options: { data: { full_name: fullName } },
         });
         return error ? error.message : null;
+      },
+      sendPhoneOtp: async (e164) => {
+        const supabase = getSupabase();
+        if (!supabase) return "generic";
+        try {
+          const { error } = await supabase.auth.signInWithOtp({
+            phone: e164,
+            options: { shouldCreateUser: false, channel: "sms" },
+          });
+          return error ? classifyPhoneOtpError(error) : null;
+        } catch {
+          return "network";
+        }
+      },
+      verifyPhoneOtp: async (e164, code) => {
+        const supabase = getSupabase();
+        if (!supabase) return "generic";
+        try {
+          const { error } = await supabase.auth.verifyOtp({
+            phone: e164,
+            token: code,
+            type: "sms",
+          });
+          return error ? classifyPhoneOtpError(error) : null;
+        } catch {
+          return "network";
+        }
       },
       requestPasswordReset: async (email) => {
         const supabase = getSupabase();

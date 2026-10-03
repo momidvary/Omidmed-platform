@@ -173,6 +173,21 @@ blindly rerunning SQL. The ordered migration set is:
     linked patient actually read their current, clear, published prescription
     (the earlier policy checked `cases` under the patient's RLS, so patients
     never saw a programme).
+28. `database/migrations/028_patient_phone_accounts.sql` — clinic owners link
+    portal accounts by mobile number (`link_patient_account_by_phone`); the
+    account listing also returns the phone.
+
+### Patient portal sign-in (mobile number + SMS code)
+
+Patients sign in at `/patient` with their mobile number and a one-time SMS
+code (Supabase phone auth, `shouldCreateUser: false`) — no email, password or
+self sign-up. A clinic owner links the number from **Patients → Manage**; if
+no Auth account has it, `/api/patients/invite` creates one with the service
+key (phone confirmed, no SMS sent) and links it. Supabase delivers the code
+through the **Send SMS hook** → `/api/auth/sms-hook`, which verifies the
+Standard Webhooks signature (`SEND_SMS_HOOK_SECRET`) and sends via
+MeliPayamak (`MELIPAYAMAK_API_KEY`, `MELIPAYAMAK_OTP_PATTERN`). Setup:
+`docs/PATIENT_PHONE_LOGIN_FA.md`. Clinicians keep email + password.
 
 ### Supabase SQL Editor install (no `psql`)
 
@@ -187,6 +202,9 @@ For a project managed only from the Supabase dashboard,
    migration and writes the same `schema_migrations` ledger as
    `migrate.mjs`, so later upgrades use the runner as usual. CI fails if it
    is stale (`--check`).
+   Projects already installed this way apply later migrations with the
+   generated `upgrades/NNN_*.sql` files (each runs once and writes the
+   ledger row).
 3. `03_first_clinic_owner.sql` — edit the email/name/clinic at the top; makes
    that account `clinic_owner` of a new clinic.
 

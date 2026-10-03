@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { usePatient } from "@/lib/store/PatientContext";
 import { exerciseFa } from "@/lib/data/exerciseFa";
 import {
@@ -15,7 +15,8 @@ import { Field, Input, Select, Textarea } from "@/components/ui/Form";
 import { Icon } from "@/components/ui/Icon";
 import { Disclaimer, Spinner } from "@/components/ui/Misc";
 import { cn, localDateValue, uid, uuid } from "@/lib/utils";
-import { useAuth } from "@/lib/store/AuthContext";
+import { useAuth, type PhoneOtpError } from "@/lib/store/AuthContext";
+import { maskMobile, normalizeIranianMobile, toEnglishDigits } from "@/lib/phone";
 import { isMockMode } from "@/lib/config";
 import { SaveStatusPill } from "@/components/ui/SaveStatusPill";
 import { detectSafetySignals } from "@/lib/clinical/safety";
@@ -199,8 +200,8 @@ function UnlinkedNotice() {
           </p>
           <p className="text-xs leading-relaxed text-[var(--color-ink-soft)]">
             ورود شما موفق بود، اما کلینیک هنوز حساب شما را به پرونده‌ای دارای
-            دوره درمان فعال متصل نکرده است. لطفاً با کلینیک تماس بگیرید و ایمیل
-            ثبت‌نامی‌تان را اعلام کنید.
+            دوره درمان فعال متصل نکرده است یا دوره درمان شما پایان یافته است.
+            لطفاً با کلینیک تماس بگیرید.
           </p>
           <Button variant="secondary" className="w-full" onClick={signOut}>
             خروج از حساب
@@ -247,7 +248,7 @@ function DemoPicker() {
         </p>
         <p className="text-xs leading-relaxed text-[var(--color-ink-soft)]">
           این نسخه آزمایشی است و داده‌ها فقط در همین مرورگر ذخیره می‌شوند. در
-          نسخه اصلی، بیماران با ایمیل و رمز عبور وارد می‌شوند.
+          نسخه اصلی، بیماران با شماره همراه و کد پیامکی وارد می‌شوند.
         </p>
         <Button className="w-full" onClick={() => openDemoPatient(0)}>
           بیمار دمو ۱ — توان‌بخشی زانو
@@ -264,116 +265,161 @@ function DemoPicker() {
   );
 }
 
-/** Supabase mode: real sign-in / sign-up with Supabase Auth. */
-function PatientAuth() {
-  const { signIn, signUp } = useAuth();
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
-  const [fullName, setFullName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
+/** Supabase mode: sign in with a mobile number + SMS one-time code. */
+const RESEND_SECONDS = 60;
 
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
+const otpErrorFa: Record<PhoneOtpError, string> = {
+  not_registered:
+    "این شماره در کلینیک ثبت نشده است. از کلینیک بخواهید شماره همراه شما را در پرونده‌تان ثبت و حساب پرتال را فعال کند.",
+  invalid_code: "کد واردشده درست نیست یا منقضی شده است. دوباره تلاش کنید یا کد جدید بگیرید.",
+  too_many: "تعداد درخواست‌ها زیاد بود. چند دقیقه صبر کنید و دوباره تلاش کنید.",
+  sms_failed: "ارسال پیامک انجام نشد. کمی بعد دوباره تلاش کنید یا با کلینیک تماس بگیرید.",
+  not_enabled: "ورود با شماره همراه هنوز در سرور فعال نشده است. لطفاً با کلینیک تماس بگیرید.",
+  network: "ارتباط با سرور برقرار نشد. اتصال اینترنت را بررسی کنید.",
+  generic: "ورود انجام نشد. دوباره تلاش کنید.",
+};
+
+function PatientAuth() {
+  const { sendPhoneOtp, verifyPhoneOtp } = useAuth();
+  const [step, setStep] = useState<"phone" | "code">("phone");
+  const [phoneInput, setPhoneInput] = useState("");
+  const [e164, setE164] = useState("");
+  const [code, setCode] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [resendAt, setResendAt] = useState(0);
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    if (step !== "code") return;
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [step]);
+  const secondsLeft = Math.max(0, Math.ceil((resendAt - now) / 1000));
+
+  async function sendCode(event?: React.FormEvent) {
+    event?.preventDefault();
+    if (busy) return;
+    const normalized = normalizeIranianMobile(phoneInput);
+    if (!normalized) {
+      setError("شماره همراه معتبر نیست؛ مثلاً ۰۹۱۲۳۴۵۶۷۸۹");
+      return;
+    }
     setBusy(true);
     setError(null);
-    setNotice(null);
-    const err =
-      mode === "signin"
-        ? await signIn(email.trim(), password)
-        : await signUp(email.trim(), password, fullName.trim());
+    const failure = await sendPhoneOtp(normalized);
     setBusy(false);
-    if (err) {
-      setError(err);
-    } else if (mode === "signup") {
-      setNotice(
-        "حساب ساخته شد. اگر تأیید ایمیل فعال باشد، ابتدا ایمیل خود را تأیید کنید؛ سپس کلینیک باید حساب شما را به پرونده‌تان متصل کند."
-      );
+    if (failure) {
+      // The typed number stays in place so nothing has to be re-entered.
+      setError(otpErrorFa[failure]);
+      return;
     }
+    setE164(normalized);
+    setCode("");
+    setStep("code");
+    setResendAt(Date.now() + RESEND_SECONDS * 1000);
+    setNow(Date.now());
+  }
+
+  async function verify(event: React.FormEvent) {
+    event.preventDefault();
+    if (busy) return;
+    const clean = toEnglishDigits(code).replace(/\D/g, "");
+    if (clean.length < 6) {
+      setError("کد ۶ رقمی پیامک‌شده را وارد کنید.");
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    const failure = await verifyPhoneOtp(e164, clean);
+    setBusy(false);
+    if (failure) setError(otpErrorFa[failure]);
   }
 
   return (
     <Card>
       <CardBody className="space-y-4">
-        <div className="flex gap-1 rounded-xl bg-[var(--color-surface-muted)] p-1">
-          {(["signin", "signup"] as const).map((m) => (
-            <button
-              key={m}
-              type="button"
-              onClick={() => {
-                setMode(m);
-                setError(null);
-              }}
-              className={cn(
-                "flex-1 rounded-lg py-2 text-[13px] font-medium transition-colors",
-                mode === m
-                  ? "bg-white text-[var(--color-ink)] shadow-sm"
-                  : "text-[var(--color-ink-faint)]"
-              )}
-            >
-              {m === "signin" ? "ورود" : "ثبت‌نام"}
-            </button>
-          ))}
-        </div>
-
-        <form onSubmit={submit} className="space-y-3">
-          {mode === "signup" && (
-            <Field label="نام و نام خانوادگی" required>
+        {step === "phone" ? (
+          <form onSubmit={sendCode} className="space-y-3">
+            <p className="text-sm text-[var(--color-ink-soft)]">
+              شماره همراهی را که در کلینیک ثبت کرده‌اید وارد کنید تا کد ورود برایتان پیامک شود.
+            </p>
+            <Field label="شماره همراه" required error={error ?? undefined}>
               <Input
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                placeholder="مثلاً رضا کریمی"
+                type="tel"
+                inputMode="tel"
+                dir="ltr"
+                autoComplete="tel"
+                value={phoneInput}
+                onChange={(event) => {
+                  setPhoneInput(event.target.value);
+                  setError(null);
+                }}
+                placeholder="09123456789"
               />
             </Field>
-          )}
-          <Field label="ایمیل" required>
-            <Input
-              type="email"
-              dir="ltr"
-              autoComplete="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
-            />
-          </Field>
-          <Field
-            label="رمز عبور"
-            required
-            error={error ?? undefined}
-            hint={mode === "signup" ? "حداقل ۶ کاراکتر" : undefined}
-          >
-            <Input
-              type="password"
-              dir="ltr"
-              autoComplete={mode === "signin" ? "current-password" : "new-password"}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-            />
-          </Field>
-          <Button type="submit" className="w-full" disabled={busy}>
-            {busy ? "لطفاً صبر کنید…" : mode === "signin" ? "ورود به پرتال" : "ساخت حساب"}
-          </Button>
-          {mode === "signin" && (
-            <a
-              href="/auth/forgot-password"
-              className="block text-center text-xs text-[var(--color-primary-strong)] underline"
-            >
-              بازیابی رمز عبور
-            </a>
-          )}
-        </form>
-
-        {notice && (
-          <p className="rounded-lg bg-[var(--color-success-soft)] px-3 py-2 text-[12px] leading-relaxed text-[var(--color-success)]">
-            {notice}
-          </p>
+            <Button type="submit" className="w-full" disabled={busy}>
+              {busy ? "در حال ارسال…" : "دریافت کد ورود"}
+            </Button>
+          </form>
+        ) : (
+          <form onSubmit={verify} className="space-y-3">
+            <p className="text-sm text-[var(--color-ink-soft)]">
+              کد ورود به شماره{" "}
+              <span dir="ltr" className="font-semibold text-[var(--color-ink)]">
+                {maskMobile(e164)}
+              </span>{" "}
+              پیامک شد.
+            </p>
+            <Field label="کد ورود" required error={error ?? undefined}>
+              <Input
+                inputMode="numeric"
+                dir="ltr"
+                autoComplete="one-time-code"
+                maxLength={10}
+                value={code}
+                onChange={(event) => {
+                  setCode(toEnglishDigits(event.target.value).replace(/\D/g, ""));
+                  setError(null);
+                }}
+                placeholder="123456"
+                className="text-center text-lg tracking-[0.4em]"
+              />
+            </Field>
+            <Button type="submit" className="w-full" disabled={busy || code.length < 6}>
+              {busy ? "لطفاً صبر کنید…" : "ورود به پرتال"}
+            </Button>
+            <div className="flex items-center justify-between text-xs">
+              <button
+                type="button"
+                className="text-[var(--color-ink-soft)] underline"
+                onClick={() => {
+                  setStep("phone");
+                  setError(null);
+                }}
+              >
+                تغییر شماره
+              </button>
+              {secondsLeft > 0 ? (
+                <span className="text-[var(--color-ink-faint)]">
+                  ارسال دوباره تا {secondsLeft.toLocaleString("fa-IR")} ثانیه دیگر
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => void sendCode()}
+                  className="font-medium text-[var(--color-primary-strong)] underline"
+                >
+                  ارسال دوباره کد
+                </button>
+              )}
+            </div>
+          </form>
         )}
         <p className="text-[11px] leading-relaxed text-[var(--color-ink-faint)]">
-          پس از ثبت‌نام، کلینیک شما باید حساب‌تان را به پرونده درمانی‌تان متصل
-          کند تا برنامه تمرینی را ببینید. کد ملی دیگر برای ورود استفاده نمی‌شود.
+          حساب پرتال را کلینیک با شماره همراه شما فعال می‌کند؛ ثبت‌نام جداگانه لازم نیست.
+          کد ملی برای ورود استفاده نمی‌شود.
         </p>
       </CardBody>
     </Card>

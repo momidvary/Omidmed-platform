@@ -11,7 +11,7 @@
 //   node database/scripts/build-sql-editor-bundle.mjs --check  # CI: fail if stale
 
 import { createHash } from "node:crypto";
-import { readdirSync, readFileSync, writeFileSync, existsSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -120,15 +120,84 @@ from public.schema_migrations where status = 'applied';
 
 const bundle = parts.join("");
 
+// One upgrade file per migration added after the SQL Editor path existed
+// (026+): for projects already installed from 02_all_migrations.sql.
+// Each refuses unless the previous version is applied and itself is not.
+const FIRST_UPGRADE_VERSION = "026";
+const upgradesDirectory = join(dirname(outputPath), "upgrades");
+const upgrades = migrations
+  .map((migration, index) => ({ migration, previous: migrations[index - 1] }))
+  .filter(({ migration }) => migration.version >= FIRST_UPGRADE_VERSION)
+  .map(({ migration, previous }) => ({
+    path: join(upgradesDirectory, migration.filename),
+    content: `-- GENERATED FILE — do not edit. Rebuild with:
+--   node database/scripts/build-sql-editor-bundle.mjs
+--
+-- Upgrade for projects installed from the SQL Editor bundle: applies
+-- ${migration.filename} once and records it in public.schema_migrations
+-- (same checksum as migrate.mjs). Paste the whole file and press Run.
+
+do $preflight$
+declare
+  v_previous text;
+  v_this text;
+begin
+  if to_regclass('public.schema_migrations') is null then
+    raise exception using errcode = '55000',
+      message = 'No migration ledger. Install with 02_all_migrations.sql instead.';
+  end if;
+  execute $q$select status from public.schema_migrations where version = ${sqlLiteral(previous.version)}$q$ into v_previous;
+  execute $q$select status from public.schema_migrations where version = ${sqlLiteral(migration.version)}$q$ into v_this;
+  if v_this = 'applied' then
+    raise exception using errcode = '55000',
+      message = 'Already applied: ${migration.filename}. Nothing to do.';
+  end if;
+  if v_this is not null then
+    raise exception using errcode = '55000',
+      message = 'A previous run of ${migration.filename} stopped part-way. Ask for help before retrying.';
+  end if;
+  if v_previous is distinct from 'applied' then
+    raise exception using errcode = '55000',
+      message = 'Apply ${previous.filename} first.';
+  end if;
+end
+$preflight$;
+
+insert into public.schema_migrations (version, filename, checksum, status)
+values (${sqlLiteral(migration.version)}, ${sqlLiteral(migration.filename)}, ${sqlLiteral(migration.checksum)}, 'applying');
+
+${migration.source.trimEnd()}
+
+update public.schema_migrations
+set status = 'applied', applied_at = clock_timestamp()
+where version = ${sqlLiteral(migration.version)} and status = 'applying';
+
+select ${sqlLiteral(migration.filename + " applied")} as result;
+`,
+  }));
+
 if (checkOnly) {
+  const stale = [];
   if (!existsSync(outputPath) || readFileSync(outputPath, "utf8") !== bundle) {
+    stale.push("02_all_migrations.sql");
+  }
+  for (const upgrade of upgrades) {
+    if (!existsSync(upgrade.path) || readFileSync(upgrade.path, "utf8") !== upgrade.content) {
+      stale.push(`upgrades/${upgrade.path.split(/[\\/]/).pop()}`);
+    }
+  }
+  if (stale.length > 0) {
     console.error(
-      "database/supabase-sql-editor/02_all_migrations.sql is stale. Run: node database/scripts/build-sql-editor-bundle.mjs"
+      `database/supabase-sql-editor is stale (${stale.join(", ")}). Run: node database/scripts/build-sql-editor-bundle.mjs`
     );
     process.exit(1);
   }
-  console.log("SQL Editor bundle is up to date.");
+  console.log("SQL Editor bundle and upgrades are up to date.");
 } else {
   writeFileSync(outputPath, bundle);
-  console.log(`Wrote ${outputPath} (${migrations.length} migrations).`);
+  mkdirSync(upgradesDirectory, { recursive: true });
+  for (const upgrade of upgrades) writeFileSync(upgrade.path, upgrade.content);
+  console.log(
+    `Wrote ${outputPath} (${migrations.length} migrations) and ${upgrades.length} upgrade file(s).`
+  );
 }

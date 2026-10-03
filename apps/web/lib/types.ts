@@ -332,6 +332,8 @@ export interface PatientAccountLink {
   userId: string;
   fullName: string;
   email: string | null;
+  /** Portal sign-in mobile number (E.164 digits as stored by Supabase Auth). */
+  phone: string | null;
   relationship: PatientAccountRelationship;
   authorizedAt: string;
   expiresAt: string | null;
@@ -373,7 +375,8 @@ export interface StartPatientEpisodeInput {
 
 export interface InvitePatientAccountInput {
   patientId: string;
-  email: string;
+  /** Mobile number in E.164 form (+98912…). */
+  phone: string;
   relationship: PatientAccountRelationship;
   expiresAt: string | null;
   authorityAttested: boolean;

@@ -99,6 +99,61 @@ end $$;
 reset role;
 select set_config('request.jwt.claims', '{}', true);
 
+-- Migration 028: portal accounts are linked by mobile number. Same guards
+-- as the email path: owner only, patient-only accounts, no account probing
+-- beyond "not found".
+update auth.users set phone = '989121112233'
+where id = '10000000-0000-4000-8000-000000000006';
+update auth.users set phone = '989121114455'
+where id = '10000000-0000-4000-8000-000000000007';
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"10000000-0000-4000-8000-000000000001","role":"authenticated"}', true);
+do $$
+declare
+  v_row record;
+begin
+  select * into strict v_row from public.link_patient_account_by_phone(
+    '30000000-0000-4000-8000-000000000001', '+98 912 111 2233', 'self', null, true);
+  if not v_row.account_found or v_row.link_status <> 'already-linked' then
+    raise exception 'FAIL: owner could not match the linked patient by phone';
+  end if;
+  if not exists (
+    select 1
+    from public.list_patient_account_links(array['30000000-0000-4000-8000-000000000001']::uuid[])
+    where user_id = '10000000-0000-4000-8000-000000000006'
+      and phone = '989121112233'
+  ) then
+    raise exception 'FAIL: owner listing does not show the account phone';
+  end if;
+  select * into strict v_row from public.link_patient_account_by_phone(
+    '30000000-0000-4000-8000-000000000001', '989129999999', 'self', null, true);
+  if v_row.account_found or v_row.link_status <> 'account-not-found' then
+    raise exception 'FAIL: unknown phone did not report account-not-found';
+  end if;
+  begin
+    perform public.link_patient_account_by_phone(
+      '30000000-0000-4000-8000-000000000001', '989121114455', 'self', null, true);
+    raise exception 'FAIL: a clinic staff account was linked as a patient login';
+  exception when check_violation then null;
+  end;
+  begin
+    perform public.link_patient_account_by_phone(
+      '30000000-0000-4000-8000-000000000001', '989121112233', 'self', null, false);
+    raise exception 'FAIL: phone link accepted without consent attestation';
+  exception when invalid_parameter_value then null;
+  end;
+end $$;
+select set_config('request.jwt.claims', '{"sub":"10000000-0000-4000-8000-000000000003","role":"authenticated"}', true);
+do $$
+begin
+  perform public.link_patient_account_by_phone(
+    '30000000-0000-4000-8000-000000000001', '989121112233', 'self', null, true);
+  raise exception 'FAIL: a non-owner linked a portal account by phone';
+exception when insufficient_privilege then null;
+end $$;
+reset role;
+select set_config('request.jwt.claims', '{}', true);
+
 -- Migration 012 requires current clear safety before an AI reservation. Use
 -- the real authenticated reviewer path so the safety actor/time are stamped by
 -- the database trigger instead of being forged by test setup.

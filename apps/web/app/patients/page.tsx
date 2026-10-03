@@ -27,6 +27,7 @@ import type {
   PatientRegistryResult,
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { formatIranianMobile, normalizeIranianMobile } from "@/lib/phone";
 
 const PAGE_SIZE = 20;
 const CURRENT_YEAR = new Date().getFullYear();
@@ -168,11 +169,9 @@ function validatePatientForm(form: PatientFormDraft): {
 function inviteFailureMessage(reason: string | undefined): string {
   switch (reason) {
     case "account_not_eligible":
-      return "This email belongs to an account that cannot be a patient login: a clinic staff account, an account without a patient profile (e.g. created before the database was reset — run 03_first_clinic_owner.sql again to restore profiles), or the account already represents another patient.";
-    case "invite_email_failed":
-      return "No account exists for this email and Supabase could not send the invitation email (the built-in mailer allows only a few emails per hour). Ask the patient to sign up at /patient first, then link the same email here — or configure custom SMTP in Supabase.";
-    case "rate_limited":
-      return "Too many invitations were requested for this patient or email. Wait and try again later.";
+      return "This number belongs to an account that cannot be a patient login: a clinic staff account, an account without a patient profile (e.g. created before the database was reset — run 03_first_clinic_owner.sql again to restore profiles), or the account already represents another patient.";
+    case "create_failed":
+      return "The portal account could not be created for this number. Check that phone sign-in is enabled in Supabase (Authentication → Providers → Phone) and retry.";
     case "not_configured":
       return "Invitations are not configured on the server: set SUPABASE_SECRET_KEY (server-only) and restart / redeploy.";
     case "not_permitted":
@@ -182,7 +181,7 @@ function inviteFailureMessage(reason: string | undefined): string {
     case "network":
       return "The server could not be reached. Check the connection and retry.";
     default:
-      return "The account could not be linked. Check the email, relationship and expiry, then retry.";
+      return "The account could not be linked. Check the number, relationship and expiry, then retry.";
   }
 }
 
@@ -679,7 +678,9 @@ export default function PatientRegistryPage() {
         </CardBody>
       </Card>
 
-      {scopedRegistry.loading ? (
+      {/* Keep the table and the open panel mounted while refreshing after
+          an action; otherwise the panel's confirmation message is lost. */}
+      {scopedRegistry.loading && !result ? (
         <Card>
           <Spinner label="Loading clinic patients…" />
         </Card>
@@ -930,7 +931,7 @@ function PatientManagementPanel({
   );
   const [episodeTitle, setEpisodeTitle] = useState("");
   const [weeklyTarget, setWeeklyTarget] = useState("5");
-  const [inviteEmail, setInviteEmail] = useState("");
+  const [invitePhone, setInvitePhone] = useState(patient.phone ?? "");
   const [relationship, setRelationship] =
     useState<PatientAccountRelationship>("self");
   const [expiresOn, setExpiresOn] = useState("");
@@ -1039,11 +1040,19 @@ function PatientManagementPanel({
       });
       return;
     }
+    const mobile = normalizeIranianMobile(invitePhone);
+    if (!mobile) {
+      setStatus({
+        tone: "error",
+        message: "Enter a valid Iranian mobile number, e.g. 0912 345 6789.",
+      });
+      return;
+    }
     setBusy("invite");
     setStatus(null);
     const invitation = await invitePatientAccount({
       patientId: patient.id,
-      email: inviteEmail.trim().toLowerCase(),
+      phone: mobile,
       relationship,
       expiresAt: expiresOn
         ? new Date(`${expiresOn}T23:59:59.999Z`).toISOString()
@@ -1061,11 +1070,10 @@ function PatientManagementPanel({
     setStatus({
       tone: "success",
       message:
-        invitation.status === "invited"
-          ? "The portal account was linked and Supabase sent an invitation email."
-          : "An existing patient account was linked. Ask the user to sign in; no new invitation email was claimed.",
+        invitation.status === "created"
+          ? `A portal account was created for ${formatIranianMobile(mobile)} and linked. The patient signs in at /patient with this number and the SMS code.`
+          : `The existing portal account ${formatIranianMobile(mobile)} was linked. The patient signs in at /patient with this number and the SMS code.`,
     });
-    setInviteEmail("");
     setAuthorityAttested(false);
     onChanged();
   }
@@ -1220,11 +1228,11 @@ function PatientManagementPanel({
           <section className="border-t border-[var(--color-border)] pt-5" aria-labelledby="portal-access-heading">
             <h3 id="portal-access-heading" className="text-sm font-semibold">Patient portal access</h3>
             <p className="mt-1 text-xs text-[var(--color-ink-soft)]">
-              Link only after verifying the email and recording patient consent or legal authority. Delegate access must expire within one year.
+              The patient (or delegate) signs in at /patient with this mobile number and an SMS code; no email or password is needed. Link only after verifying the number and recording patient consent or legal authority. Delegate access must expire within one year.
             </p>
             <form onSubmit={sendInvitation} className="mt-3 grid gap-3 md:grid-cols-3">
-              <Field label="Account email" required>
-                <Input type="email" value={inviteEmail} onChange={(event) => setInviteEmail(event.target.value)} maxLength={254} autoComplete="email" />
+              <Field label="Mobile number" required hint="Iranian mobile, e.g. 0912 345 6789">
+                <Input type="tel" inputMode="tel" dir="ltr" value={invitePhone} onChange={(event) => setInvitePhone(event.target.value)} maxLength={20} autoComplete="off" placeholder="09123456789" />
               </Field>
               <Field label="Relationship" required>
                 <Select value={relationship} onChange={(event) => setRelationship(event.target.value as PatientAccountRelationship)}>
@@ -1239,12 +1247,12 @@ function PatientManagementPanel({
               </Field>
               <label className="flex items-start gap-2 text-xs text-[var(--color-ink-soft)] md:col-span-2">
                 <input type="checkbox" checked={authorityAttested} onChange={(event) => setAuthorityAttested(event.target.checked)} className="mt-0.5" />
-                I verified this email and attest that patient consent or valid legal authority is recorded outside this application.
+                I verified this mobile number and attest that patient consent or valid legal authority is recorded outside this application.
               </label>
               <div className="flex justify-end">
                 <Button type="submit" size="sm" disabled={Boolean(busy) || !authorityAttested}>
                   <Icon name="send" width={14} height={14} />
-                  {busy === "invite" ? "Sending…" : "Link / invite account"}
+                  {busy === "invite" ? "Linking…" : "Link portal account"}
                 </Button>
               </div>
             </form>
@@ -1260,7 +1268,9 @@ function PatientManagementPanel({
                   {activeLinks.map((link) => (
                     <li key={link.userId} className="flex flex-col gap-2 rounded-xl border border-[var(--color-border)] p-3 sm:flex-row sm:items-center sm:justify-between">
                       <div className="text-sm">
-                        <p className="font-medium">{link.email ?? link.fullName}</p>
+                        <p className="font-medium" dir="ltr">
+                          {link.phone ? formatIranianMobile(link.phone) : link.email ?? link.fullName}
+                        </p>
                         <p className="text-xs text-[var(--color-ink-soft)]">
                           {link.relationship}{link.expiresAt ? ` · expires ${formatDate(link.expiresAt)}` : " · no expiry"}
                         </p>

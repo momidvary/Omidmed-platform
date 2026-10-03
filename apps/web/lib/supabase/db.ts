@@ -701,6 +701,7 @@ export async function fetchPatientRegistry({
         userId: raw.user_id as string,
         fullName: (raw.full_name as string) || "Patient account",
         email: (raw.email as string | null) ?? null,
+        phone: (raw.phone as string | null) ?? null,
         relationship: raw.relationship as PatientRegistryItem["accountLinks"][number]["relationship"],
         authorizedAt: raw.authorized_at as string,
         expiresAt: (raw.expires_at as string | null) ?? null,

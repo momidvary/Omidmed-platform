@@ -261,9 +261,11 @@ Before promoting a build:
    which remain sensitive pseudonymous health metadata; select the processor
    only after privacy/security review and the required data-processing terms.
 
-`apps/web/vercel.json` invokes the drain once per minute. Vercel currently
-requires a Pro or Enterprise plan for per-minute cron; Hobby permits only a
-daily schedule and is not an acceptable alerting configuration. Cron timing is
+`apps/web/vercel.json` invokes the drain once a day (`0 4 * * *`, 04:00 UTC)
+so the project deploys on the Vercel Hobby plan, which rejects more frequent
+cron schedules. That is not an acceptable alerting configuration: before
+relying on webhook alerts, move to Pro/Enterprise and set the schedule to
+`* * * * *`. In-app alerts (`/alerts`) do not depend on this cron. Cron timing is
 still not a hard real-time or receipt guarantee, so production needs monitoring
 and a tested fallback path.
 

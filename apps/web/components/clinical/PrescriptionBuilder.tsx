@@ -207,6 +207,35 @@ export function PrescriptionBuilder({
     setHistoryRetry((value) => value + 1);
   }
 
+  // Load a saved draft back into the form so it can be checked and
+  // published after a reload or on another day.
+  function openSavedDraft(record: PrescriptionRecord) {
+    if (busy || record.status !== "draft") return;
+    setStartDate(record.startDate);
+    setEndDate(record.endDate ?? "");
+    setReviewDate(record.reviewDate);
+    setPrecautions(record.precautions);
+    setStopRules(record.stopRules);
+    setScheduleTimezone(record.scheduleTimezone ?? "");
+    setItems(
+      record.items.length > 0
+        ? record.items.map((item) => ({
+            ...item,
+            rowId: uid("rx"),
+            scheduledWeekdays: item.scheduledWeekdays ?? [],
+          }))
+        : [emptyItem()]
+    );
+    setStored({
+      id: record.id,
+      version: record.version,
+      status: record.status,
+      timestamp: record.createdAt,
+    });
+    setPublishConfirmed(false);
+    setError(null);
+  }
+
   async function publish() {
     if (busy || !stored || stored.status !== "draft" || !publishConfirmed) return;
     setBusy(true);
@@ -502,6 +531,18 @@ export function PrescriptionBuilder({
                 <span className="text-[var(--color-ink-faint)]">
                   {record.items.length} exercise(s) · {new Date(record.createdAt).toLocaleString()}
                 </span>
+                {record.status === "draft" &&
+                  record.treatmentPlanId === treatmentPlanId &&
+                  stored?.id !== record.id && (
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      disabled={busy}
+                      onClick={() => openSavedDraft(record)}
+                    >
+                      Open for review
+                    </Button>
+                  )}
               </div>
             ))}
 

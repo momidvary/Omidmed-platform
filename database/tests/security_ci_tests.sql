@@ -80,6 +80,25 @@ insert into public.cases (
 );
 select set_config('request.jwt.claims', '{}', true);
 
+-- Migration 026: the owner's account-link listing must work against the
+-- hosted auth.users schema (email varchar(255)); before 026 every call
+-- failed with 42804 and the Patient Registry could not load.
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"10000000-0000-4000-8000-000000000001","role":"authenticated"}', true);
+do $$
+begin
+  if not exists (
+    select 1
+    from public.list_patient_account_links(array['30000000-0000-4000-8000-000000000001']::uuid[])
+    where user_id = '10000000-0000-4000-8000-000000000006'
+      and email = 'patient@example.test'
+  ) then
+    raise exception 'FAIL: owner could not list the patient account link with its email';
+  end if;
+end $$;
+reset role;
+select set_config('request.jwt.claims', '{}', true);
+
 -- Migration 012 requires current clear safety before an AI reservation. Use
 -- the real authenticated reviewer path so the safety actor/time are stamped by
 -- the database trigger instead of being forged by test setup.
@@ -797,6 +816,34 @@ begin
      ) then
     raise exception 'FAIL: publishing a new prescription did not revoke the old version';
   end if;
+
+  -- Migration 027: the linked patient must actually see the current,
+  -- clear, published programme (the policy's case check used to run under
+  -- the patient's RLS, which hides cases, so it was never visible).
+  declare
+    v_previous_claims text := current_setting('request.jwt.claims', true);
+  begin
+    perform set_config(
+      'request.jwt.claims',
+      '{"sub":"10000000-0000-4000-8000-000000000006","role":"authenticated"}',
+      true
+    );
+    if not exists (
+         select 1 from public.exercise_prescriptions
+         where id = v_prescription_two and status = 'published'
+       )
+       or not exists (
+         select 1 from public.prescription_items
+         where prescription_id = v_prescription_two
+       )
+       or exists (
+         select 1 from public.exercise_prescriptions
+         where id = v_prescription_one
+       ) then
+      raise exception 'FAIL: linked patient cannot see exactly the current published prescription';
+    end if;
+    perform set_config('request.jwt.claims', v_previous_claims, true);
+  end;
 
   insert into public.patient_daily_logs (
     episode_id, date, pain_level, completed

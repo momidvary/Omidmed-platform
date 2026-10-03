@@ -32,6 +32,15 @@
    18. `018_clinical_documentation_and_outcomes.sql`
    19. `019_notification_outbox.sql`
    20. `020_case_assessment_versioning.sql`
+   21. `021_structured_exercise_adherence.sql`
+   22. `022_adherence_retry_hardening.sql`
+   23. `023_prescription_schedule.sql`
+   24. `024_structured_progress_guard.sql`
+   25. `025_exercise_measurement_targets.sql`
+   26. `026_auth_email_type_fix.sql` — بدون آن صفحه Patient Registry در Supabase
+       واقعی باز نمی‌شود.
+   27. `027_patient_prescription_visibility.sql` — بدون آن بیمار برنامه تمرینی
+       منتشرشده خود را نمی‌بیند.
 
    برای دیتابیس کاملاً خالی از runner دارای checksum و قفل هم‌زمانی استفاده کنید:
 
@@ -42,6 +51,18 @@
    در انتشارهای بعدی همان فرمان را بدون `--allow-baseline` اجرا کنید. runner روی
    schema موجودِ بدون ledger عمداً متوقف می‌شود؛ چنین پروژه‌ای باید بعد از backup
    و مقایسه schema توسط DBA تطبیق داده شود و نباید با دستکاری ledger دور زده شود.
+
+   **مسیر بدون psql (فقط با SQL Editor سوپابیس):** سه فایل پوشه
+   `database/supabase-sql-editor/` را به ترتیب اجرا کنید (هر فایل را کامل کپی و
+   یک بار Run بزنید):
+
+   1. `01_reset_app_schema.sql` — فقط اگر پروژه قبلاً با برنچ قدیمی‌تری راه‌اندازی
+      شده است. جدول‌های برنامه را پاک می‌کند ولی کاربران Authentication می‌مانند؛
+      اگر حتی یک پرونده بیمار وجود داشته باشد، اجرا نمی‌شود.
+   2. `02_all_migrations.sql` — همه migrationها (۰۰۱ تا ۰۲۷) به‌همراه همان
+      ledger که runner می‌سازد؛ ارتقاهای بعدی با `migrate.mjs` انجام می‌شود.
+   3. `03_first_clinic_owner.sql` — ایمیل، نام و اسم کلینیک را در ابتدای فایل
+      ویرایش کنید؛ آن حساب `clinic_owner` یک کلینیک جدید می‌شود.
 
 4. `database/seed/seed.dev.sql` فقط داده دموی توسعه است و نباید در production
    اجرا شود.

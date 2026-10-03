@@ -365,6 +365,35 @@ function PlannerForm() {
     setHistoryRetry((value) => value + 1);
   }
 
+  // A saved draft must stay signable after a reload or on another day —
+  // otherwise the only way forward is regenerating a new version.
+  function openSavedDraft(record: TreatmentPlanRecord) {
+    if (record.status !== "draft" || workflowBusy) return;
+    if (
+      hasUnsavedPlannerWork &&
+      !window.confirm(
+        "Discard the unsaved treatment-plan work on this screen and open the saved draft?"
+      )
+    ) {
+      return;
+    }
+    generationToken.current += 1;
+    setLoading(false);
+    setError(null);
+    setPlan(record.plan);
+    setPlanEdited(false);
+    setGeneratedInput(record.input);
+    setStoredPlan({
+      id: record.id,
+      version: record.version,
+      status: record.status,
+      timestamp: record.createdAt,
+    });
+    setReviewConfirmed(false);
+    setReviewNote("");
+    setWorkflowError(null);
+  }
+
   async function reviewDraft(decision: "approved" | "rejected") {
     if (workflowBusy || !storedPlan || storedPlan.status !== "draft") return;
     if (decision === "approved" && !reviewConfirmed) {
@@ -916,6 +945,17 @@ function PlannerForm() {
                     <span className="ms-auto text-xs text-[var(--color-ink-faint)]">
                       {new Date(record.createdAt).toLocaleString()}
                     </span>
+                    {record.status === "draft" &&
+                      storedPlan?.id !== record.id && (
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          disabled={workflowBusy || !safetyCleared}
+                          onClick={() => openSavedDraft(record)}
+                        >
+                          Open for review
+                        </Button>
+                      )}
                   </li>
                 ))}
               </ul>

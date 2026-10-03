@@ -119,7 +119,7 @@ begin
   end if;
   if not exists (
     select 1
-    from public.list_patient_account_links(array['30000000-0000-4000-8000-000000000001']::uuid[])
+    from public.list_patient_account_phones(array['30000000-0000-4000-8000-000000000001']::uuid[])
     where user_id = '10000000-0000-4000-8000-000000000006'
       and phone = '989121112233'
   ) then
@@ -150,6 +150,17 @@ begin
     '30000000-0000-4000-8000-000000000001', '989121112233', 'self', null, true);
   raise exception 'FAIL: a non-owner linked a portal account by phone';
 exception when insufficient_privilege then null;
+end $$;
+do $$
+begin
+  -- The assigned therapist may see the link, never the sign-in phone.
+  if exists (
+    select 1
+    from public.list_patient_account_phones(array['30000000-0000-4000-8000-000000000001']::uuid[])
+    where phone is not null
+  ) then
+    raise exception 'FAIL: a non-owner saw a portal account phone';
+  end if;
 end $$;
 reset role;
 select set_config('request.jwt.claims', '{}', true);

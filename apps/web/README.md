@@ -174,8 +174,10 @@ blindly rerunning SQL. The ordered migration set is:
     (the earlier policy checked `cases` under the patient's RLS, so patients
     never saw a programme).
 28. `database/migrations/028_patient_phone_accounts.sql` — clinic owners link
-    portal accounts by mobile number (`link_patient_account_by_phone`); the
-    account listing also returns the phone.
+    portal accounts by mobile number (`link_patient_account_by_phone`);
+    `list_patient_account_phones` returns the sign-in phones (owners only).
+    The existing listing's return type is left unchanged so replaying 015/026
+    stays idempotent.
 
 ### Patient portal sign-in (mobile number + SMS code)
 

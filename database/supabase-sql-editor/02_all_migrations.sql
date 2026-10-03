@@ -9971,7 +9971,7 @@ where version = '027' and status = 'applying';
 -- 028_patient_phone_accounts.sql
 -- ════════════════════════════════════════════════════════════════
 insert into public.schema_migrations (version, filename, checksum, status)
-values ('028', '028_patient_phone_accounts.sql', '1bbd396c235e477049cf114ca5f93d9c4ff86e324b953cb7eb41dc0d5420863a', 'applying');
+values ('028', '028_patient_phone_accounts.sql', '3a364eec6172d7ea49560bc4f7aa2966bf5519a461394e7e8d4cc4fa37289fd6', 'applying');
 
 -- PhysioAI — Migration 028: patient portal accounts by mobile number
 -- (run after 027).
@@ -9984,9 +9984,10 @@ values ('028', '028_patient_phone_accounts.sql', '1bbd396c235e477049cf114ca5f93d
 --    (owner of the patient's clinic, consent attested, patient-only account,
 --    one "self" patient per account, bounded delegate expiry); only the
 --    account lookup matches auth.users.phone (E.164 digits, no '+').
--- 2) list_patient_account_links also returns the account phone (owners
---    only), so the registry can show phone-based accounts. The return type
---    changes, so the function is dropped and re-created with the same grants.
+-- 2) list_patient_account_phones returns the sign-in phone of each linked
+--    account (owners only; same access checks as list_patient_account_links).
+--    A separate function keeps list_patient_account_links' return type
+--    unchanged, so replaying migrations 015/026 stays idempotent.
 
 begin;
 
@@ -10108,19 +10109,11 @@ begin
 end;
 $$;
 
-drop function if exists public.list_patient_account_links(uuid[]);
-
-create function public.list_patient_account_links(p_patient_ids uuid[])
+create or replace function public.list_patient_account_phones(p_patient_ids uuid[])
 returns table (
   patient_id uuid,
   user_id uuid,
-  full_name text,
-  email text,
-  phone text,
-  relationship text,
-  authorized_at timestamptz,
-  expires_at timestamptz,
-  revoked_at timestamptz
+  phone text
 )
 language plpgsql
 stable
@@ -10147,13 +10140,7 @@ begin
   return query
   select grant_row.patient_id,
          grant_row.user_id,
-         profile.full_name,
-         case when private.is_owner_of(patient.clinic_id) then auth_user.email::text else null end,
-         case when private.is_owner_of(patient.clinic_id) then auth_user.phone::text else null end,
-         grant_row.relationship,
-         grant_row.authorized_at,
-         grant_row.expires_at,
-         grant_row.revoked_at
+         case when private.is_owner_of(patient.clinic_id) then auth_user.phone::text else null end
   from public.patient_users grant_row
   join public.patients patient on patient.id = grant_row.patient_id
   join public.profiles profile on profile.id = grant_row.user_id
@@ -10170,7 +10157,7 @@ declare
 begin
   foreach v_signature in array array[
     'public.link_patient_account_by_phone(uuid,text,text,timestamp with time zone,boolean)'::regprocedure,
-    'public.list_patient_account_links(uuid[])'::regprocedure
+    'public.list_patient_account_phones(uuid[])'::regprocedure
   ] loop
     execute format('revoke all on function %s from public, anon, authenticated, service_role', v_signature);
     execute format('grant execute on function %s to authenticated', v_signature);

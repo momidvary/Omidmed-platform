@@ -599,7 +599,7 @@ export async function fetchPatientRegistry({
       };
     }
 
-    const [episodeResult, assignmentResult, therapistResult, accountResult] = await Promise.all([
+    const [episodeResult, assignmentResult, therapistResult, accountResult, phoneResult] = await Promise.all([
       withTimeout(
         supabase
           .from("care_episodes")
@@ -624,6 +624,12 @@ export async function fetchPatientRegistry({
       ),
       withTimeout(
         supabase.rpc("list_patient_account_links", {
+          p_patient_ids: patientIds,
+        })
+      ),
+      // Sign-in phones (migration 028; owners only, null for other roles).
+      withTimeout(
+        supabase.rpc("list_patient_account_phones", {
           p_patient_ids: patientIds,
         })
       ),
@@ -693,6 +699,15 @@ export async function fetchPatientRegistry({
       string,
       PatientRegistryItem["accountLinks"]
     >();
+    // Phones are display-only: if the lookup fails the registry still loads.
+    const accountPhones = new Map<string, string>();
+    if (phoneResult && !phoneResult.error && phoneResult.data) {
+      for (const raw of phoneResult.data as Row[]) {
+        if (raw.phone) {
+          accountPhones.set(`${raw.patient_id}:${raw.user_id}`, raw.phone as string);
+        }
+      }
+    }
     for (const raw of accountResult.data as Row[]) {
       const patientId = raw.patient_id as string;
       if (!pagePatientIds.has(patientId)) continue;
@@ -701,7 +716,7 @@ export async function fetchPatientRegistry({
         userId: raw.user_id as string,
         fullName: (raw.full_name as string) || "Patient account",
         email: (raw.email as string | null) ?? null,
-        phone: (raw.phone as string | null) ?? null,
+        phone: accountPhones.get(`${patientId}:${raw.user_id}`) ?? null,
         relationship: raw.relationship as PatientRegistryItem["accountLinks"][number]["relationship"],
         authorizedAt: raw.authorized_at as string,
         expiresAt: (raw.expires_at as string | null) ?? null,

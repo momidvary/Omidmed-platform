@@ -810,9 +810,9 @@ export async function fetchClinicTherapistDirectory(
  * owns authorization and transactionality; the browser never performs a
  * sequence of partial inserts.
  */
-export function createPatientEpisode(
+export async function createPatientEpisode(
   input: CreatePatientEpisodeInput
-): Promise<boolean> {
+): Promise<{ patientId: string | null } | null> {
   const currentYear = new Date().getFullYear();
   const fullName = input.fullName.trim().replace(/\s+/g, " ");
   const phone = input.phone?.trim() || null;
@@ -841,14 +841,18 @@ export function createPatientEpisode(
     input.weeklyTarget < 1 ||
     input.weeklyTarget > 7
   ) {
-    return Promise.resolve(false);
+    return null;
   }
 
-  return trackedWrite(async () => {
+  // null = not saved. A saved patient whose id did not come back is still
+  // reported as saved (patientId null) so the clinician never retries into
+  // a duplicate record.
+  let created: { patientId: string | null } | null = null;
+  await trackedWrite(async () => {
     const supabase = getSupabase();
     if (!supabase) return false;
 
-    const { error } = await supabase.rpc("create_patient_episode", {
+    const { data, error } = await supabase.rpc("create_patient_episode", {
       p_clinic_id: input.clinicId,
       p_full_name: fullName,
       p_phone: phone,
@@ -858,8 +862,18 @@ export function createPatientEpisode(
       p_weekly_target: input.weeklyTarget,
       p_assigned_therapist_id: input.assignedTherapistId,
     });
-    return !error;
+    if (error) return false;
+    // The RPC returns one (patient_id, episode_id) row; ids let the UI open
+    // the new patient's workspace directly.
+    const row = (Array.isArray(data) ? data[0] : data) as
+      | { patient_id?: unknown }
+      | null;
+    created = {
+      patientId: typeof row?.patient_id === "string" ? row.patient_id : null,
+    };
+    return true;
   });
+  return created;
 }
 
 /** Update demographics through the server-authorized workflow. */
@@ -1025,6 +1039,41 @@ export async function invitePatientAccount(
  * user from mixing the inactive tenant into the current inbox. RLS remains
  * the final authorization boundary.
  */
+/**
+ * Counts for the sidebar badges and dashboard: unresolved clinical alerts
+ * and tickets still waiting for a clinician response in the active clinic.
+ * Head-only count queries under RLS; no patient rows are transferred.
+ * Returns null on failure so the UI can hide stale numbers.
+ */
+export async function fetchAttentionCounts(
+  clinicId: string
+): Promise<{ alerts: number; tickets: number } | null> {
+  const supabase = getSupabase();
+  if (!supabase || !clinicId) return null;
+  try {
+    const [alerts, tickets] = await Promise.all([
+      withTimeout(
+        supabase
+          .from("clinical_alerts")
+          .select("id", { count: "exact", head: true })
+          .eq("clinic_id", clinicId)
+          .in("status", ["open", "acknowledged"])
+      ),
+      withTimeout(
+        supabase
+          .from("tickets")
+          .select("id, patients!inner(clinic_id)", { count: "exact", head: true })
+          .eq("patients.clinic_id", clinicId)
+          .in("status", ["open", "acknowledged"])
+      ),
+    ]);
+    if (!alerts || !tickets || alerts.error || tickets.error) return null;
+    return { alerts: alerts.count ?? 0, tickets: tickets.count ?? 0 };
+  } catch {
+    return null;
+  }
+}
+
 export async function fetchClinicianTickets(
   clinicId: string
 ): Promise<ClinicianTicket[] | null> {

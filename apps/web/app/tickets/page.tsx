@@ -10,6 +10,7 @@ import { EmptyState, PageIntro, Spinner } from "@/components/ui/Misc";
 import { detectSafetySignals } from "@/lib/clinical/safety";
 import { isMockMode } from "@/lib/config";
 import { useAuth } from "@/lib/store/AuthContext";
+import { useAttention } from "@/lib/store/AttentionContext";
 import { useLocale } from "@/lib/store/LocaleContext";
 import { intlLocale, useText } from "@/lib/i18n/text";
 import type { Locale } from "@/lib/i18n/translations";
@@ -124,6 +125,7 @@ function senderLabel(reply: TicketReply, t: TicketsText): string {
 
 export default function ClinicianTicketInboxPage() {
   const { profile, activeClinicId } = useAuth();
+  const { refresh: refreshAttention } = useAttention();
   const { locale } = useLocale();
   const t = useText(ticketsText);
   const [inbox, setInbox] = useState<InboxState>(emptyInbox);
@@ -382,6 +384,7 @@ export default function ClinicianTicketInboxPage() {
       tone: "success",
       message: t.replySaved,
     });
+    refreshAttention();
 
     const refreshed = await fetchClinicianTickets(clinicId);
     if (activeClinicRef.current !== clinicId || !refreshed) return;
@@ -441,6 +444,7 @@ export default function ClinicianTicketInboxPage() {
       tone: "success",
       message: t.ackSaved,
     });
+    refreshAttention();
   }
 
   async function closeSelected() {
@@ -494,6 +498,7 @@ export default function ClinicianTicketInboxPage() {
       tone: "success",
       message: t.closeSaved,
     });
+    refreshAttention();
   }
 
   if (isMockMode) {

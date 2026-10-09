@@ -6,7 +6,7 @@ const en = {
   loadFailedBody:
     "The clinical case list failed to load. No empty-state or assessment actions are shown until the authenticated database request succeeds.",
   retry: "Retry cases",
-  title: "Case Analysis",
+  title: "Examination & Reasoning",
   intro:
     "Structured findings rank provisional hypotheses transparently — decision support to verify independently, not a diagnosis or validated AI analysis.",
   caseLabel: "Patient case",
@@ -14,7 +14,7 @@ const en = {
   unnamed: "Unnamed",
   noCaseTitle: "No case selected",
   noCaseBody: "Create a new patient case or pick a recent one to generate a clinical reasoning summary.",
-  newCase: "New Patient Case",
+  newCase: "New Assessment",
   safetyClear: "Structured safety screen is clear. Continue to monitor and verify throughout examination.",
   safetyAbsent: (disposition: string) =>
     `Safety clearance is absent (${disposition}). Resolve the documented pathway before treatment advice or patient education.`,
@@ -62,15 +62,15 @@ export const caseAnalysisText: PageText<typeof en> = {
     loadFailedBody:
       "فهرست پرونده‌های بالینی بارگذاری نشد. تا موفقیت درخواست احراز هویت‌شده به دیتابیس، هیچ وضعیت خالی یا عملیات ارزیابی نمایش داده نمی‌شود.",
     retry: "بارگذاری دوباره پرونده‌ها",
-    title: "تحلیل پرونده",
+    title: "معاینه و تحلیل",
     intro:
       "یافته‌های ساختاریافته، فرضیه‌های موقت را به‌طور شفاف رتبه‌بندی می‌کنند — پشتیبان تصمیم‌گیری برای تأیید مستقل، نه تشخیص یا تحلیل معتبر هوش مصنوعی.",
     caseLabel: "پرونده بیمار",
     selectCase: "انتخاب پرونده…",
     unnamed: "بدون نام",
     noCaseTitle: "پرونده‌ای انتخاب نشده",
-    noCaseBody: "یک پرونده جدید بسازید یا یکی از پرونده‌های اخیر را برای خلاصه استدلال بالینی انتخاب کنید.",
-    newCase: "پرونده جدید بیمار",
+    noCaseBody: "یک ارزیابی جدید ثبت کنید یا یکی از ارزیابی‌های اخیر را برای خلاصه استدلال بالینی انتخاب کنید.",
+    newCase: "ارزیابی جدید",
     safetyClear: "غربالگری ایمنی ساختاریافته پاک است. در طول معاینه همچنان پایش و بررسی کنید.",
     safetyAbsent: (disposition) =>
       `مجوز ایمنی وجود ندارد (${disposition}). پیش از توصیه درمانی یا آموزش بیمار، مسیر ثبت‌شده را پیگیری کنید.`,

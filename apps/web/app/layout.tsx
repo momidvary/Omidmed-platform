@@ -6,6 +6,7 @@ import { CaseProvider } from "@/lib/store/CaseContext";
 import { PatientProvider } from "@/lib/store/PatientContext";
 import { LocaleProvider } from "@/lib/store/LocaleContext";
 import { AuthProvider } from "@/lib/store/AuthContext";
+import { AttentionProvider } from "@/lib/store/AttentionContext";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -31,11 +32,13 @@ export default function RootLayout({
       <body>
         <LocaleProvider>
           <AuthProvider>
-            <CaseProvider>
-              <PatientProvider>
-                <AppShell>{children}</AppShell>
-              </PatientProvider>
-            </CaseProvider>
+            <AttentionProvider>
+              <CaseProvider>
+                <PatientProvider>
+                  <AppShell>{children}</AppShell>
+                </PatientProvider>
+              </CaseProvider>
+            </AttentionProvider>
           </AuthProvider>
         </LocaleProvider>
       </body>

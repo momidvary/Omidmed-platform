@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useEffect, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useCases } from "@/lib/store/CaseContext";
 import { useAuth } from "@/lib/store/AuthContext";
 import type {
@@ -16,7 +16,7 @@ import { Button } from "@/components/ui/Button";
 import { Field, Input, Select, Textarea } from "@/components/ui/Form";
 import { Icon } from "@/components/ui/Icon";
 import { PageIntro, Disclaimer, Spinner } from "@/components/ui/Misc";
-import { uuid } from "@/lib/utils";
+import { cn, isUuid, uuid } from "@/lib/utils";
 import {
   localizedRedFlag,
   redFlagCategories,
@@ -86,8 +86,36 @@ function emptyLookupQuery(clinicId: string | null): PatientLookupQuery {
   return { clinicId, draft: "", applied: "" };
 }
 
+/** Registry demographics prefill the intake; nothing is typed twice. */
+function formFromPatient(patient: PatientRegistryItem): FormState {
+  return {
+    ...emptyForm,
+    name: patient.fullName,
+    age: patient.birthYear
+      ? String(new Date().getFullYear() - patient.birthYear)
+      : "",
+    gender: patient.gender ?? "",
+  };
+}
+
+type Step = 1 | 2 | 3;
+const STEPS: Step[] = [1, 2, 3];
+
 export default function NewCasePage() {
+  return (
+    <Suspense fallback={<Spinner label="…" />}>
+      <NewCaseForm />
+    </Suspense>
+  );
+}
+
+function NewCaseForm() {
   const router = useRouter();
+  const patientParam = useSearchParams().get("patient");
+  const preselectedPatientId = isUuid(patientParam) ? patientParam : null;
+  const [step, setStep] = useState<Step>(1);
+  const [showSearch, setShowSearch] = useState(false);
+  const autoSelected = useRef<string | null>(null);
   const { addCase } = useCases();
   const { profile, activeClinicId, loading: authLoading } = useAuth();
   const { locale } = useLocale();
@@ -159,12 +187,20 @@ export default function NewCasePage() {
     const key = lookupKey;
     let cancelled = false;
 
+    // Opened from a patient's page: load that patient directly until the
+    // clinician searches for someone else.
+    const directPatientId =
+      preselectedPatientId && !scopedLookupQuery.applied
+        ? preselectedPatientId
+        : undefined;
+
     async function loadPatients() {
       const result = await fetchPatientRegistry({
         clinicId,
         search: scopedLookupQuery.applied,
         page: 1,
         pageSize: REGISTRY_PAGE_SIZE,
+        patientId: directPatientId,
       });
       if (cancelled) return;
 
@@ -184,6 +220,24 @@ export default function NewCasePage() {
         loading: false,
         error: null,
       });
+
+      const direct = directPatientId
+        ? result.patients.find(
+            (patient) => patient.id === directPatientId && patient.clinicId === clinicId
+          )
+        : undefined;
+      if (direct && autoSelected.current !== `${clinicId}:${direct.id}`) {
+        autoSelected.current = `${clinicId}:${direct.id}`;
+        if (direct.activeEpisode) {
+          setSelection({ clinicId, patient: direct });
+          setStoredForm(formFromPatient(direct));
+          setDraftClinicId(clinicId);
+          setPatientSelectionError(null);
+        } else {
+          setPatientSelectionError(t.noActiveEpisode);
+          setShowSearch(true);
+        }
+      }
     }
 
     void loadPatients();
@@ -196,6 +250,8 @@ export default function NewCasePage() {
     lookupKey,
     lookupRetryToken,
     scopedLookupQuery.applied,
+    preselectedPatientId,
+    t.noActiveEpisode,
   ]);
 
   function set<K extends keyof FormState>(key: K, value: FormState[K]) {
@@ -228,18 +284,7 @@ export default function NewCasePage() {
 
   function resetDraft(clearPatient = true) {
     const patient = clearPatient ? null : selectedRegistryPatient;
-    setStoredForm(
-      patient
-        ? {
-            ...emptyForm,
-            name: patient.fullName,
-            age: patient.birthYear
-              ? String(new Date().getFullYear() - patient.birthYear)
-              : "",
-            gender: patient.gender ?? "",
-          }
-        : emptyForm
-    );
+    setStoredForm(patient ? formFromPatient(patient) : emptyForm);
     setDraftClinicId(activeClinicId);
     setErrors({});
     setStoredRedFlags(new Set());
@@ -263,6 +308,10 @@ export default function NewCasePage() {
       setPatientSelectionError(t.selectFromClinic);
       return;
     }
+    selectPatient(patient);
+  }
+
+  function selectPatient(patient: PatientRegistryItem) {
     if (!patient.activeEpisode) {
       resetDraft(true);
       setPatientSelectionError(t.noActiveEpisode);
@@ -270,14 +319,7 @@ export default function NewCasePage() {
     }
 
     setSelection({ clinicId: patient.clinicId, patient });
-    setStoredForm({
-      ...emptyForm,
-      name: patient.fullName,
-      age: patient.birthYear
-        ? String(new Date().getFullYear() - patient.birthYear)
-        : "",
-      gender: patient.gender ?? "",
-    });
+    setStoredForm(formFromPatient(patient));
     setDraftClinicId(activeClinicId);
     setErrors({});
     setStoredRedFlags(new Set());
@@ -285,6 +327,8 @@ export default function NewCasePage() {
     setStoredSafetyError(null);
     setSaveError(null);
     setPatientSelectionError(null);
+    setShowSearch(false);
+    setStep(1);
   }
 
   function applyPatientSearch() {
@@ -296,6 +340,36 @@ export default function NewCasePage() {
       applied,
     });
     setPatientSelectionError(null);
+  }
+
+  /** Step 1 fields and the patient link; shows errors and stays on step 1. */
+  function validateFirstStep(): boolean {
+    const next: Errors = {};
+    if (!form.name.trim()) next.name = t.nameRequired;
+    if (form.age && (Number(form.age) < 0 || Number(form.age) > 120))
+      next.age = t.ageInvalid;
+    if (!form.mainComplaint.trim())
+      next.mainComplaint = t.complaintRequired;
+    if (!form.region) next.region = t.regionRequired;
+    const linked =
+      isMockMode ||
+      Boolean(
+        activeClinicId &&
+          selectedRegistryPatient?.clinicId === activeClinicId &&
+          selectedRegistryPatient.activeEpisode
+      );
+    if (!linked) {
+      setPatientSelectionError(t.patientRequired);
+      setShowSearch(true);
+    }
+    setErrors(next);
+    return Object.keys(next).length === 0 && linked;
+  }
+
+  function goToStep(target: Step) {
+    if (target > 1 && step === 1 && !validateFirstStep()) return;
+    setStep(target);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   function validate(): boolean {
@@ -325,6 +399,10 @@ export default function NewCasePage() {
       }
     }
     setErrors(next);
+    if (Object.keys(next).length > 0 || !validPatientLink) {
+      if (!validPatientLink) setShowSearch(true);
+      setStep(1);
+    }
     return (
       Object.keys(next).length === 0 &&
       safetyScreenCompleted &&
@@ -334,6 +412,11 @@ export default function NewCasePage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    // Enter in an earlier step moves forward instead of submitting.
+    if (step < 3) {
+      goToStep((step + 1) as Step);
+      return;
+    }
     if (submitInFlight.current || !validate()) return;
     submitInFlight.current = true;
     setSubmitting(true);
@@ -411,383 +494,463 @@ export default function NewCasePage() {
       />
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {!isMockMode && (
-          <Card>
-            <CardHeader
-              title={t.linkTitle}
-              subtitle={t.linkSubtitle}
-              icon={<Icon name="user" width={18} height={18} />}
-            />
-            <CardBody className="space-y-4">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-                <div className="flex-1">
-                  <Field
-                    label={t.searchName}
-                    hint={t.searchHint(REGISTRY_PAGE_SIZE)}
-                  >
-                    <Input
-                      value={scopedLookupQuery.draft}
-                      maxLength={REGISTRY_SEARCH_LIMIT}
-                      onChange={(event) =>
-                        setLookupQuery({
-                          clinicId: activeClinicId,
-                          draft: event.target.value,
-                          applied: scopedLookupQuery.applied,
-                        })
-                      }
-                      onKeyDown={(event) => {
-                        if (event.key === "Enter") {
-                          event.preventDefault();
-                          applyPatientSearch();
-                        }
-                      }}
-                      placeholder={t.searchPlaceholder}
-                    />
-                  </Field>
-                </div>
+        {!isMockMode &&
+          (selectedRegistryPatient?.activeEpisode && !showSearch ? (
+            <Card>
+              <CardBody className="flex flex-wrap items-center justify-between gap-3">
+                <p className="flex items-center gap-2 text-sm text-[var(--color-ink)]">
+                  <Icon name="user" width={18} height={18} className="text-[var(--color-primary)]" />
+                  <span dir="auto">
+                    {t.linkedTo(
+                      selectedRegistryPatient.fullName,
+                      selectedRegistryPatient.activeEpisode.titleFa
+                    )}
+                  </span>
+                </p>
                 <Button
                   type="button"
-                  variant="secondary"
-                  onClick={applyPatientSearch}
-                  disabled={scopedLookup.loading}
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setShowSearch(true)}
                 >
-                  {t.search}
+                  {t.changePatient}
                 </Button>
-              </div>
-
-              {scopedLookup.loading ? (
-                <Spinner label={t.loadingPatients} />
-              ) : scopedLookup.error ? (
-                <div
-                  role="alert"
-                  className="rounded-xl bg-[var(--color-danger-soft)] px-4 py-3 text-sm text-[var(--color-danger)]"
-                >
-                  <p>{t.registryFailed}</p>
+              </CardBody>
+            </Card>
+          ) : (
+            <Card>
+              <CardHeader
+                title={t.linkTitle}
+                subtitle={t.linkSubtitle}
+                icon={<Icon name="user" width={18} height={18} />}
+              />
+              <CardBody className="space-y-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+                  <div className="flex-1">
+                    <Field
+                      label={t.searchName}
+                      hint={t.searchHint(REGISTRY_PAGE_SIZE)}
+                    >
+                      <Input
+                        value={scopedLookupQuery.draft}
+                        maxLength={REGISTRY_SEARCH_LIMIT}
+                        onChange={(event) =>
+                          setLookupQuery({
+                            clinicId: activeClinicId,
+                            draft: event.target.value,
+                            applied: scopedLookupQuery.applied,
+                          })
+                        }
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter") {
+                            event.preventDefault();
+                            applyPatientSearch();
+                          }
+                        }}
+                        placeholder={t.searchPlaceholder}
+                      />
+                    </Field>
+                  </div>
                   <Button
                     type="button"
-                    size="sm"
                     variant="secondary"
-                    className="mt-3"
-                    onClick={() => setLookupRetryToken((value) => value + 1)}
+                    onClick={applyPatientSearch}
+                    disabled={scopedLookup.loading}
                   >
-                    {t.retry}
+                    {t.search}
                   </Button>
                 </div>
-              ) : scopedLookup.patients.length === 0 ? (
-                <p
-                  role="status"
-                  className="rounded-xl bg-[var(--color-surface-muted)] px-4 py-3 text-sm text-[var(--color-ink-soft)]"
-                >
-                  {t.noMatch}
-                </p>
-              ) : (
-                <Field
-                  label={t.patientEpisode}
-                  required
-                  error={patientSelectionError ?? undefined}
-                >
-                  <Select
-                    value={selectedRegistryPatient?.id ?? ""}
-                    onChange={(event) => choosePatient(event.target.value)}
+
+                {scopedLookup.loading ? (
+                  <Spinner label={t.loadingPatients} />
+                ) : scopedLookup.error ? (
+                  <div
+                    role="alert"
+                    className="rounded-xl bg-[var(--color-danger-soft)] px-4 py-3 text-sm text-[var(--color-danger)]"
                   >
-                    <option value="">{t.selectPatient}</option>
-                    {scopedLookup.patients.map((patient) => (
-                      <option key={patient.id} value={patient.id}>
-                        {patient.fullName} — {patient.activeEpisode?.titleFa ?? t.noActiveEpisodeShort}
+                    <p>{t.registryFailed}</p>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      className="mt-3"
+                      onClick={() => setLookupRetryToken((value) => value + 1)}
+                    >
+                      {t.retry}
+                    </Button>
+                  </div>
+                ) : scopedLookup.patients.length === 0 ? (
+                  <p
+                    role="status"
+                    className="rounded-xl bg-[var(--color-surface-muted)] px-4 py-3 text-sm text-[var(--color-ink-soft)]"
+                  >
+                    {t.noMatch}
+                  </p>
+                ) : (
+                  <Field
+                    label={t.patientEpisode}
+                    required
+                    error={patientSelectionError ?? undefined}
+                  >
+                    <Select
+                      value={selectedRegistryPatient?.id ?? ""}
+                      onChange={(event) => choosePatient(event.target.value)}
+                    >
+                      <option value="">{t.selectPatient}</option>
+                      {scopedLookup.patients.map((patient) => (
+                        <option key={patient.id} value={patient.id}>
+                          {patient.fullName} — {patient.activeEpisode?.titleFa ?? t.noActiveEpisodeShort}
+                        </option>
+                      ))}
+                    </Select>
+                  </Field>
+                )}
+
+                {selectedRegistryPatient?.activeEpisode && (
+                  <p
+                    role="status"
+                    className="rounded-xl bg-[var(--color-success-soft)] px-4 py-3 text-sm text-[var(--color-success)]"
+                  >
+                    {t.linkedTo(
+                      selectedRegistryPatient.fullName,
+                      selectedRegistryPatient.activeEpisode.titleFa
+                    )}
+                  </p>
+                )}
+                {patientSelectionError && scopedLookup.patients.length === 0 && (
+                  <p role="alert" className="text-sm text-[var(--color-danger)]">
+                    {patientSelectionError}
+                  </p>
+                )}
+              </CardBody>
+            </Card>
+          ))}
+
+        <nav aria-label={t.stepsAria}>
+          <ol className="grid grid-cols-3 gap-2">
+            {STEPS.map((value) => {
+              const label =
+                value === 1 ? t.stepComplaint : value === 2 ? t.stepHistory : t.stepSafety;
+              const current = value === step;
+              const done = value < step;
+              return (
+                <li key={value}>
+                  <button
+                    type="button"
+                    onClick={() => goToStep(value)}
+                    aria-current={current ? "step" : undefined}
+                    className={cn(
+                      "flex w-full flex-col items-start gap-0.5 rounded-xl border px-3 py-2 text-start transition-colors",
+                      current
+                        ? "border-[var(--color-primary)] bg-[var(--color-primary-tint)]"
+                        : "border-[var(--color-border)] bg-white hover:bg-[var(--color-surface-muted)]"
+                    )}
+                  >
+                    <span className="text-[11px] text-[var(--color-ink-faint)]">
+                      {t.stepLabel(value, STEPS.length)}
+                    </span>
+                    <span
+                      className={cn(
+                        "flex items-center gap-1 text-sm font-semibold",
+                        current
+                          ? "text-[var(--color-primary-strong)]"
+                          : "text-[var(--color-ink-soft)]"
+                      )}
+                    >
+                      {done && <Icon name="check" width={14} height={14} />}
+                      {label}
+                      {value === 2 && (
+                        <span className="text-[11px] font-normal text-[var(--color-ink-faint)]">
+                          ({t.optional})
+                        </span>
+                      )}
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ol>
+        </nav>
+
+        {step === 1 && (
+          <>
+            {isMockMode && (
+              <Card>
+                <CardHeader
+                  title={t.details}
+                  icon={<Icon name="user" width={18} height={18} />}
+                />
+                <CardBody className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                  <Field label={t.patientName} required error={errors.name}>
+                    <Input
+                      value={form.name}
+                      onChange={(e) => set("name", e.target.value)}
+                      placeholder={t.namePlaceholder}
+                      disabled={!isMockMode}
+                    />
+                  </Field>
+                  <Field label={t.age} error={errors.age}>
+                    <Input
+                      type="number"
+                      min={0}
+                      max={120}
+                      value={form.age}
+                      onChange={(e) => set("age", e.target.value)}
+                      placeholder={t.agePlaceholder}
+                      disabled={!isMockMode}
+                    />
+                  </Field>
+                  <Field label={t.gender}>
+                    <Select
+                      value={form.gender}
+                      onChange={(e) => set("gender", e.target.value as Gender)}
+                      disabled={!isMockMode}
+                    >
+                      <option value="">{t.select}</option>
+                      <option value="female">{t.female}</option>
+                      <option value="male">{t.male}</option>
+                      <option value="other">{t.other}</option>
+                    </Select>
+                  </Field>
+                </CardBody>
+              </Card>
+            )}
+            <Card>
+              <CardHeader
+                title={t.presenting}
+                icon={<Icon name="analysis" width={18} height={18} />}
+              />
+              <CardBody className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <Field label={t.region} required error={errors.region}>
+                  <Select
+                    value={form.region}
+                    onChange={(e) => set("region", e.target.value as BodyRegionId)}
+                  >
+                    <option value="">{t.select}</option>
+                    {localizedRegions(locale).map((r) => (
+                      <option key={r.id} value={r.id}>
+                        {r.label}
                       </option>
                     ))}
                   </Select>
                 </Field>
-              )}
+                <div className="sm:col-span-2">
+                  <Field label={t.mainComplaint} required error={errors.mainComplaint}>
+                    <Textarea
+                      value={form.mainComplaint}
+                      onChange={(e) => set("mainComplaint", e.target.value)}
+                      placeholder={t.complaintPlaceholder}
+                    />
+                  </Field>
+                </div>
+                <Field label={t.painLocation}>
+                  <Input
+                    value={form.painLocation}
+                    onChange={(e) => set("painLocation", e.target.value)}
+                    placeholder={t.painLocationPlaceholder}
+                  />
+                </Field>
+                <Field label={t.duration}>
+                  <Input
+                    value={form.duration}
+                    onChange={(e) => set("duration", e.target.value)}
+                    placeholder={t.durationPlaceholder}
+                  />
+                </Field>
+                <div className="sm:col-span-2">
+                  <Field label={t.painIntensity(form.painIntensity)}>
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs text-[var(--color-ink-faint)]">0</span>
+                      <input
+                        type="range"
+                        min={0}
+                        max={10}
+                        value={form.painIntensity}
+                        onChange={(e) => set("painIntensity", Number(e.target.value))}
+                        className="h-2 flex-1 cursor-pointer appearance-none rounded-full bg-gradient-to-r from-[var(--color-success)] via-[var(--color-warn)] to-[var(--color-danger)] accent-[var(--color-ink)]"
+                      />
+                      <span className="text-xs text-[var(--color-ink-faint)]">10</span>
+                    </div>
+                  </Field>
+                </div>
+                <Field label={t.mechanism}>
+                  <Input
+                    value={form.mechanism}
+                    onChange={(e) => set("mechanism", e.target.value)}
+                    placeholder={t.mechanismPlaceholder}
+                  />
+                </Field>
+                <Field label={t.aggravating}>
+                  <Input
+                    value={form.aggravating}
+                    onChange={(e) => set("aggravating", e.target.value)}
+                    placeholder={t.aggravatingPlaceholder}
+                  />
+                </Field>
+                <Field label={t.easing}>
+                  <Input
+                    value={form.easing}
+                    onChange={(e) => set("easing", e.target.value)}
+                    placeholder={t.easingPlaceholder}
+                  />
+                </Field>
+                <Field label={t.functional}>
+                  <Input
+                    value={form.functionalLimitations}
+                    onChange={(e) => set("functionalLimitations", e.target.value)}
+                    placeholder={t.functionalPlaceholder}
+                  />
+                </Field>
+              </CardBody>
+            </Card>
+          </>
+        )}
 
-              {selectedRegistryPatient?.activeEpisode && (
-                <p
-                  role="status"
-                  className="rounded-xl bg-[var(--color-success-soft)] px-4 py-3 text-sm text-[var(--color-success)]"
-                >
-                  {t.linkedTo(
-                    selectedRegistryPatient.fullName,
-                    selectedRegistryPatient.activeEpisode.titleFa
-                  )}
-                </p>
-              )}
-              {patientSelectionError && scopedLookup.patients.length === 0 && (
-                <p role="alert" className="text-sm text-[var(--color-danger)]">
-                  {patientSelectionError}
-                </p>
-              )}
+        {step === 2 && (
+          <Card>
+            <CardHeader
+              title={t.history}
+              icon={<Icon name="clock" width={18} height={18} />}
+            />
+            <CardBody className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Field label={t.medicalHistory}>
+                <Textarea
+                  value={form.medicalHistory}
+                  onChange={(e) => set("medicalHistory", e.target.value)}
+                  placeholder={t.medicalPlaceholder}
+                  className="min-h-20"
+                />
+              </Field>
+              <Field label={t.surgicalHistory}>
+                <Textarea
+                  value={form.surgicalHistory}
+                  onChange={(e) => set("surgicalHistory", e.target.value)}
+                  placeholder={t.surgicalPlaceholder}
+                  className="min-h-20"
+                />
+              </Field>
+              <Field label={t.imaging}>
+                <Textarea
+                  value={form.imaging}
+                  onChange={(e) => set("imaging", e.target.value)}
+                  placeholder={t.imagingPlaceholder}
+                  className="min-h-20"
+                />
+              </Field>
+              <Field label={t.medications}>
+                <Textarea
+                  value={form.medications}
+                  onChange={(e) => set("medications", e.target.value)}
+                  placeholder={t.medicationsPlaceholder}
+                  className="min-h-20"
+                />
+              </Field>
+              <div className="sm:col-span-2">
+                <Field label={t.goal} hint={t.goalHint}>
+                  <Input
+                    value={form.patientGoal}
+                    onChange={(e) => set("patientGoal", e.target.value)}
+                    placeholder={t.goalPlaceholder}
+                  />
+                </Field>
+              </div>
             </CardBody>
           </Card>
         )}
 
-        <Card>
-          <CardHeader
-            title={t.details}
-            icon={<Icon name="user" width={18} height={18} />}
-          />
-          <CardBody className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <Field label={t.patientName} required error={errors.name}>
-              <Input
-                value={form.name}
-                onChange={(e) => set("name", e.target.value)}
-                placeholder={t.namePlaceholder}
-                disabled={!isMockMode}
+        {step === 3 && (
+          <>
+            <Card>
+              <CardHeader
+                title={t.safetyTitle}
+                subtitle={t.safetySubtitle}
+                icon={<Icon name="shield" width={18} height={18} />}
               />
-            </Field>
-            <Field label={t.age} error={errors.age}>
-              <Input
-                type="number"
-                min={0}
-                max={120}
-                value={form.age}
-                onChange={(e) => set("age", e.target.value)}
-                placeholder={t.agePlaceholder}
-                disabled={!isMockMode}
-              />
-            </Field>
-            <Field label={t.gender}>
-              <Select
-                value={form.gender}
-                onChange={(e) => set("gender", e.target.value as Gender)}
-                disabled={!isMockMode}
-              >
-                <option value="">{t.select}</option>
-                <option value="female">{t.female}</option>
-                <option value="male">{t.male}</option>
-                <option value="other">{t.other}</option>
-              </Select>
-            </Field>
-            <Field label={t.region} required error={errors.region}>
-              <Select
-                value={form.region}
-                onChange={(e) => set("region", e.target.value as BodyRegionId)}
-              >
-                <option value="">{t.select}</option>
-                {localizedRegions(locale).map((r) => (
-                  <option key={r.id} value={r.id}>
-                    {r.label}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-          </CardBody>
-        </Card>
-
-        <Card>
-          <CardHeader
-            title={t.presenting}
-            icon={<Icon name="analysis" width={18} height={18} />}
-          />
-          <CardBody className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div className="sm:col-span-2">
-              <Field label={t.mainComplaint} required error={errors.mainComplaint}>
-                <Textarea
-                  value={form.mainComplaint}
-                  onChange={(e) => set("mainComplaint", e.target.value)}
-                  placeholder={t.complaintPlaceholder}
-                />
-              </Field>
-            </div>
-            <Field label={t.painLocation}>
-              <Input
-                value={form.painLocation}
-                onChange={(e) => set("painLocation", e.target.value)}
-                placeholder={t.painLocationPlaceholder}
-              />
-            </Field>
-            <Field label={t.duration}>
-              <Input
-                value={form.duration}
-                onChange={(e) => set("duration", e.target.value)}
-                placeholder={t.durationPlaceholder}
-              />
-            </Field>
-            <div className="sm:col-span-2">
-              <Field label={t.painIntensity(form.painIntensity)}>
-                <div className="flex items-center gap-3">
-                  <span className="text-xs text-[var(--color-ink-faint)]">0</span>
-                  <input
-                    type="range"
-                    min={0}
-                    max={10}
-                    value={form.painIntensity}
-                    onChange={(e) => set("painIntensity", Number(e.target.value))}
-                    className="h-2 flex-1 cursor-pointer appearance-none rounded-full bg-gradient-to-r from-[var(--color-success)] via-[var(--color-warn)] to-[var(--color-danger)] accent-[var(--color-ink)]"
-                  />
-                  <span className="text-xs text-[var(--color-ink-faint)]">10</span>
+              <CardBody className="space-y-5">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  {redFlagCategories.map((category) => (
+                    <fieldset key={category} className="rounded-xl border border-[var(--color-border)] p-3">
+                      <legend className="px-1 text-xs font-semibold text-[var(--color-ink)]">
+                        {redFlagCategoryLabel(category, locale)}
+                      </legend>
+                      <div className="space-y-1.5">
+                        {redFlags
+                          .filter((flag) => flag.category === category)
+                          .map((source) => localizedRedFlag(source, locale))
+                          .map((flag) => {
+                            const selected = selectedRedFlags.has(flag.id);
+                            return (
+                              <button
+                                key={flag.id}
+                                type="button"
+                                aria-pressed={selected}
+                                onClick={() => {
+                                  updateRedFlags((previous) => {
+                                    const next = new Set(previous);
+                                    if (next.has(flag.id)) next.delete(flag.id);
+                                    else next.add(flag.id);
+                                    return next;
+                                  });
+                                  updateSafetyCompleted(false);
+                                  updateSafetyError(null);
+                                }}
+                                className={`flex w-full items-start gap-2 rounded-lg px-2 py-2 text-start text-xs ${
+                                  selected
+                                    ? "bg-[var(--color-danger-soft)] text-[var(--color-danger)]"
+                                    : "hover:bg-[var(--color-surface-muted)] text-[var(--color-ink-soft)]"
+                                }`}
+                              >
+                                <span
+                                  aria-hidden="true"
+                                  className={`mt-0.5 h-4 w-4 shrink-0 rounded border ${
+                                    selected
+                                      ? "border-[var(--color-danger)] bg-[var(--color-danger)]"
+                                      : "border-[var(--color-border)]"
+                                  }`}
+                                />
+                                <span>
+                                  <span className="block font-medium">{flag.label}</span>
+                                  <span className="block text-[11px] opacity-80">{flag.detail}</span>
+                                </span>
+                              </button>
+                            );
+                          })}
+                      </div>
+                    </fieldset>
+                  ))}
                 </div>
-              </Field>
-            </div>
-            <Field label={t.mechanism}>
-              <Input
-                value={form.mechanism}
-                onChange={(e) => set("mechanism", e.target.value)}
-                placeholder={t.mechanismPlaceholder}
-              />
-            </Field>
-            <Field label={t.aggravating}>
-              <Input
-                value={form.aggravating}
-                onChange={(e) => set("aggravating", e.target.value)}
-                placeholder={t.aggravatingPlaceholder}
-              />
-            </Field>
-            <Field label={t.easing}>
-              <Input
-                value={form.easing}
-                onChange={(e) => set("easing", e.target.value)}
-                placeholder={t.easingPlaceholder}
-              />
-            </Field>
-            <Field label={t.functional}>
-              <Input
-                value={form.functionalLimitations}
-                onChange={(e) => set("functionalLimitations", e.target.value)}
-                placeholder={t.functionalPlaceholder}
-              />
-            </Field>
-          </CardBody>
-        </Card>
 
-        <Card>
-          <CardHeader
-            title={t.history}
-            icon={<Icon name="clock" width={18} height={18} />}
-          />
-          <CardBody className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Field label={t.medicalHistory}>
-              <Textarea
-                value={form.medicalHistory}
-                onChange={(e) => set("medicalHistory", e.target.value)}
-                placeholder={t.medicalPlaceholder}
-                className="min-h-20"
-              />
-            </Field>
-            <Field label={t.surgicalHistory}>
-              <Textarea
-                value={form.surgicalHistory}
-                onChange={(e) => set("surgicalHistory", e.target.value)}
-                placeholder={t.surgicalPlaceholder}
-                className="min-h-20"
-              />
-            </Field>
-            <Field label={t.imaging}>
-              <Textarea
-                value={form.imaging}
-                onChange={(e) => set("imaging", e.target.value)}
-                placeholder={t.imagingPlaceholder}
-                className="min-h-20"
-              />
-            </Field>
-            <Field label={t.medications}>
-              <Textarea
-                value={form.medications}
-                onChange={(e) => set("medications", e.target.value)}
-                placeholder={t.medicationsPlaceholder}
-                className="min-h-20"
-              />
-            </Field>
-            <div className="sm:col-span-2">
-              <Field label={t.goal} hint={t.goalHint}>
-                <Input
-                  value={form.patientGoal}
-                  onChange={(e) => set("patientGoal", e.target.value)}
-                  placeholder={t.goalPlaceholder}
-                />
-              </Field>
-            </div>
-          </CardBody>
-        </Card>
+                {selectedRedFlags.size > 0 && (
+                  <p role="alert" className="rounded-xl bg-[var(--color-danger-soft)] px-4 py-3 text-sm text-[var(--color-danger)]">
+                    {t.concernsPresent}
+                  </p>
+                )}
 
-        <Card>
-          <CardHeader
-            title={t.safetyTitle}
-            subtitle={t.safetySubtitle}
-            icon={<Icon name="shield" width={18} height={18} />}
-          />
-          <CardBody className="space-y-5">
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              {redFlagCategories.map((category) => (
-                <fieldset key={category} className="rounded-xl border border-[var(--color-border)] p-3">
-                  <legend className="px-1 text-xs font-semibold text-[var(--color-ink)]">
-                    {redFlagCategoryLabel(category, locale)}
-                  </legend>
-                  <div className="space-y-1.5">
-                    {redFlags
-                      .filter((flag) => flag.category === category)
-                      .map((source) => localizedRedFlag(source, locale))
-                      .map((flag) => {
-                        const selected = selectedRedFlags.has(flag.id);
-                        return (
-                          <button
-                            key={flag.id}
-                            type="button"
-                            aria-pressed={selected}
-                            onClick={() => {
-                              updateRedFlags((previous) => {
-                                const next = new Set(previous);
-                                if (next.has(flag.id)) next.delete(flag.id);
-                                else next.add(flag.id);
-                                return next;
-                              });
-                              updateSafetyCompleted(false);
-                              updateSafetyError(null);
-                            }}
-                            className={`flex w-full items-start gap-2 rounded-lg px-2 py-2 text-start text-xs ${
-                              selected
-                                ? "bg-[var(--color-danger-soft)] text-[var(--color-danger)]"
-                                : "hover:bg-[var(--color-surface-muted)] text-[var(--color-ink-soft)]"
-                            }`}
-                          >
-                            <span
-                              aria-hidden="true"
-                              className={`mt-0.5 h-4 w-4 shrink-0 rounded border ${
-                                selected
-                                  ? "border-[var(--color-danger)] bg-[var(--color-danger)]"
-                                  : "border-[var(--color-border)]"
-                              }`}
-                            />
-                            <span>
-                              <span className="block font-medium">{flag.label}</span>
-                              <span className="block text-[11px] opacity-80">{flag.detail}</span>
-                            </span>
-                          </button>
-                        );
-                      })}
-                  </div>
-                </fieldset>
-              ))}
-            </div>
+                <label className="flex items-start gap-3 rounded-xl border border-[var(--color-border)] p-3 text-sm text-[var(--color-ink-soft)]">
+                  <input
+                    type="checkbox"
+                    className="mt-1"
+                    checked={safetyScreenCompleted}
+                    onChange={(event) => {
+                      updateSafetyCompleted(event.target.checked);
+                      updateSafetyError(null);
+                    }}
+                  />
+                  <span>
+                    {t.screenAttest}
+                  </span>
+                </label>
+                {safetyError && (
+                  <p role="alert" className="text-sm text-[var(--color-danger)]">
+                    {safetyError}
+                  </p>
+                )}
+              </CardBody>
+            </Card>
 
-            {selectedRedFlags.size > 0 && (
-              <p role="alert" className="rounded-xl bg-[var(--color-danger-soft)] px-4 py-3 text-sm text-[var(--color-danger)]">
-                {t.concernsPresent}
-              </p>
-            )}
-
-            <label className="flex items-start gap-3 rounded-xl border border-[var(--color-border)] p-3 text-sm text-[var(--color-ink-soft)]">
-              <input
-                type="checkbox"
-                className="mt-1"
-                checked={safetyScreenCompleted}
-                onChange={(event) => {
-                  updateSafetyCompleted(event.target.checked);
-                  updateSafetyError(null);
-                }}
-              />
-              <span>
-                {t.screenAttest}
-              </span>
-            </label>
-            {safetyError && (
-              <p role="alert" className="text-sm text-[var(--color-danger)]">
-                {safetyError}
-              </p>
-            )}
-          </CardBody>
-        </Card>
-
-        <Disclaimer />
+            <Disclaimer />
+          </>
+        )}
 
         {saveError && (
           <p className="rounded-xl bg-[var(--color-danger-soft)] px-4 py-3 text-sm text-[var(--color-danger)]">
@@ -795,18 +958,44 @@ export default function NewCasePage() {
           </p>
         )}
 
-        <div className="flex items-center justify-end gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <Button
             type="button"
-            variant="secondary"
-            onClick={() => resetDraft(true)}
+            variant="ghost"
+            onClick={() => {
+              resetDraft(!preselectedPatientId || isMockMode);
+              setStep(1);
+            }}
           >
             {t.clear}
           </Button>
-          <Button type="submit" disabled={submitting}>
-            {submitting ? t.creating : t.create}
-            <Icon name="arrow" width={16} height={16} className="rtl:rotate-180" />
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            {step > 1 && (
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => goToStep((step - 1) as Step)}
+              >
+                {t.back}
+              </Button>
+            )}
+            {step === 2 && (
+              <Button type="button" variant="secondary" onClick={() => goToStep(3)}>
+                {t.skip}
+              </Button>
+            )}
+            {step < 3 ? (
+              <Button type="button" onClick={() => goToStep((step + 1) as Step)}>
+                {t.next}
+                <Icon name="arrow" width={16} height={16} className="rtl:rotate-180" />
+              </Button>
+            ) : (
+              <Button type="submit" disabled={submitting}>
+                {submitting ? t.creating : t.create}
+                <Icon name="arrow" width={16} height={16} className="rtl:rotate-180" />
+              </Button>
+            )}
+          </div>
         </div>
       </form>
     </div>

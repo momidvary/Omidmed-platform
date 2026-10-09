@@ -3,9 +3,13 @@ export function cn(...classes: (string | false | null | undefined)[]): string {
   return classes.filter(Boolean).join(" ");
 }
 
-/** Format an ISO date string as a short, human-readable date. */
-export function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("en-US", {
+/**
+ * Format an ISO date string as a short, human-readable date. Persian uses
+ * the Iranian (Solar Hijri) calendar via fa-IR.
+ */
+export function formatDate(iso: string, locale: "en" | "fa" | "ar" = "en"): string {
+  const tag = locale === "fa" ? "fa-IR" : locale === "ar" ? "ar" : "en-US";
+  return new Date(iso).toLocaleDateString(tag, {
     month: "short",
     day: "numeric",
     year: "numeric",

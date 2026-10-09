@@ -28,6 +28,9 @@ import type {
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { formatIranianMobile, normalizeIranianMobile } from "@/lib/phone";
+import { useLocale } from "@/lib/store/LocaleContext";
+import { intlLocale, useText } from "@/lib/i18n/text";
+import { patientsText, type PatientsText } from "./text";
 
 const PAGE_SIZE = 20;
 const CURRENT_YEAR = new Date().getFullYear();
@@ -105,7 +108,20 @@ function compactSpaces(value: string): string {
   return value.trim().replace(/\s+/g, " ");
 }
 
-function validatePatientForm(form: PatientFormDraft): {
+/**
+ * Birth year as stored (Gregorian). Iranian users often know their Solar
+ * Hijri birth year (e.g. 1365); 1279–1420 is converted by +621 (±1 year,
+ * which is within the precision of a year-only field).
+ */
+function gregorianBirthYear(input: string): number | null {
+  const trimmed = latinDigits(input).trim();
+  if (trimmed === "") return null;
+  const year = Number(trimmed);
+  if (Number.isInteger(year) && year >= 1279 && year <= 1420) return year + 621;
+  return year;
+}
+
+function validatePatientForm(form: PatientFormDraft, t: PatientsText): {
   errors: FormErrors;
   normalized: NormalizedPatientForm | null;
 } {
@@ -114,19 +130,18 @@ function validatePatientForm(form: PatientFormDraft): {
   const titleFa = compactSpaces(form.titleFa);
   const phoneInput = latinDigits(form.phone).trim();
   const phone = phoneInput.replace(/[\s()-]/g, "");
-  const birthYearInput = latinDigits(form.birthYear).trim();
   const weeklyTargetInput = latinDigits(form.weeklyTarget).trim();
-  const birthYear = birthYearInput === "" ? null : Number(birthYearInput);
+  const birthYear = gregorianBirthYear(form.birthYear);
   const weeklyTarget = Number(weeklyTargetInput);
 
   if (fullName.length < 2) {
-    errors.fullName = "Enter at least 2 characters.";
+    errors.fullName = t.errName2;
   } else if (fullName.length > 120) {
-    errors.fullName = "Name must be 120 characters or fewer.";
+    errors.fullName = t.errName120;
   }
 
   if (phone && !/^\+?\d{7,15}$/.test(phone)) {
-    errors.phone = "Use 7 to 15 digits, optionally starting with +.";
+    errors.phone = t.errPhone;
   }
 
   if (
@@ -135,13 +150,13 @@ function validatePatientForm(form: PatientFormDraft): {
       birthYear < 1900 ||
       birthYear > CURRENT_YEAR)
   ) {
-    errors.birthYear = `Use a Gregorian year from 1900 to ${CURRENT_YEAR}.`;
+    errors.birthYear = t.errBirthYear(CURRENT_YEAR);
   }
 
   if (titleFa.length < 2) {
-    errors.titleFa = "Enter at least 2 characters.";
+    errors.titleFa = t.errTitle2;
   } else if (titleFa.length > 160) {
-    errors.titleFa = "Episode title must be 160 characters or fewer.";
+    errors.titleFa = t.errTitle160;
   }
 
   if (
@@ -149,7 +164,7 @@ function validatePatientForm(form: PatientFormDraft): {
     weeklyTarget < 1 ||
     weeklyTarget > 7
   ) {
-    errors.weeklyTarget = "Weekly target must be a whole number from 1 to 7.";
+    errors.weeklyTarget = t.errWeekly;
   }
 
   if (Object.keys(errors).length > 0) return { errors, normalized: null };
@@ -166,40 +181,25 @@ function validatePatientForm(form: PatientFormDraft): {
   };
 }
 
-function inviteFailureMessage(reason: string | undefined): string {
-  switch (reason) {
-    case "account_not_eligible":
-      return "This number belongs to an account that cannot be a patient login: a clinic staff account, an account without a patient profile (e.g. created before the database was reset — run 03_first_clinic_owner.sql again to restore profiles), or the account already represents another patient.";
-    case "create_failed":
-      return "The portal account could not be created for this number. Check that phone sign-in is enabled in Supabase (Authentication → Providers → Phone) and retry.";
-    case "not_configured":
-      return "Invitations are not configured on the server: set SUPABASE_SECRET_KEY (server-only) and restart / redeploy.";
-    case "not_permitted":
-      return "Only a clinic owner of this patient's clinic can link portal accounts, and archived patients cannot be linked.";
-    case "unauthorized":
-      return "Your session expired. Sign in again and retry.";
-    case "network":
-      return "The server could not be reached. Check the connection and retry.";
-    default:
-      return "The account could not be linked. Check the number, relationship and expiry, then retry.";
-  }
+function inviteFailureMessage(reason: string | undefined, t: PatientsText): string {
+  return (reason && t.invite[reason]) || t.invite.default;
 }
 
-function formatDate(value: string): string {
+function formatDate(value: string, locale: string, unknown: string): string {
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "Unknown";
-  return date.toLocaleDateString("en-GB", {
+  if (Number.isNaN(date.getTime())) return unknown;
+  return date.toLocaleDateString(locale, {
     year: "numeric",
     month: "short",
     day: "numeric",
   });
 }
 
-function genderLabel(gender: Gender | null): string {
-  if (gender === "female") return "Female";
-  if (gender === "male") return "Male";
-  if (gender === "other") return "Other";
-  return "Not recorded";
+function genderLabel(gender: Gender | null, t: PatientsText): string {
+  if (gender === "female") return t.female;
+  if (gender === "male") return t.male;
+  if (gender === "other") return t.other;
+  return t.notRecorded;
 }
 
 export default function PatientRegistryPage() {
@@ -208,6 +208,7 @@ export default function PatientRegistryPage() {
     activeClinicId,
     loading: authLoading,
   } = useAuth();
+  const t = useText(patientsText);
   const [registry, setRegistry] = useState<RegistryState>(emptyRegistry);
   const [query, setQuery] = useState<RegistryQuery>(() => emptyQuery(null));
   const [showCreate, setShowCreate] = useState(false);
@@ -287,8 +288,7 @@ export default function PatientRegistryPage() {
           key,
           result: null,
           loading: false,
-          error:
-            "Patient registry could not be loaded. Check the connection and clinic permissions, then retry.",
+          error: "load_failed",
         });
         return;
       }
@@ -373,7 +373,7 @@ export default function PatientRegistryPage() {
       return;
     }
 
-    const validated = validatePatientForm(scopedForm);
+    const validated = validatePatientForm(scopedForm, t);
     setFormErrors(validated.errors);
     if (!validated.normalized) return;
 
@@ -396,8 +396,7 @@ export default function PatientRegistryPage() {
       setFeedback({
         clinicId,
         tone: "error",
-        message:
-          "Patient was not created. Check your connection and permissions, and confirm the create_patient_episode RPC is deployed.",
+        message: t.createFailed,
       });
       return;
     }
@@ -408,7 +407,7 @@ export default function PatientRegistryPage() {
     setFeedback({
       clinicId,
       tone: "success",
-      message: "Patient and active care episode were created atomically.",
+      message: t.created,
     });
     setRetryToken((value) => value + 1);
   }
@@ -417,13 +416,13 @@ export default function PatientRegistryPage() {
     return (
       <div className="space-y-6">
         <PageIntro
-          title="Patient Registry"
-          description="Clinic-scoped patients, active care episodes and therapist assignments."
+          title={t.title}
+          description={t.introShort}
         />
         <EmptyState
           icon="user"
-          title="Demo registry is empty"
-          description="Mock mode does not fabricate patient health information. Connect an authenticated clinic database to use the registry."
+          title={t.demoEmpty}
+          description={t.demoEmptyHint}
         />
       </div>
     );
@@ -432,7 +431,7 @@ export default function PatientRegistryPage() {
   if (authLoading) {
     return (
       <Card>
-        <Spinner label="Checking clinical access…" />
+        <Spinner label={t.checkingAccess} />
       </Card>
     );
   }
@@ -441,8 +440,8 @@ export default function PatientRegistryPage() {
     return (
       <div className="space-y-6">
         <PageIntro
-          title="Patient Registry"
-          description="Clinic-scoped patients, active care episodes and therapist assignments."
+          title={t.title}
+          description={t.introShort}
         />
         <Card>
           <CardBody>
@@ -450,11 +449,10 @@ export default function PatientRegistryPage() {
               <Icon name="shield" className="mt-0.5 text-[var(--color-danger)]" />
               <div>
                 <h2 className="text-sm font-semibold text-[var(--color-ink)]">
-                  Clinical access required
+                  {t.accessRequired}
                 </h2>
                 <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
-                  Patient PHI is available only to clinic owners and therapists.
-                  Clinic staff and other roles cannot open this registry.
+                  {t.accessRequiredHint}
                 </p>
               </div>
             </div>
@@ -468,13 +466,13 @@ export default function PatientRegistryPage() {
     return (
       <div className="space-y-6">
         <PageIntro
-          title="Patient Registry"
-          description="Clinic-scoped patients, active care episodes and therapist assignments."
+          title={t.title}
+          description={t.introShort}
         />
         <EmptyState
           icon="search"
-          title="Select an active clinic"
-          description="Choose a clinic from the top bar. Patient records are loaded only for that active tenant."
+          title={t.selectClinic}
+          description={t.selectClinicHint}
         />
       </div>
     );
@@ -483,8 +481,8 @@ export default function PatientRegistryPage() {
   return (
     <div className="space-y-6">
       <PageIntro
-        title="Patient Registry"
-        description="Find patients in the active clinic, review current care and start a new episode safely."
+        title={t.title}
+        description={t.intro}
         action={
           <Button
             onClick={() => setShowCreate((visible) => !visible)}
@@ -492,7 +490,7 @@ export default function PatientRegistryPage() {
             aria-controls="create-patient-panel"
           >
             <Icon name={showCreate ? "close" : "plus"} width={15} height={15} />
-            {showCreate ? "Close form" : "New patient"}
+            {showCreate ? t.closeForm : t.newPatient}
           </Button>
         }
       />
@@ -501,15 +499,15 @@ export default function PatientRegistryPage() {
         <Card>
           <div id="create-patient-panel">
             <CardHeader
-              title="Create patient and first care episode"
-              subtitle="Saved as one database transaction; no partial patient record is created."
+              title={t.createTitle}
+              subtitle={t.createSubtitle}
               icon={<Icon name="user" />}
             />
             <CardBody>
               <form onSubmit={submitPatient} className="space-y-5" noValidate>
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <Field
-                    label="Full name"
+                    label={t.fullName}
                     required
                     error={formErrors.fullName}
                   >
@@ -523,8 +521,8 @@ export default function PatientRegistryPage() {
                     />
                   </Field>
                   <Field
-                    label="Phone (optional)"
-                    hint="7–15 digits; Persian and Arabic numerals are accepted."
+                    label={t.phoneOptional}
+                    hint={t.phoneHint}
                     error={formErrors.phone}
                   >
                     <Input
@@ -539,8 +537,8 @@ export default function PatientRegistryPage() {
                     />
                   </Field>
                   <Field
-                    label="Birth year (optional)"
-                    hint="Gregorian year"
+                    label={t.birthYearOptional}
+                    hint={t.birthYearHint}
                     error={formErrors.birthYear}
                   >
                     <Input
@@ -553,21 +551,21 @@ export default function PatientRegistryPage() {
                       dir="ltr"
                     />
                   </Field>
-                  <Field label="Gender (optional)" error={formErrors.gender}>
+                  <Field label={t.genderOptional} error={formErrors.gender}>
                     <Select
                       value={scopedForm.gender}
                       onChange={(event) =>
                         updateForm("gender", event.target.value)
                       }
                     >
-                      <option value="">Not recorded</option>
-                      <option value="female">Female</option>
-                      <option value="male">Male</option>
-                      <option value="other">Other</option>
+                      <option value="">{t.notRecorded}</option>
+                      <option value="female">{t.female}</option>
+                      <option value="male">{t.male}</option>
+                      <option value="other">{t.other}</option>
                     </Select>
                   </Field>
                   <Field
-                    label="Care episode title (Persian)"
+                    label={t.episodeTitle}
                     required
                     error={formErrors.titleFa}
                   >
@@ -581,9 +579,9 @@ export default function PatientRegistryPage() {
                     />
                   </Field>
                   <Field
-                    label="Weekly target"
+                    label={t.weeklyTarget}
                     required
-                    hint="Planned sessions or home-program days per week (1–7)."
+                    hint={t.weeklyTargetHint}
                     error={formErrors.weeklyTarget}
                   >
                     <Input
@@ -600,8 +598,8 @@ export default function PatientRegistryPage() {
 
                 <p className="rounded-xl bg-[var(--color-surface-muted)] px-4 py-3 text-xs text-[var(--color-ink-soft)]">
                   {profile?.role === "therapist"
-                    ? "You will be assigned as this patient’s therapist automatically."
-                    : "The new patient will start unassigned; an owner can assign a therapist later."}
+                    ? t.therapistAutoAssign
+                    : t.ownerUnassigned}
                 </p>
 
                 {currentFeedback && (
@@ -621,7 +619,7 @@ export default function PatientRegistryPage() {
                 <div className="flex justify-end">
                   <Button type="submit" disabled={submitting}>
                     <Icon name="plus" width={15} height={15} />
-                    {submitting ? "Creating…" : "Create patient & episode"}
+                    {submitting ? t.creating : t.createButton}
                   </Button>
                 </div>
               </form>
@@ -638,7 +636,7 @@ export default function PatientRegistryPage() {
             className="flex flex-col gap-3 sm:flex-row"
           >
             <label htmlFor="patient-search" className="sr-only">
-              Search patient name
+              {t.searchLabel}
             </label>
             <Input
               id="patient-search"
@@ -652,16 +650,16 @@ export default function PatientRegistryPage() {
                 })
               }
               maxLength={80}
-              placeholder="Search by patient name…"
+              placeholder={t.searchPlaceholder}
               className="sm:max-w-md"
             />
             <Button type="submit" variant="secondary">
               <Icon name="search" width={15} height={15} />
-              Search
+              {t.search}
             </Button>
             {scopedQuery.applied && (
               <Button type="button" variant="ghost" onClick={clearSearch}>
-                Clear
+                {t.clear}
               </Button>
             )}
             <Button
@@ -672,7 +670,7 @@ export default function PatientRegistryPage() {
               className="sm:ms-auto"
             >
               <Icon name="clock" width={15} height={15} />
-              Refresh
+              {t.refresh}
             </Button>
           </form>
         </CardBody>
@@ -682,16 +680,16 @@ export default function PatientRegistryPage() {
           an action; otherwise the panel's confirmation message is lost. */}
       {scopedRegistry.loading && !result ? (
         <Card>
-          <Spinner label="Loading clinic patients…" />
+          <Spinner label={t.loadingPatients} />
         </Card>
       ) : scopedRegistry.error ? (
         <Card>
           <CardBody className="text-center">
             <p role="alert" className="text-sm text-[var(--color-danger)]">
-              {scopedRegistry.error}
+              {t.loadFailed}
             </p>
             <Button className="mt-4" variant="secondary" onClick={retry}>
-              Try again
+              {t.tryAgain}
             </Button>
           </CardBody>
         </Card>
@@ -700,18 +698,18 @@ export default function PatientRegistryPage() {
           icon={scopedQuery.applied ? "search" : "user"}
           title={
             scopedQuery.applied
-              ? "No matching patients"
-              : "No patients in this clinic"
+              ? t.noMatches
+              : t.noPatients
           }
           description={
             scopedQuery.applied
-              ? "Try a different name or clear the search."
-              : "Create the first patient and active care episode when the clinic is ready."
+              ? t.noMatchesHint
+              : t.noPatientsHint
           }
           action={
             scopedQuery.applied ? (
               <Button variant="secondary" onClick={clearSearch}>
-                Clear search
+                {t.clearSearch}
               </Button>
             ) : undefined
           }
@@ -765,6 +763,9 @@ function RegistryTable({
   onManage: (patientId: string) => void;
   onPageChange: (page: number) => void;
 }) {
+  const t = useText(patientsText);
+  const { locale } = useLocale();
+  const dateLocale = intlLocale(locale);
   const first = (page - 1) * PAGE_SIZE + 1;
   const last = Math.min(total, first + patients.length - 1);
 
@@ -773,28 +774,27 @@ function RegistryTable({
       <div className="overflow-x-auto">
         <table className="w-full min-w-[880px] text-start text-sm">
           <caption className="sr-only">
-            Patients in the active clinic with active episode and therapist
-            assignment
+            {t.caption}
           </caption>
           <thead className="border-b border-[var(--color-border)] bg-[var(--color-surface-muted)] text-xs text-[var(--color-ink-soft)]">
             <tr>
               <th scope="col" className="px-5 py-3 text-start font-medium">
-                Patient
+                {t.colPatient}
               </th>
               <th scope="col" className="px-5 py-3 text-start font-medium">
-                Demographics
+                {t.colDemographics}
               </th>
               <th scope="col" className="px-5 py-3 text-start font-medium">
-                Active care episode
+                {t.colEpisode}
               </th>
               <th scope="col" className="px-5 py-3 text-start font-medium">
-                Assigned therapist
+                {t.colTherapist}
               </th>
               <th scope="col" className="px-5 py-3 text-start font-medium">
-                Added
+                {t.colAdded}
               </th>
               <th scope="col" className="px-5 py-3 text-start font-medium">
-                Actions
+                {t.colActions}
               </th>
             </tr>
           </thead>
@@ -806,18 +806,18 @@ function RegistryTable({
                     {patient.fullName}
                   </p>
                   <p className="mt-1 text-xs text-[var(--color-ink-soft)]" dir="ltr">
-                    {patient.phone ?? "No phone recorded"}
+                    {patient.phone ?? t.noPhone}
                   </p>
                 </td>
                 <td className="px-5 py-4 text-[var(--color-ink-soft)]">
-                  <p>{genderLabel(patient.gender)}</p>
+                  <p>{genderLabel(patient.gender, t)}</p>
                   <p className="mt-1 text-xs">
                     {patient.birthYear
-                      ? `Born ${patient.birthYear} · approx. ${Math.max(
-                          0,
-                          CURRENT_YEAR - patient.birthYear
-                        )} years`
-                      : "Birth year not recorded"}
+                      ? t.born(
+                          locale === "fa" ? patient.birthYear - 621 : patient.birthYear,
+                          Math.max(0, CURRENT_YEAR - patient.birthYear)
+                        )
+                      : t.noBirthYear}
                   </p>
                 </td>
                 <td className="px-5 py-4">
@@ -827,13 +827,15 @@ function RegistryTable({
                         {patient.activeEpisode.titleFa}
                       </p>
                       <p className="mt-1 text-xs text-[var(--color-ink-soft)]">
-                        Target {patient.activeEpisode.weeklyTarget}/week · since{" "}
-                        {formatDate(patient.activeEpisode.startedAt)}
+                        {t.targetSince(
+                          patient.activeEpisode.weeklyTarget,
+                          formatDate(patient.activeEpisode.startedAt, dateLocale, t.unknownDate)
+                        )}
                       </p>
                     </>
                   ) : (
                     <span className="text-xs font-medium text-[var(--color-warn)]">
-                      No active episode
+                      {t.noActiveEpisode}
                     </span>
                   )}
                 </td>
@@ -846,13 +848,13 @@ function RegistryTable({
                     </ul>
                   ) : (
                     <span className="text-xs text-[var(--color-warn)]">
-                      Unassigned
+                      {t.unassigned}
                     </span>
                   )}
                 </td>
                 <td className="px-5 py-4 text-xs text-[var(--color-ink-soft)]">
                   <time dateTime={patient.createdAt}>
-                    {formatDate(patient.createdAt)}
+                    {formatDate(patient.createdAt, dateLocale, t.unknownDate)}
                   </time>
                 </td>
                 <td className="px-5 py-4">
@@ -863,7 +865,7 @@ function RegistryTable({
                     onClick={() => onManage(patient.id)}
                   >
                     <Icon name="edit" width={14} height={14} />
-                    Manage
+                    {t.manage}
                   </Button>
                 </td>
               </tr>
@@ -873,7 +875,7 @@ function RegistryTable({
       </div>
       <div className="flex flex-col gap-3 border-t border-[var(--color-border)] px-5 py-4 text-xs text-[var(--color-ink-soft)] sm:flex-row sm:items-center sm:justify-between">
         <p aria-live="polite">
-          Showing {first}–{last} of {total.toLocaleString("en-US")}
+          {t.showing(first, last, total)}
         </p>
         <div className="flex items-center gap-2">
           <Button
@@ -881,21 +883,21 @@ function RegistryTable({
             size="sm"
             disabled={page <= 1}
             onClick={() => onPageChange(page - 1)}
-            aria-label="Previous patient page"
+            aria-label={t.previousAria}
           >
-            Previous
+            {t.previous}
           </Button>
           <span>
-            Page {page} of {totalPages}
+            {t.pageOf(page, totalPages)}
           </span>
           <Button
             variant="secondary"
             size="sm"
             disabled={page >= totalPages}
             onClick={() => onPageChange(page + 1)}
-            aria-label="Next patient page"
+            aria-label={t.nextAria}
           >
-            Next
+            {t.next}
           </Button>
         </div>
       </div>
@@ -920,6 +922,9 @@ function PatientManagementPanel({
   onArchived: () => void;
   onClose: () => void;
 }) {
+  const t = useText(patientsText);
+  const { locale } = useLocale();
+  const dateLocale = intlLocale(locale);
   const [fullName, setFullName] = useState(patient.fullName);
   const [phone, setPhone] = useState(patient.phone ?? "");
   const [birthYear, setBirthYear] = useState(
@@ -959,8 +964,7 @@ function PatientManagementPanel({
     if (!ok) {
       setStatus({
         tone: "error",
-        message:
-          "The change was rejected. Check permissions, current episode state and database migration 015.",
+        message: t.changeRejected,
       });
       return;
     }
@@ -971,7 +975,7 @@ function PatientManagementPanel({
 
   async function saveDemographics(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const normalizedBirthYear = latinDigits(birthYear).trim();
+    const normalizedBirthYear = gregorianBirthYear(birthYear);
     await runAction(
       "demographics",
       () =>
@@ -979,10 +983,10 @@ function PatientManagementPanel({
           patientId: patient.id,
           fullName: compactSpaces(fullName),
           phone: latinDigits(phone).trim().replace(/[\s()-]/g, "") || null,
-          birthYear: normalizedBirthYear ? Number(normalizedBirthYear) : null,
+          birthYear: normalizedBirthYear,
           gender: gender || null,
         }),
-      "Patient demographics were updated."
+      t.demographicsSaved
     );
   }
 
@@ -991,8 +995,8 @@ function PatientManagementPanel({
       "assignment",
       () => setPatientPrimaryTherapist(patient.id, therapistId || null),
       therapistId
-        ? "Primary therapist assignment was updated."
-        : "The patient is now unassigned."
+        ? t.assignmentSaved
+        : t.nowUnassigned
     );
   }
 
@@ -1003,10 +1007,10 @@ function PatientManagementPanel({
       `episode-${statusValue}`,
       () => transitionCareEpisode(episode.id, statusValue),
       statusValue === "active"
-        ? "The care episode was resumed. A new prescription must be reviewed and published before patient exercises resume."
+        ? t.resumed
         : statusValue === "paused"
-          ? "The care episode was paused and its actionable prescription was revoked."
-          : "The care episode was completed and its clinical artifacts were closed."
+          ? t.paused
+          : t.completed
     );
   }
 
@@ -1024,7 +1028,7 @@ function PatientManagementPanel({
             ? therapistId || null
             : currentUserId,
         }),
-      "A new active care episode was created.",
+      t.episodeCreated,
       () => setEpisodeTitle("")
     );
   }
@@ -1035,8 +1039,7 @@ function PatientManagementPanel({
     if (!authorityAttested || (relationship !== "self" && !expiresOn)) {
       setStatus({
         tone: "error",
-        message:
-          "Confirm patient consent/legal authority and set an expiry for every delegate account.",
+        message: t.attestRequired,
       });
       return;
     }
@@ -1044,7 +1047,7 @@ function PatientManagementPanel({
     if (!mobile) {
       setStatus({
         tone: "error",
-        message: "Enter a valid Iranian mobile number, e.g. 0912 345 6789.",
+        message: t.invalidMobile,
       });
       return;
     }
@@ -1063,7 +1066,7 @@ function PatientManagementPanel({
     if (!invitation.ok) {
       setStatus({
         tone: "error",
-        message: inviteFailureMessage(invitation.reason),
+        message: inviteFailureMessage(invitation.reason, t),
       });
       return;
     }
@@ -1071,8 +1074,8 @@ function PatientManagementPanel({
       tone: "success",
       message:
         invitation.status === "created"
-          ? `A portal account was created for ${formatIranianMobile(mobile)} and linked. The patient signs in at /patient with this number and the SMS code.`
-          : `The existing portal account ${formatIranianMobile(mobile)} was linked. The patient signs in at /patient with this number and the SMS code.`,
+          ? t.linkedCreated(formatIranianMobile(mobile))
+          : t.linkedExisting(formatIranianMobile(mobile)),
     });
     setAuthorityAttested(false);
     onChanged();
@@ -1083,7 +1086,7 @@ function PatientManagementPanel({
       `revoke-${userId}`,
       () =>
         revokePatientAccountLink(patient.id, userId, revocationReason),
-      "Portal access was revoked immediately.",
+      t.revoked,
       () => setRevocationReason("")
     );
   }
@@ -1092,7 +1095,7 @@ function PatientManagementPanel({
     await runAction(
       "archive",
       () => archivePatientRecord(patient.id, archiveReason),
-      "Patient record was archived without deleting clinical history.",
+      t.archived,
       onArchived
     );
   }
@@ -1106,13 +1109,13 @@ function PatientManagementPanel({
   return (
     <Card>
       <CardHeader
-        title={`Manage ${patient.fullName}`}
-        subtitle="All lifecycle and portal changes are authorized and stamped by the database."
+        title={t.manageTitle(patient.fullName)}
+        subtitle={t.manageSubtitle}
         icon={<Icon name="edit" />}
         action={
           <Button type="button" size="sm" variant="ghost" onClick={onClose}>
             <Icon name="close" width={14} height={14} />
-            Close
+            {t.close}
           </Button>
         }
       />
@@ -1133,29 +1136,29 @@ function PatientManagementPanel({
 
         <section aria-labelledby="patient-demographics-heading">
           <h3 id="patient-demographics-heading" className="text-sm font-semibold">
-            Demographics
+            {t.demographics}
           </h3>
           <form onSubmit={saveDemographics} className="mt-3 grid gap-3 md:grid-cols-5">
-            <Field label="Full name" required>
+            <Field label={t.fullName} required>
               <Input value={fullName} onChange={(event) => setFullName(event.target.value)} maxLength={120} />
             </Field>
-            <Field label="Phone">
+            <Field label={t.phone}>
               <Input value={phone} onChange={(event) => setPhone(event.target.value)} inputMode="tel" maxLength={30} />
             </Field>
-            <Field label="Birth year">
+            <Field label={t.birthYear} hint={t.birthYearHint}>
               <Input value={birthYear} onChange={(event) => setBirthYear(event.target.value)} inputMode="numeric" maxLength={4} />
             </Field>
-            <Field label="Gender">
+            <Field label={t.gender}>
               <Select value={gender} onChange={(event) => setGender(event.target.value as "" | Gender)}>
-                <option value="">Not recorded</option>
-                <option value="female">Female</option>
-                <option value="male">Male</option>
-                <option value="other">Other</option>
+                <option value="">{t.notRecorded}</option>
+                <option value="female">{t.female}</option>
+                <option value="male">{t.male}</option>
+                <option value="other">{t.other}</option>
               </Select>
             </Field>
             <div className="flex items-end">
               <Button type="submit" size="sm" disabled={Boolean(busy)}>
-                {busy === "demographics" ? "Saving…" : "Save details"}
+                {busy === "demographics" ? t.saving : t.saveDetails}
               </Button>
             </div>
           </form>
@@ -1163,62 +1166,66 @@ function PatientManagementPanel({
 
         <section className="border-t border-[var(--color-border)] pt-5" aria-labelledby="assignment-heading">
           <h3 id="assignment-heading" className="text-sm font-semibold">
-            Therapist assignment
+            {t.therapistAssignment}
           </h3>
           {isOwner ? (
             <div className="mt-3 flex max-w-xl flex-col gap-3 sm:flex-row sm:items-end">
-              <Field label="Primary therapist">
+              <Field label={t.primaryTherapist}>
                 <Select value={therapistId} onChange={(event) => setTherapistId(event.target.value)}>
-                  <option value="">Unassigned</option>
+                  <option value="">{t.unassigned}</option>
                   {therapists.map((therapist) => (
                     <option key={therapist.id} value={therapist.id}>{therapist.fullName}</option>
                   ))}
                 </Select>
               </Field>
               <Button type="button" size="sm" disabled={Boolean(busy)} onClick={saveAssignment}>
-                {busy === "assignment" ? "Saving…" : "Update assignment"}
+                {busy === "assignment" ? t.saving : t.updateAssignment}
               </Button>
             </div>
           ) : (
             <p className="mt-2 text-sm text-[var(--color-ink-soft)]">
-              Only the clinic owner can reassign a patient.
+              {t.ownerOnlyReassign}
             </p>
           )}
         </section>
 
         <section className="border-t border-[var(--color-border)] pt-5" aria-labelledby="episode-heading">
-          <h3 id="episode-heading" className="text-sm font-semibold">Care episode</h3>
+          <h3 id="episode-heading" className="text-sm font-semibold">{t.careEpisode}</h3>
           {latestEpisode ? (
             <div className="mt-3 rounded-xl bg-[var(--color-surface-muted)] p-4">
               <p className="font-medium" dir="auto">{latestEpisode.titleFa}</p>
               <p className="mt-1 text-xs text-[var(--color-ink-soft)]">
-                Status: {latestEpisode.status} · target {latestEpisode.weeklyTarget}/week · started {formatDate(latestEpisode.startedAt)}
+                {t.episodeStatus(
+                  t.statuses[latestEpisode.status] ?? latestEpisode.status,
+                  latestEpisode.weeklyTarget,
+                  formatDate(latestEpisode.startedAt, dateLocale, t.unknownDate)
+                )}
               </p>
               <div className="mt-3 flex flex-wrap gap-2">
                 {latestEpisode.status === "active" && (
-                  <Button type="button" size="sm" variant="secondary" disabled={Boolean(busy)} onClick={() => changeEpisode("paused")}>Pause</Button>
+                  <Button type="button" size="sm" variant="secondary" disabled={Boolean(busy)} onClick={() => changeEpisode("paused")}>{t.pause}</Button>
                 )}
                 {latestEpisode.status === "paused" && (
-                  <Button type="button" size="sm" variant="secondary" disabled={Boolean(busy)} onClick={() => changeEpisode("active")}>Resume</Button>
+                  <Button type="button" size="sm" variant="secondary" disabled={Boolean(busy)} onClick={() => changeEpisode("active")}>{t.resume}</Button>
                 )}
                 {latestEpisode.status !== "completed" && (
-                  <Button type="button" size="sm" variant="danger" disabled={Boolean(busy)} onClick={() => changeEpisode("completed")}>Complete episode</Button>
+                  <Button type="button" size="sm" variant="danger" disabled={Boolean(busy)} onClick={() => changeEpisode("completed")}>{t.complete}</Button>
                 )}
               </div>
             </div>
           ) : (
-            <p className="mt-2 text-sm text-[var(--color-ink-soft)]">No care episode exists yet.</p>
+            <p className="mt-2 text-sm text-[var(--color-ink-soft)]">{t.noEpisode}</p>
           )}
           {!patient.activeEpisode && (
             <form onSubmit={createEpisode} className="mt-4 grid gap-3 md:grid-cols-[1fr_10rem_auto] md:items-end">
-              <Field label="New episode title" required>
+              <Field label={t.newEpisodeTitle} required>
                 <Input value={episodeTitle} onChange={(event) => setEpisodeTitle(event.target.value)} maxLength={160} dir="auto" />
               </Field>
-              <Field label="Weekly target" required hint="1–7 days">
+              <Field label={t.weeklyTarget} required hint={t.daysHint}>
                 <Input value={weeklyTarget} onChange={(event) => setWeeklyTarget(event.target.value)} inputMode="numeric" maxLength={1} />
               </Field>
               <Button type="submit" size="sm" disabled={Boolean(busy)}>
-                {busy === "new-episode" ? "Starting…" : "Start new episode"}
+                {busy === "new-episode" ? t.starting : t.startEpisode}
               </Button>
             </form>
           )}
@@ -1226,43 +1233,43 @@ function PatientManagementPanel({
 
         {isOwner && (
           <section className="border-t border-[var(--color-border)] pt-5" aria-labelledby="portal-access-heading">
-            <h3 id="portal-access-heading" className="text-sm font-semibold">Patient portal access</h3>
+            <h3 id="portal-access-heading" className="text-sm font-semibold">{t.portalAccess}</h3>
             <p className="mt-1 text-xs text-[var(--color-ink-soft)]">
-              The patient (or delegate) signs in at /patient with this mobile number and an SMS code; no email or password is needed. Link only after verifying the number and recording patient consent or legal authority. Delegate access must expire within one year.
+              {t.portalHint}
             </p>
             <form onSubmit={sendInvitation} className="mt-3 grid gap-3 md:grid-cols-3">
-              <Field label="Mobile number" required hint="Iranian mobile, e.g. 0912 345 6789">
+              <Field label={t.mobile} required hint={t.mobileHint}>
                 <Input type="tel" inputMode="tel" dir="ltr" value={invitePhone} onChange={(event) => setInvitePhone(event.target.value)} maxLength={20} autoComplete="off" placeholder="09123456789" />
               </Field>
-              <Field label="Relationship" required>
+              <Field label={t.relationship} required>
                 <Select value={relationship} onChange={(event) => setRelationship(event.target.value as PatientAccountRelationship)}>
-                  <option value="self">Patient themself</option>
-                  <option value="parent">Parent</option>
-                  <option value="guardian">Legal guardian</option>
-                  <option value="caregiver">Caregiver</option>
+                  <option value="self">{t.relationships.self}</option>
+                  <option value="parent">{t.relationships.parent}</option>
+                  <option value="guardian">{t.relationships.guardian}</option>
+                  <option value="caregiver">{t.relationships.caregiver}</option>
                 </Select>
               </Field>
-              <Field label={relationship === "self" ? "Expiry (optional)" : "Expiry (required)"}>
+              <Field label={relationship === "self" ? t.expiryOptional : t.expiryRequired}>
                 <Input type="date" value={expiresOn} onChange={(event) => setExpiresOn(event.target.value)} required={relationship !== "self"} />
               </Field>
               <label className="flex items-start gap-2 text-xs text-[var(--color-ink-soft)] md:col-span-2">
                 <input type="checkbox" checked={authorityAttested} onChange={(event) => setAuthorityAttested(event.target.checked)} className="mt-0.5" />
-                I verified this mobile number and attest that patient consent or valid legal authority is recorded outside this application.
+                {t.attest}
               </label>
               <div className="flex justify-end">
                 <Button type="submit" size="sm" disabled={Boolean(busy) || !authorityAttested}>
                   <Icon name="send" width={14} height={14} />
-                  {busy === "invite" ? "Linking…" : "Link portal account"}
+                  {busy === "invite" ? t.linking : t.link}
                 </Button>
               </div>
             </form>
 
             <div className="mt-5 space-y-3">
-              <Field label="Reason required before revoking access">
+              <Field label={t.revokeReason}>
                 <Input value={revocationReason} onChange={(event) => setRevocationReason(event.target.value)} maxLength={1000} />
               </Field>
               {activeLinks.length === 0 ? (
-                <p className="text-sm text-[var(--color-ink-soft)]">No active portal account.</p>
+                <p className="text-sm text-[var(--color-ink-soft)]">{t.noActivePortal}</p>
               ) : (
                 <ul className="space-y-2">
                   {activeLinks.map((link) => (
@@ -1272,11 +1279,14 @@ function PatientManagementPanel({
                           {link.phone ? formatIranianMobile(link.phone) : link.email ?? link.fullName}
                         </p>
                         <p className="text-xs text-[var(--color-ink-soft)]">
-                          {link.relationship}{link.expiresAt ? ` · expires ${formatDate(link.expiresAt)}` : " · no expiry"}
+                          {t.relationships[link.relationship] ?? link.relationship}
+                          {link.expiresAt
+                            ? t.expires(formatDate(link.expiresAt, dateLocale, t.unknownDate))
+                            : t.noExpiry}
                         </p>
                       </div>
                       <Button type="button" size="sm" variant="danger" disabled={Boolean(busy) || revocationReason.trim().length < 3} onClick={() => revokeLink(link.userId)}>
-                        Revoke access
+                        {t.revoke}
                       </Button>
                     </li>
                   ))}
@@ -1288,16 +1298,16 @@ function PatientManagementPanel({
 
         {isOwner && !patient.activeEpisode && (
           <section className="border-t border-[var(--color-border)] pt-5" aria-labelledby="archive-heading">
-            <h3 id="archive-heading" className="text-sm font-semibold text-[var(--color-danger)]">Archive patient record</h3>
+            <h3 id="archive-heading" className="text-sm font-semibold text-[var(--color-danger)]">{t.archiveTitle}</h3>
             <p className="mt-1 text-xs text-[var(--color-ink-soft)]">
-              Archiving retains clinical history, removes assignments and revokes portal access. The database refuses this while alerts are unresolved.
+              {t.archiveHint}
             </p>
             <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end">
-              <Field label="Archive reason" required>
+              <Field label={t.archiveReason} required>
                 <Textarea value={archiveReason} onChange={(event) => setArchiveReason(event.target.value)} maxLength={1000} />
               </Field>
               <Button type="button" size="sm" variant="danger" disabled={Boolean(busy) || archiveReason.trim().length < 3} onClick={archivePatient}>
-                {busy === "archive" ? "Archiving…" : "Archive record"}
+                {busy === "archive" ? t.archiving : t.archive}
               </Button>
             </div>
           </section>

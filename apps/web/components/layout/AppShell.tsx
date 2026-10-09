@@ -99,7 +99,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           className="fixed inset-0 z-40 lg:hidden"
           role="dialog"
           aria-modal="true"
-          aria-label="Navigation menu"
+          aria-label={t("shell.menu")}
         >
           <div
             aria-hidden="true"
@@ -118,7 +118,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 menuButtonRef.current?.focus();
               }}
               className="absolute end-3 top-3 z-10 grid h-9 w-9 place-items-center rounded-lg text-[var(--color-ink-soft)] hover:bg-[var(--color-surface-muted)]"
-              aria-label="Close menu"
+              aria-label={t("shell.closeMenu")}
             >
               <Icon name="close" />
             </button>
@@ -135,7 +135,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             type="button"
             onClick={() => setMobileOpen(true)}
             className="grid h-9 w-9 place-items-center rounded-lg text-[var(--color-ink-soft)] hover:bg-[var(--color-surface-muted)] lg:hidden"
-            aria-label="Open menu"
+            aria-label={t("shell.openMenu")}
           >
             <Icon name="menu" />
           </button>
@@ -153,7 +153,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <select
             value={locale}
             onChange={(e) => setLocale(e.target.value as Locale)}
-            aria-label="Language"
+            aria-label={t("shell.language")}
             className="rounded-lg border border-[var(--color-border)] bg-white px-2 py-1.5 text-xs text-[var(--color-ink-soft)] focus:border-[var(--color-primary)] focus:outline-none"
           >
             {locales.map((l) => (
@@ -177,12 +177,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <select
               value={activeClinicId ?? ""}
               onChange={(event) => setActiveClinicId(event.target.value)}
-              aria-label="Active clinic"
+              aria-label={t("shell.activeClinic")}
               className="max-w-44 rounded-lg border border-[var(--color-border)] bg-white px-2 py-1.5 text-xs text-[var(--color-ink-soft)] focus:border-[var(--color-primary)] focus:outline-none"
             >
               {profile.clinics.length > 1 && (
                 <option value="" disabled>
-                  Select clinic
+                  {t("shell.selectClinic")}
                 </option>
               )}
               {profile.clinics.map((clinic) => (

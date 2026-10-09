@@ -10,17 +10,25 @@ import type {
   PatientCase,
   PatientRegistryItem,
 } from "@/lib/types";
-import { bodyRegions } from "@/lib/data/bodyRegions";
+import { localizedRegions } from "@/lib/data/bodyRegionsFa";
 import { Card, CardBody, CardHeader } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Field, Input, Select, Textarea } from "@/components/ui/Form";
 import { Icon } from "@/components/ui/Icon";
 import { PageIntro, Disclaimer, Spinner } from "@/components/ui/Misc";
 import { uuid } from "@/lib/utils";
-import { redFlags, redFlagCategories } from "@/lib/data/redFlags";
+import {
+  localizedRedFlag,
+  redFlagCategories,
+  redFlagCategoryLabel,
+  redFlags,
+} from "@/lib/data/redFlags";
 import { evaluateSafetyScreen } from "@/lib/clinical/safety";
 import { isMockMode } from "@/lib/config";
 import { fetchPatientRegistry } from "@/lib/supabase/db";
+import { useLocale } from "@/lib/store/LocaleContext";
+import { useText } from "@/lib/i18n/text";
+import { newCaseText } from "./text";
 
 const emptyForm = {
   name: "",
@@ -82,6 +90,8 @@ export default function NewCasePage() {
   const router = useRouter();
   const { addCase } = useCases();
   const { profile, activeClinicId, loading: authLoading } = useAuth();
+  const { locale } = useLocale();
+  const t = useText(newCaseText);
   const [storedForm, setStoredForm] = useState<FormState>(emptyForm);
   const [draftClinicId, setDraftClinicId] = useState<string | null>(null);
   const [errors, setErrors] = useState<Errors>({});
@@ -163,8 +173,7 @@ export default function NewCasePage() {
           key,
           patients: [],
           loading: false,
-          error:
-            "Patient registry could not be loaded. Check the connection and your clinic access, then retry.",
+          error: "load_failed",
         });
         return;
       }
@@ -251,14 +260,12 @@ export default function NewCasePage() {
     );
     if (!patient || patient.clinicId !== activeClinicId) {
       resetDraft(true);
-      setPatientSelectionError("Select a patient from the active clinic.");
+      setPatientSelectionError(t.selectFromClinic);
       return;
     }
     if (!patient.activeEpisode) {
       resetDraft(true);
-      setPatientSelectionError(
-        "This patient has no active care episode. Open the registry and create or reactivate an episode first."
-      );
+      setPatientSelectionError(t.noActiveEpisode);
       return;
     }
 
@@ -293,16 +300,14 @@ export default function NewCasePage() {
 
   function validate(): boolean {
     const next: Errors = {};
-    if (!form.name.trim()) next.name = "Patient name is required.";
+    if (!form.name.trim()) next.name = t.nameRequired;
     if (form.age && (Number(form.age) < 0 || Number(form.age) > 120))
-      next.age = "Enter a valid age (0–120).";
+      next.age = t.ageInvalid;
     if (!form.mainComplaint.trim())
-      next.mainComplaint = "Main complaint is required.";
-    if (!form.region) next.region = "Select a body region.";
+      next.mainComplaint = t.complaintRequired;
+    if (!form.region) next.region = t.regionRequired;
     if (!safetyScreenCompleted) {
-      updateSafetyError(
-        "Complete the structured red-flag screen before creating the case."
-      );
+      updateSafetyError(t.screenRequired);
     } else {
       updateSafetyError(null);
     }
@@ -314,9 +319,7 @@ export default function NewCasePage() {
           selectedRegistryPatient.activeEpisode
       );
       if (!validPatientLink) {
-        setPatientSelectionError(
-          "Select a registry patient with an active care episode before creating the case."
-        );
+        setPatientSelectionError(t.patientRequired);
       } else {
         setPatientSelectionError(null);
       }
@@ -378,16 +381,14 @@ export default function NewCasePage() {
     if (!ok) {
       // Keep the form exactly as typed — nothing is lost on a failed save.
       setSubmitting(false);
-      setSaveError(
-        "Save failed — your input has been kept. Check the connection (or that your account belongs to a clinic) and try again."
-      );
+      setSaveError(t.saveFailed);
       return;
     }
     router.push("/case-analysis");
   }
 
   if (!isMockMode && authLoading) {
-    return <Spinner label="Loading patient registry…" />;
+    return <Spinner label={t.loadingRegistry} />;
   }
 
   if (!isMockMode && !canLinkPatient) {
@@ -395,7 +396,7 @@ export default function NewCasePage() {
       <Card>
         <CardBody>
           <p role="alert" className="text-sm text-[var(--color-danger)]">
-            Only a clinic owner or therapist may create a clinical case.
+            {t.roleRequired}
           </p>
         </CardBody>
       </Card>
@@ -405,24 +406,24 @@ export default function NewCasePage() {
   return (
     <div className="space-y-6">
       <PageIntro
-        title="New Patient Case"
-        description="Capture the subjective interview in a structured format. Required fields are marked; everything else can be completed later."
+        title={t.title}
+        description={t.intro}
       />
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {!isMockMode && (
           <Card>
             <CardHeader
-              title="Link registry patient"
-              subtitle="Real clinical cases must belong to one patient and that patient’s active care episode."
+              title={t.linkTitle}
+              subtitle={t.linkSubtitle}
               icon={<Icon name="user" width={18} height={18} />}
             />
             <CardBody className="space-y-4">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
                 <div className="flex-1">
                   <Field
-                    label="Search patient name"
-                    hint={`Showing at most ${REGISTRY_PAGE_SIZE} matches from the active clinic.`}
+                    label={t.searchName}
+                    hint={t.searchHint(REGISTRY_PAGE_SIZE)}
                   >
                     <Input
                       value={scopedLookupQuery.draft}
@@ -440,7 +441,7 @@ export default function NewCasePage() {
                           applyPatientSearch();
                         }
                       }}
-                      placeholder="Type a patient name"
+                      placeholder={t.searchPlaceholder}
                     />
                   </Field>
                 </div>
@@ -450,18 +451,18 @@ export default function NewCasePage() {
                   onClick={applyPatientSearch}
                   disabled={scopedLookup.loading}
                 >
-                  Search
+                  {t.search}
                 </Button>
               </div>
 
               {scopedLookup.loading ? (
-                <Spinner label="Loading patients…" />
+                <Spinner label={t.loadingPatients} />
               ) : scopedLookup.error ? (
                 <div
                   role="alert"
                   className="rounded-xl bg-[var(--color-danger-soft)] px-4 py-3 text-sm text-[var(--color-danger)]"
                 >
-                  <p>{scopedLookup.error}</p>
+                  <p>{t.registryFailed}</p>
                   <Button
                     type="button"
                     size="sm"
@@ -469,7 +470,7 @@ export default function NewCasePage() {
                     className="mt-3"
                     onClick={() => setLookupRetryToken((value) => value + 1)}
                   >
-                    Retry
+                    {t.retry}
                   </Button>
                 </div>
               ) : scopedLookup.patients.length === 0 ? (
@@ -477,12 +478,11 @@ export default function NewCasePage() {
                   role="status"
                   className="rounded-xl bg-[var(--color-surface-muted)] px-4 py-3 text-sm text-[var(--color-ink-soft)]"
                 >
-                  No matching patient was found. Create the patient and first
-                  care episode in Patient Registry, then return here.
+                  {t.noMatch}
                 </p>
               ) : (
                 <Field
-                  label="Patient and active episode"
+                  label={t.patientEpisode}
                   required
                   error={patientSelectionError ?? undefined}
                 >
@@ -490,10 +490,10 @@ export default function NewCasePage() {
                     value={selectedRegistryPatient?.id ?? ""}
                     onChange={(event) => choosePatient(event.target.value)}
                   >
-                    <option value="">Select a patient…</option>
+                    <option value="">{t.selectPatient}</option>
                     {scopedLookup.patients.map((patient) => (
                       <option key={patient.id} value={patient.id}>
-                        {patient.fullName} — {patient.activeEpisode?.titleFa ?? "no active episode"}
+                        {patient.fullName} — {patient.activeEpisode?.titleFa ?? t.noActiveEpisodeShort}
                       </option>
                     ))}
                   </Select>
@@ -505,8 +505,10 @@ export default function NewCasePage() {
                   role="status"
                   className="rounded-xl bg-[var(--color-success-soft)] px-4 py-3 text-sm text-[var(--color-success)]"
                 >
-                  Linked to {selectedRegistryPatient.fullName} · episode: {" "}
-                  {selectedRegistryPatient.activeEpisode.titleFa}
+                  {t.linkedTo(
+                    selectedRegistryPatient.fullName,
+                    selectedRegistryPatient.activeEpisode.titleFa
+                  )}
                 </p>
               )}
               {patientSelectionError && scopedLookup.patients.length === 0 && (
@@ -520,48 +522,48 @@ export default function NewCasePage() {
 
         <Card>
           <CardHeader
-            title="Patient Details"
+            title={t.details}
             icon={<Icon name="user" width={18} height={18} />}
           />
           <CardBody className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <Field label="Patient name" required error={errors.name}>
+            <Field label={t.patientName} required error={errors.name}>
               <Input
                 value={form.name}
                 onChange={(e) => set("name", e.target.value)}
-                placeholder="e.g. Sara Ahmadi"
+                placeholder={t.namePlaceholder}
                 disabled={!isMockMode}
               />
             </Field>
-            <Field label="Age" error={errors.age}>
+            <Field label={t.age} error={errors.age}>
               <Input
                 type="number"
                 min={0}
                 max={120}
                 value={form.age}
                 onChange={(e) => set("age", e.target.value)}
-                placeholder="e.g. 42"
+                placeholder={t.agePlaceholder}
                 disabled={!isMockMode}
               />
             </Field>
-            <Field label="Gender">
+            <Field label={t.gender}>
               <Select
                 value={form.gender}
                 onChange={(e) => set("gender", e.target.value as Gender)}
                 disabled={!isMockMode}
               >
-                <option value="">Select…</option>
-                <option value="female">Female</option>
-                <option value="male">Male</option>
-                <option value="other">Other</option>
+                <option value="">{t.select}</option>
+                <option value="female">{t.female}</option>
+                <option value="male">{t.male}</option>
+                <option value="other">{t.other}</option>
               </Select>
             </Field>
-            <Field label="Body region" required error={errors.region}>
+            <Field label={t.region} required error={errors.region}>
               <Select
                 value={form.region}
                 onChange={(e) => set("region", e.target.value as BodyRegionId)}
               >
-                <option value="">Select…</option>
-                {bodyRegions.map((r) => (
+                <option value="">{t.select}</option>
+                {localizedRegions(locale).map((r) => (
                   <option key={r.id} value={r.id}>
                     {r.label}
                   </option>
@@ -573,35 +575,35 @@ export default function NewCasePage() {
 
         <Card>
           <CardHeader
-            title="Presenting Problem"
+            title={t.presenting}
             icon={<Icon name="analysis" width={18} height={18} />}
           />
           <CardBody className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="sm:col-span-2">
-              <Field label="Main complaint" required error={errors.mainComplaint}>
+              <Field label={t.mainComplaint} required error={errors.mainComplaint}>
                 <Textarea
                   value={form.mainComplaint}
                   onChange={(e) => set("mainComplaint", e.target.value)}
-                  placeholder="In the patient's words — e.g. low back pain radiating to the right buttock"
+                  placeholder={t.complaintPlaceholder}
                 />
               </Field>
             </div>
-            <Field label="Pain location">
+            <Field label={t.painLocation}>
               <Input
                 value={form.painLocation}
                 onChange={(e) => set("painLocation", e.target.value)}
-                placeholder="e.g. Lower back, right side"
+                placeholder={t.painLocationPlaceholder}
               />
             </Field>
-            <Field label="Duration of symptoms">
+            <Field label={t.duration}>
               <Input
                 value={form.duration}
                 onChange={(e) => set("duration", e.target.value)}
-                placeholder="e.g. 8 weeks"
+                placeholder={t.durationPlaceholder}
               />
             </Field>
             <div className="sm:col-span-2">
-              <Field label={`Pain intensity — ${form.painIntensity}/10`}>
+              <Field label={t.painIntensity(form.painIntensity)}>
                 <div className="flex items-center gap-3">
                   <span className="text-xs text-[var(--color-ink-faint)]">0</span>
                   <input
@@ -616,32 +618,32 @@ export default function NewCasePage() {
                 </div>
               </Field>
             </div>
-            <Field label="Mechanism of injury / onset">
+            <Field label={t.mechanism}>
               <Input
                 value={form.mechanism}
                 onChange={(e) => set("mechanism", e.target.value)}
-                placeholder="e.g. Gradual onset after desk work"
+                placeholder={t.mechanismPlaceholder}
               />
             </Field>
-            <Field label="Aggravating factors">
+            <Field label={t.aggravating}>
               <Input
                 value={form.aggravating}
                 onChange={(e) => set("aggravating", e.target.value)}
-                placeholder="e.g. Sitting > 30 min, bending"
+                placeholder={t.aggravatingPlaceholder}
               />
             </Field>
-            <Field label="Easing factors">
+            <Field label={t.easing}>
               <Input
                 value={form.easing}
                 onChange={(e) => set("easing", e.target.value)}
-                placeholder="e.g. Walking, lying down"
+                placeholder={t.easingPlaceholder}
               />
             </Field>
-            <Field label="Functional limitations">
+            <Field label={t.functional}>
               <Input
                 value={form.functionalLimitations}
                 onChange={(e) => set("functionalLimitations", e.target.value)}
-                placeholder="e.g. Cannot sit through a work day"
+                placeholder={t.functionalPlaceholder}
               />
             </Field>
           </CardBody>
@@ -649,48 +651,48 @@ export default function NewCasePage() {
 
         <Card>
           <CardHeader
-            title="History & Context"
+            title={t.history}
             icon={<Icon name="clock" width={18} height={18} />}
           />
           <CardBody className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Field label="Medical history">
+            <Field label={t.medicalHistory}>
               <Textarea
                 value={form.medicalHistory}
                 onChange={(e) => set("medicalHistory", e.target.value)}
-                placeholder="e.g. Hypertension, diabetes…"
+                placeholder={t.medicalPlaceholder}
                 className="min-h-20"
               />
             </Field>
-            <Field label="Surgical history">
+            <Field label={t.surgicalHistory}>
               <Textarea
                 value={form.surgicalHistory}
                 onChange={(e) => set("surgicalHistory", e.target.value)}
-                placeholder="e.g. Left TKA 3 weeks ago"
+                placeholder={t.surgicalPlaceholder}
                 className="min-h-20"
               />
             </Field>
-            <Field label="Imaging findings">
+            <Field label={t.imaging}>
               <Textarea
                 value={form.imaging}
                 onChange={(e) => set("imaging", e.target.value)}
-                placeholder="e.g. MRI: L4-L5 disc bulge / Not performed"
+                placeholder={t.imagingPlaceholder}
                 className="min-h-20"
               />
             </Field>
-            <Field label="Current medications">
+            <Field label={t.medications}>
               <Textarea
                 value={form.medications}
                 onChange={(e) => set("medications", e.target.value)}
-                placeholder="e.g. Ibuprofen as needed"
+                placeholder={t.medicationsPlaceholder}
                 className="min-h-20"
               />
             </Field>
             <div className="sm:col-span-2">
-              <Field label="Patient goal" hint="What does the patient want to get back to?">
+              <Field label={t.goal} hint={t.goalHint}>
                 <Input
                   value={form.patientGoal}
                   onChange={(e) => set("patientGoal", e.target.value)}
-                  placeholder="e.g. Return to pain-free desk work and gym"
+                  placeholder={t.goalPlaceholder}
                 />
               </Field>
             </div>
@@ -699,8 +701,8 @@ export default function NewCasePage() {
 
         <Card>
           <CardHeader
-            title="Clinical Safety Screen"
-            subtitle="Record every item that is present. Unchecked is not considered a negative screen until you explicitly complete it."
+            title={t.safetyTitle}
+            subtitle={t.safetySubtitle}
             icon={<Icon name="shield" width={18} height={18} />}
           />
           <CardBody className="space-y-5">
@@ -708,11 +710,12 @@ export default function NewCasePage() {
               {redFlagCategories.map((category) => (
                 <fieldset key={category} className="rounded-xl border border-[var(--color-border)] p-3">
                   <legend className="px-1 text-xs font-semibold text-[var(--color-ink)]">
-                    {category}
+                    {redFlagCategoryLabel(category, locale)}
                   </legend>
                   <div className="space-y-1.5">
                     {redFlags
                       .filter((flag) => flag.category === category)
+                      .map((source) => localizedRedFlag(source, locale))
                       .map((flag) => {
                         const selected = selectedRedFlags.has(flag.id);
                         return (
@@ -730,7 +733,7 @@ export default function NewCasePage() {
                               updateSafetyCompleted(false);
                               updateSafetyError(null);
                             }}
-                            className={`flex w-full items-start gap-2 rounded-lg px-2 py-2 text-left text-xs ${
+                            className={`flex w-full items-start gap-2 rounded-lg px-2 py-2 text-start text-xs ${
                               selected
                                 ? "bg-[var(--color-danger-soft)] text-[var(--color-danger)]"
                                 : "hover:bg-[var(--color-surface-muted)] text-[var(--color-ink-soft)]"
@@ -758,7 +761,7 @@ export default function NewCasePage() {
 
             {selectedRedFlags.size > 0 && (
               <p role="alert" className="rounded-xl bg-[var(--color-danger-soft)] px-4 py-3 text-sm text-[var(--color-danger)]">
-                One or more safety concerns are present. Document and complete the appropriate medical referral before treatment advice is generated.
+                {t.concernsPresent}
               </p>
             )}
 
@@ -773,7 +776,7 @@ export default function NewCasePage() {
                 }}
               />
               <span>
-                I completed this structured screen and understand that selected concerns require medical escalation; an empty screen does not replace clinical judgement.
+                {t.screenAttest}
               </span>
             </label>
             {safetyError && (
@@ -798,11 +801,11 @@ export default function NewCasePage() {
             variant="secondary"
             onClick={() => resetDraft(true)}
           >
-            Clear form
+            {t.clear}
           </Button>
           <Button type="submit" disabled={submitting}>
-            {submitting ? "Creating…" : "Create case & analyse"}
-            <Icon name="arrow" width={16} height={16} />
+            {submitting ? t.creating : t.create}
+            <Icon name="arrow" width={16} height={16} className="rtl:rotate-180" />
           </Button>
         </div>
       </form>

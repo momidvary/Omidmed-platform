@@ -1,7 +1,15 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { redFlags, redFlagCategories } from "@/lib/data/redFlags";
+import {
+  localizedRedFlag,
+  redFlagCategories,
+  redFlagCategoryLabel,
+  redFlags,
+} from "@/lib/data/redFlags";
+import { useLocale } from "@/lib/store/LocaleContext";
+import { intlLocale, useText } from "@/lib/i18n/text";
+import { redFlagsText } from "./text";
 import { Card, CardBody, CardHeader } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -29,32 +37,6 @@ const dispositionTone: Record<
   emergency: "danger",
 };
 
-const dispositionCopy: Record<
-  CompletedDisposition,
-  { title: string; detail: string }
-> = {
-  clear: {
-    title: "Screen completed with no concerns selected",
-    detail:
-      "This does not rule out serious pathology. Continue the clinical examination and repeat screening if the presentation changes.",
-  },
-  "medical-review": {
-    title: "Medical review is required before treatment planning",
-    detail:
-      "Do not interpret this checklist as a diagnosis. Document the finding and follow the appropriate local referral pathway.",
-  },
-  urgent: {
-    title: "Urgent clinical escalation is required",
-    detail:
-      "Pause treatment advice and arrange prompt medical assessment using the applicable local pathway. Do not delay escalation to finish this checklist.",
-  },
-  emergency: {
-    title: "Possible emergency — arrange immediate assessment",
-    detail:
-      "Stop treatment activity and follow the local emergency pathway now. Do not leave the patient waiting on an app or routine message.",
-  },
-};
-
 export default function RedFlagCheckerPage() {
   const {
     cases,
@@ -66,6 +48,10 @@ export default function RedFlagCheckerPage() {
     loadError,
     reloadCases,
   } = useCases();
+  const { locale } = useLocale();
+  const t = useText(redFlagsText);
+  const dispositionCopy = t.copy;
+  const when = (value: string) => new Date(value).toLocaleString(intlLocale(locale));
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [phase, setPhase] = useState<ScreenPhase>("not-started");
   const [reviewConfirmed, setReviewConfirmed] = useState(false);
@@ -76,8 +62,11 @@ export default function RedFlagCheckerPage() {
   const [saveError, setSaveError] = useState<string | null>(null);
 
   const selectedItems = useMemo(
-    () => redFlags.filter((r) => selected.has(r.id)),
-    [selected]
+    () =>
+      redFlags
+        .filter((r) => selected.has(r.id))
+        .map((item) => localizedRedFlag(item, locale)),
+    [selected, locale]
   );
 
   const provisionalDisposition = useMemo(
@@ -132,7 +121,7 @@ export default function RedFlagCheckerPage() {
     return (
       !hasUnsavedDraft ||
       window.confirm(
-        "Discard this unsaved safety-screen draft? Selected findings and notes will be lost."
+        t.discardConfirm
       )
     );
   }
@@ -144,9 +133,7 @@ export default function RedFlagCheckerPage() {
   async function completeScreen() {
     if (!reviewConfirmed || !currentCase || saving) return;
     if (selected.size > 0 && actionTaken.trim().length < 3) {
-      setSaveError(
-        "Document the referral or escalation action before saving a concern."
-      );
+      setSaveError(t.actionRequired);
       return;
     }
     setSaving(true);
@@ -158,9 +145,7 @@ export default function RedFlagCheckerPage() {
     });
     setSaving(false);
     if (!saved) {
-      setSaveError(
-        "The safety screen was not saved. The case has not been cleared; check your connection and access, then retry."
-      );
+      setSaveError(t.notSaved);
       return;
     }
     setPhase("completed");
@@ -170,8 +155,8 @@ export default function RedFlagCheckerPage() {
   return (
     <div className="space-y-6">
       <PageIntro
-        title="Red Flag Checker"
-        description="Screen for signs of serious pathology. Select every item that applies to the patient in front of you."
+        title={t.title}
+        description={t.intro}
         action={
           phase !== "not-started" || selected.size > 0 ? (
             <Button
@@ -180,7 +165,7 @@ export default function RedFlagCheckerPage() {
               onClick={clearDraft}
               disabled={saving}
             >
-              Clear draft
+              {t.clearDraft}
             </Button>
           ) : undefined
         }
@@ -194,8 +179,7 @@ export default function RedFlagCheckerPage() {
               className="rounded-xl border border-[var(--color-danger)]/40 bg-[var(--color-danger-soft)] px-4 py-3 text-sm text-[var(--color-danger)]"
             >
               <p>
-                Patient cases could not be loaded securely. This is a connection
-                or access error, not an empty case list.
+                {t.loadError}
               </p>
               <Button
                 type="button"
@@ -204,12 +188,12 @@ export default function RedFlagCheckerPage() {
                 className="mt-3"
                 onClick={reloadCases}
               >
-                Retry case list
+                {t.retryCases}
               </Button>
             </div>
           )}
           <label className="block text-sm font-semibold text-[var(--color-ink)]">
-            Patient case
+            {t.patientCase}
             <select
               value={currentCaseId ?? ""}
               onChange={(event) => {
@@ -224,12 +208,12 @@ export default function RedFlagCheckerPage() {
             >
               <option value="">
                 {!hydrated
-                  ? "Loading cases…"
+                  ? t.loadingCases
                   : loadError
-                    ? "Cases could not be loaded"
+                    ? t.casesFailed
                   : cases.length === 0
-                    ? "No accessible cases"
-                    : "Select a case"}
+                    ? t.noCases
+                    : t.selectCase}
               </option>
               {cases.map((patientCase) => (
                 <option key={patientCase.id} value={patientCase.id}>
@@ -240,7 +224,7 @@ export default function RedFlagCheckerPage() {
           </label>
           {currentCase ? (
             <div className="flex flex-wrap items-center gap-2 text-xs text-[var(--color-ink-soft)]">
-              <span>Current stored safety state:</span>
+              <span>{t.storedState}</span>
               <Badge
                 tone={
                   dispositionTone[
@@ -248,20 +232,17 @@ export default function RedFlagCheckerPage() {
                   ]
                 }
               >
-                {currentCase.safetyScreen?.disposition ?? "not-screened"}
+                {t.dispositions[currentCase.safetyScreen?.disposition ?? "not-screened"]}
               </Badge>
               {currentCase.safetyScreen?.screenedAt && (
                 <span>
-                  {new Date(
-                    currentCase.safetyScreen.screenedAt
-                  ).toLocaleString()}
+                  {when(currentCase.safetyScreen.screenedAt)}
                 </span>
               )}
             </div>
           ) : (
             <p className="text-xs text-[var(--color-ink-faint)]">
-              Select the exact patient case before reviewing the checklist. No
-              result is stored without an explicit case.
+              {t.selectFirst}
             </p>
           )}
         </CardBody>
@@ -314,7 +295,7 @@ export default function RedFlagCheckerPage() {
             </p>
             {completedAt && (
               <p className="mt-2 text-[11px] text-[var(--color-ink-faint)]">
-                Completed {new Date(completedAt).toLocaleString()}
+                {t.completed(when(completedAt))}
               </p>
             )}
             {selectedItems.length > 0 && (
@@ -361,12 +342,15 @@ export default function RedFlagCheckerPage() {
           </span>
           <div>
             <p className="text-sm font-semibold text-[var(--color-ink)]">
-              Safety screen not completed
+              {t.notCompleted}
             </p>
             <p className="mt-1 text-xs leading-relaxed text-[var(--color-ink-soft)]">
               {selectedItems.length > 0
-                ? `${selectedItems.length} concern${selectedItems.length > 1 ? "s are" : " is"} currently selected. ${dispositionCopy[displayedDisposition].title}. Completion is not permission to delay the indicated referral.`
-                : "Unselected items are currently unknown, not confirmed absent. Review every item, then complete the attestation below."}
+                ? t.concernsSelected(
+                    selectedItems.length,
+                    dispositionCopy[displayedDisposition as keyof typeof dispositionCopy].title
+                  )
+                : t.unknownItems}
             </p>
           </div>
         </div>
@@ -377,12 +361,13 @@ export default function RedFlagCheckerPage() {
         {redFlagCategories.map((category) => (
           <Card key={category}>
             <CardHeader
-              title={category}
+              title={redFlagCategoryLabel(category, locale)}
               icon={<Icon name="flag" width={18} height={18} />}
             />
             <CardBody className="space-y-1.5">
               {redFlags
                 .filter((r) => r.category === category)
+                .map((source) => localizedRedFlag(source, locale))
                 .map((item) => {
                   const checked = selected.has(item.id);
                   return (
@@ -433,19 +418,19 @@ export default function RedFlagCheckerPage() {
         <CardBody className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2">
             <label className="block text-sm font-medium text-[var(--color-ink)]">
-              Clinical notes (optional)
+              {t.notes}
               <textarea
                 value={notes}
                 onChange={(event) => setNotes(event.target.value)}
                 maxLength={10000}
                 rows={4}
                 disabled={!currentCase || saving || phase === "completed"}
-                placeholder="Relevant context from this assessment"
+                placeholder={t.notesPlaceholder}
                 className="mt-2 w-full rounded-xl border border-[var(--color-border)] bg-white px-3 py-2.5 text-sm font-normal outline-none focus:border-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-60"
               />
             </label>
             <label className="block text-sm font-medium text-[var(--color-ink)]">
-              Referral / escalation action
+              {t.action}
               <textarea
                 value={actionTaken}
                 onChange={(event) => setActionTaken(event.target.value)}
@@ -455,14 +440,14 @@ export default function RedFlagCheckerPage() {
                 disabled={!currentCase || saving || phase === "completed"}
                 placeholder={
                   selected.size > 0
-                    ? "Required: document the action taken now"
-                    : "Not required when the completed screen is clear"
+                    ? t.actionPlaceholderRequired
+                    : t.actionPlaceholderOptional
                 }
                 className="mt-2 w-full rounded-xl border border-[var(--color-border)] bg-white px-3 py-2.5 text-sm font-normal outline-none focus:border-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-60"
               />
               {selected.size > 0 && (
                 <span className="mt-1 block text-xs text-[var(--color-danger)]">
-                  A concern cannot be saved without a documented action.
+                  {t.actionMissing}
                 </span>
               )}
             </label>
@@ -483,9 +468,7 @@ export default function RedFlagCheckerPage() {
               className="mt-1"
             />
             <span>
-              I actively reviewed every item with the patient. Unselected items
-              are absent based on the current assessment, and I understand that
-              this checklist does not rule out serious pathology.
+              {t.attest}
             </span>
           </label>
           {saveError && (
@@ -507,12 +490,11 @@ export default function RedFlagCheckerPage() {
                 (selected.size > 0 && actionTaken.trim().length < 3)
               }
             >
-              {saving ? "Saving…" : "Complete and save safety screen"}
+              {saving ? t.saving : t.save}
             </Button>
             {phase === "completed" && (
               <span className="text-xs text-[var(--color-ink-faint)]">
-                This result is stored in the case history. Use Clear draft to
-                begin a new assessment.
+                {t.stored}
               </span>
             )}
           </div>

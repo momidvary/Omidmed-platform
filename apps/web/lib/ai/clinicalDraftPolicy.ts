@@ -113,12 +113,43 @@ export function minimizeClinicalAiPayload(
     redactionCount += minimized.redactionCount;
     return [key, minimized.text] as const;
   });
+  const minimizedContext = Object.fromEntries(
+    minimizedEntries
+  ) as ClinicalDraftCaseContext;
+
+  // Structured labels come from the knowledge base; only the clinician's
+  // free-text examination notes can carry identifiers.
+  if (caseContext.structuredFindings) {
+    minimizedContext.structuredFindings = {
+      ...caseContext.structuredFindings,
+      examNotes: caseContext.structuredFindings.examNotes.map((entry) => {
+        const minimized = redactDirectIdentifiers(entry.note);
+        redactionCount += minimized.redactionCount;
+        return { ...entry, note: minimized.text };
+      }),
+    };
+  }
 
   return {
     question: minimizedQuestion.text,
-    caseContext: Object.fromEntries(
-      minimizedEntries
-    ) as ClinicalDraftCaseContext,
+    caseContext: minimizedContext,
     redactionCount,
   };
+}
+
+/**
+ * Free text that the deterministic safety gate must scan: the question, the
+ * clinician-entered case fields and examination notes. Knowledge-base labels
+ * are controlled vocabulary and are deliberately excluded.
+ */
+export function clinicalAiFreeText(
+  question: string,
+  caseContext: ClinicalDraftCaseContext
+): string {
+  const { structuredFindings, ...fields } = caseContext;
+  return [
+    question,
+    ...Object.values(fields).filter((value) => typeof value === "string"),
+    ...(structuredFindings?.examNotes.map((entry) => entry.note) ?? []),
+  ].join("\n");
 }

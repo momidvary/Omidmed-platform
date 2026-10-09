@@ -40,7 +40,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24.18.0
-      - name: Apply migrations 001 through 028
+      - name: Apply migrations 001 through 029
         run: |
           psql -X -v ON_ERROR_STOP=1 -f database/tests/local_supabase_bootstrap.sql
           node database/scripts/migrate.mjs --allow-baseline
@@ -80,6 +80,7 @@ jobs:
           psql -X -v ON_ERROR_STOP=1 -f database/migrations/026_auth_email_type_fix.sql
           psql -X -v ON_ERROR_STOP=1 -f database/migrations/027_patient_prescription_visibility.sql
           psql -X -v ON_ERROR_STOP=1 -f database/migrations/028_patient_phone_accounts.sql
+          psql -X -v ON_ERROR_STOP=1 -f database/migrations/029_case_clinical_findings.sql
       - name: Validate every deferred constraint on the clean schema
         run: |
           psql -X -v ON_ERROR_STOP=1 <<'SQL'

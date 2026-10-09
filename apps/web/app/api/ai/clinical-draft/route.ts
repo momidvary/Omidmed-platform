@@ -15,9 +15,12 @@ import {
   ClinicalDraftSchema,
 } from "@/lib/ai/clinicalDraftSchema";
 import {
+  clinicalAiFreeText,
   minimizeClinicalAiPayload,
   resolveClinicalAiLimits,
 } from "@/lib/ai/clinicalDraftPolicy";
+import { buildStructuredFindingsContext } from "@/lib/clinical/reasoning/aiContext";
+import type { BodyRegionId } from "@/lib/types";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -177,6 +180,23 @@ export async function POST(request: Request) {
     return json({ error: "safety_clearance_required" }, 409);
   }
 
+  // The latest structured findings are read with the clinician's own RLS
+  // scope. A failed read stops generation rather than silently drafting
+  // without the documented examination.
+  const { data: findingsRow, error: findingsError } = await userClient
+    .from("case_clinical_findings")
+    .select("region, knowledge_version, findings")
+    .eq("case_id", caseId)
+    .order("version", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (findingsError) return json({ error: "findings_unavailable" }, 503);
+  const structuredFindings = buildStructuredFindingsContext(
+    findingsRow,
+    (patientCase.region as BodyRegionId | null) ?? null,
+    patientCase.age
+  );
+
   const parsedCaseContext = ClinicalDraftCaseContextSchema.safeParse({
     age: patientCase.age,
     gender: patientCase.gender,
@@ -194,13 +214,14 @@ export async function POST(request: Request) {
     medications: patientCase.medications ?? "",
     functionalLimitations: patientCase.functional_limitations ?? "",
     patientGoal: patientCase.patient_goal ?? "",
+    structuredFindings,
   });
   if (!parsedCaseContext.success) {
     return json({ error: "case_context_invalid" }, 422);
   }
   const caseContext = parsedCaseContext.data;
   const safetySignals = detectSafetySignals(
-    `${question}\n${Object.values(caseContext).join("\n")}`
+    clinicalAiFreeText(question, caseContext)
   );
   if (safetySignals.length > 0) {
     return json(

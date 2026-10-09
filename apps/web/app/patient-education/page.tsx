@@ -3,6 +3,9 @@
 import { useRef, useState } from "react";
 import { useCases } from "@/lib/store/CaseContext";
 import { buildEducation, delay } from "@/lib/ai/engine";
+import { buildEducationFa, type EducationHandout } from "@/lib/ai/educationFa";
+import { useText } from "@/lib/i18n/text";
+import { useLocale } from "@/lib/store/LocaleContext";
 import { hasClinicalSafetyClearance } from "@/lib/clinical/safety";
 import { Card, CardBody, CardHeader } from "@/components/ui/Card";
 import { Button, ButtonLink } from "@/components/ui/Button";
@@ -15,11 +18,18 @@ import {
   PageIntro,
   Spinner,
 } from "@/components/ui/Misc";
+import { educationText, handoutHeadings } from "./text";
 
-type Handout = ReturnType<typeof buildEducation>;
+type HandoutLanguage = "en" | "fa";
+type Handout = EducationHandout & { language: HandoutLanguage };
 
 export default function PatientEducationPage() {
   const { cases, currentCase, setCurrentCase } = useCases();
+  const { locale } = useLocale();
+  const t = useText(educationText);
+  const [chosenLanguage, setChosenLanguage] = useState<HandoutLanguage | null>(null);
+  const handoutLanguage: HandoutLanguage =
+    chosenLanguage ?? (locale === "fa" ? "fa" : "en");
   const [handout, setHandout] = useState<Handout | null>(null);
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -32,9 +42,7 @@ export default function PatientEducationPage() {
     if (!currentCase) return;
     if (!safetyCleared) {
       setHandout(null);
-      setError(
-        "Patient advice is blocked until this case has a completed, clear structured safety screen and any concerns have been resolved."
-      );
+      setError(t.blocked);
       return;
     }
 
@@ -46,14 +54,19 @@ export default function PatientEducationPage() {
     try {
       // 🔌 REAL AI API INTEGRATION POINT — keep the safety gate when this
       // becomes an authenticated server-side AI call.
-      const result = await delay(buildEducation(currentCase));
-      if (requestToken === generationToken.current) setHandout(result);
+      const language = handoutLanguage;
+      const result = await delay(
+        language === "fa" ? buildEducationFa(currentCase) : buildEducation(currentCase)
+      );
+      if (requestToken === generationToken.current) {
+        setHandout({ ...result, language });
+      }
     } catch (cause) {
       if (requestToken === generationToken.current) {
         setError(
           cause instanceof Error
             ? cause.message
-            : "The handout could not be generated safely."
+            : t.failed
         );
       }
     } finally {
@@ -63,22 +76,23 @@ export default function PatientEducationPage() {
 
   async function copyHandout() {
     if (!handout || !currentCase || !safetyCleared) return;
+    const h = handoutHeadings[handout.language];
     const text = [
-      `Home advice for ${currentCase.name}`,
+      h.homeAdvice(currentCase.name),
       "",
-      "What is the problem?",
+      h.problem,
       handout.problem,
       "",
-      "What to avoid for now:",
+      `${h.avoid}:`,
       ...handout.avoid.map((i) => `• ${i}`),
       "",
-      "Your exercises:",
+      `${h.exercises}:`,
       ...handout.exercises.map((i) => `• ${i}`),
       "",
-      "When to contact us or a doctor:",
+      `${h.contact}:`,
       ...handout.contact.map((i) => `• ${i}`),
       "",
-      "Simple home advice:",
+      `${h.tips}:`,
       ...handout.homeAdvice.map((i) => `• ${i}`),
     ].join("\n");
     try {
@@ -93,8 +107,8 @@ export default function PatientEducationPage() {
   return (
     <div className="space-y-6">
       <PageIntro
-        title="Patient Education Generator"
-        description="Turn the clinical picture into a plain-language handout the patient can take home."
+        title={t.title}
+        description={t.intro}
         action={
           cases.length > 0 ? (
             <Select
@@ -107,12 +121,13 @@ export default function PatientEducationPage() {
                 setError(null);
                 setCopied(false);
               }}
+              aria-label={t.caseAria}
               className="w-64"
             >
-              <option value="">Select a case…</option>
+              <option value="">{t.selectCase}</option>
               {cases.map((c) => (
                 <option key={c.id} value={c.id}>
-                  {c.name || "Unnamed"}
+                  {c.name || t.unnamed}
                 </option>
               ))}
             </Select>
@@ -123,9 +138,9 @@ export default function PatientEducationPage() {
       {!currentCase && (
         <EmptyState
           icon="education"
-          title="No case selected"
-          description="Pick a case (or create one) to generate a patient-friendly explanation."
-          action={<ButtonLink href="/new-case">New Patient Case</ButtonLink>}
+          title={t.noCaseTitle}
+          description={t.noCaseBody}
+          action={<ButtonLink href="/new-case">{t.newCase}</ButtonLink>}
         />
       )}
 
@@ -146,14 +161,16 @@ export default function PatientEducationPage() {
                   : "text-sm font-semibold text-[var(--color-danger)]"
               }
             >
-              {safetyCleared
-                ? "Safety gate passed for this case"
-                : "Patient handout generation locked"}
+              {safetyCleared ? t.gatePassed : t.gateLocked}
             </p>
             <p className="mt-1 text-xs leading-relaxed text-[var(--color-ink-soft)]">
               {safetyCleared
-                ? "A completed clear screen permits drafting, but the clinician must still review every statement before sharing it."
-                : `Current safety disposition: ${currentCase.safetyScreen?.disposition ?? "not-screened"}. Do not generate reassurance, exercises or home advice until escalation is resolved and documented.`}
+                ? t.gatePassedBody
+                : t.gateLockedBody(
+                    t.disposition[currentCase.safetyScreen?.disposition ?? "not-screened"] ??
+                      currentCase.safetyScreen?.disposition ??
+                      t.disposition["not-screened"]
+                  )}
             </p>
           </div>
 
@@ -168,16 +185,31 @@ export default function PatientEducationPage() {
                   {currentCase.mainComplaint}
                 </p>
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <Select
+                  aria-label={t.handoutLanguage}
+                  value={handoutLanguage}
+                  onChange={(e) => {
+                    generationToken.current += 1;
+                    setChosenLanguage(e.target.value as HandoutLanguage);
+                    setHandout(null);
+                    setLoading(false);
+                    setCopied(false);
+                  }}
+                  className="w-auto"
+                >
+                  <option value="fa">{t.handoutLanguage}: فارسی</option>
+                  <option value="en">{t.handoutLanguage}: English</option>
+                </Select>
                 {handout && safetyCleared && (
                   <Button variant="secondary" onClick={copyHandout}>
                     <Icon name={copied ? "check" : "copy"} width={15} height={15} />
-                    {copied ? "Copied!" : "Copy handout"}
+                    {copied ? t.copied : t.copy}
                   </Button>
                 )}
                 <Button onClick={generate} disabled={loading || !safetyCleared}>
                   <Icon name="sparkle" width={16} height={16} />
-                  {loading ? "Writing…" : handout ? "Regenerate" : "Generate handout"}
+                  {loading ? t.writing : handout ? t.regenerate : t.generate}
                 </Button>
               </div>
             </CardBody>
@@ -194,15 +226,19 @@ export default function PatientEducationPage() {
 
           {loading && (
             <Card>
-              <Spinner label="Writing patient-friendly advice…" />
+              <Spinner label={t.loading} />
             </Card>
           )}
 
           {handout && !loading && safetyCleared && (
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div
+              lang={handout.language}
+              dir={handout.language === "fa" ? "rtl" : "ltr"}
+              className="grid grid-cols-1 gap-4 md:grid-cols-2"
+            >
               <Card className="md:col-span-2">
                 <CardHeader
-                  title="What is the problem?"
+                  title={handoutHeadings[handout.language].problem}
                   icon={<Icon name="education" width={18} height={18} />}
                 />
                 <CardBody>
@@ -213,28 +249,28 @@ export default function PatientEducationPage() {
               </Card>
 
               <Card>
-                <CardHeader title="What to avoid for now" icon={<Icon name="alert" width={18} height={18} />} />
+                <CardHeader title={handoutHeadings[handout.language].avoid} icon={<Icon name="alert" width={18} height={18} />} />
                 <CardBody>
                   <BulletList items={handout.avoid} tone="warn" />
                 </CardBody>
               </Card>
 
               <Card>
-                <CardHeader title="Your exercises" icon={<Icon name="exercise" width={18} height={18} />} />
+                <CardHeader title={handoutHeadings[handout.language].exercises} icon={<Icon name="exercise" width={18} height={18} />} />
                 <CardBody>
                   <BulletList items={handout.exercises} tone="primary" />
                 </CardBody>
               </Card>
 
               <Card>
-                <CardHeader title="When to contact us or a doctor" icon={<Icon name="flag" width={18} height={18} />} />
+                <CardHeader title={handoutHeadings[handout.language].contact} icon={<Icon name="flag" width={18} height={18} />} />
                 <CardBody>
                   <BulletList items={handout.contact} tone="danger" />
                 </CardBody>
               </Card>
 
               <Card>
-                <CardHeader title="Simple home advice" icon={<Icon name="check" width={18} height={18} />} />
+                <CardHeader title={handoutHeadings[handout.language].tips} icon={<Icon name="check" width={18} height={18} />} />
                 <CardBody>
                   <BulletList items={handout.homeAdvice} tone="success" />
                 </CardBody>

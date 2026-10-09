@@ -3,7 +3,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useCases } from "@/lib/store/CaseContext";
 import { buildChatReply, suggestedPrompts } from "@/lib/ai/engine";
-import { getRegion } from "@/lib/data/bodyRegions";
+import { buildChatReplyFa, suggestedPromptsFa } from "@/lib/ai/chatFa";
+import { regionLabel } from "@/lib/data/bodyRegionsFa";
+import { useText } from "@/lib/i18n/text";
+import { useLocale } from "@/lib/store/LocaleContext";
 import type { ChatMessage } from "@/lib/types";
 import { Card, CardBody, CardHeader } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
@@ -17,6 +20,7 @@ import {
   ClinicalDraftSchema,
   type ClinicalDraft,
 } from "@/lib/ai/clinicalDraftSchema";
+import { aiAssistantText } from "./text";
 
 const GENERAL_CONTEXT = "__general__";
 const CLINICAL_AI_ENABLED =
@@ -35,6 +39,9 @@ function isClinicalDraftMessage(
 
 export default function AiAssistantPage() {
   const { cases, currentCase, setCurrentCase } = useCases();
+  const { locale } = useLocale();
+  const t = useText(aiAssistantText);
+  const prompts = locale === "fa" ? suggestedPromptsFa : suggestedPrompts;
   const contextKey = currentCase?.id ?? GENERAL_CONTEXT;
   const [conversations, setConversations] = useState<
     Record<string, ChatMessage[]>
@@ -106,8 +113,7 @@ export default function AiAssistantPage() {
       appendMessage(requestContext, {
         id: uid("msg"),
         role: "assistant",
-        content:
-          "Case-specific clinical suggestions are locked because this case does not have a completed, clear safety screen. Complete or resolve the structured safety pathway first; do not use this chat to bypass escalation.",
+        content: t.lockedCase,
       });
       return;
     }
@@ -116,8 +122,7 @@ export default function AiAssistantPage() {
       appendMessage(requestContext, {
         id: uid("msg"),
         role: "assistant",
-        content:
-          "Select a safety-cleared case before requesting a real clinical draft. The server does not accept free-floating clinical prompts without a case record.",
+        content: t.needCase,
       });
       return;
     }
@@ -147,9 +152,7 @@ export default function AiAssistantPage() {
           appendMessage(requestContext, {
             id: uid("msg"),
             role: "assistant",
-            content: safetyBlocked
-              ? "The deterministic safety gate blocked AI generation. Review the structured red-flag pathway and arrange the indicated escalation; do not use a model response to override it."
-              : "The audited AI draft service is unavailable or refused this request. No fallback clinical answer was generated; continue with independent clinical reasoning.",
+            content: safetyBlocked ? t.safetyBlocked : t.unavailable,
           });
           return;
         }
@@ -164,8 +167,7 @@ export default function AiAssistantPage() {
           appendMessage(requestContext, {
             id: uid("msg"),
             role: "assistant",
-            content:
-              "The AI service returned an invalid draft. It was discarded and must not be used.",
+            content: t.invalid,
           });
           return;
         }
@@ -187,8 +189,7 @@ export default function AiAssistantPage() {
           appendMessage(requestContext, {
             id: uid("msg"),
             role: "assistant",
-            content:
-              "The AI request failed. No clinical fallback was substituted; verify the case independently.",
+            content: t.failed,
           });
         }
       } finally {
@@ -205,7 +206,10 @@ export default function AiAssistantPage() {
       const reply: ChatMessage = {
         id: uid("msg"),
         role: "assistant",
-        content: buildChatReply(content, caseSnapshot ?? undefined),
+        content:
+          locale === "fa"
+            ? buildChatReplyFa(content, caseSnapshot ?? undefined)
+            : buildChatReply(content, caseSnapshot ?? undefined),
       };
       appendMessage(requestContext, reply);
       clearPending(requestContext);
@@ -275,21 +279,15 @@ export default function AiAssistantPage() {
   return (
     <div className="space-y-6">
       <PageIntro
-        title="AI Clinical Assistant"
-        description={
-          CLINICAL_AI_ENABLED
-            ? "Audited, structured draft assistant. A safety-cleared case and explicit clinician review are required."
-            : "Template assistant sandbox. Conversations and pending replies are isolated to the selected case."
-        }
+        title={t.title}
+        description={CLINICAL_AI_ENABLED ? t.introAi : t.introTemplate}
       />
 
       <div
         role="alert"
         className="rounded-2xl border border-[var(--color-warn)]/40 bg-[var(--color-warn-soft)] px-5 py-4 text-sm text-[var(--color-ink-soft)]"
       >
-        {CLINICAL_AI_ENABLED
-          ? "AI drafts are generated server-side and logged, but no model output is clinical clearance. Review the original record, verify every unsupported claim and explicitly accept, edit or reject the draft."
-          : "No validated clinical AI model or evidence retrieval service is connected. Treat every response as fixed demo content; do not copy it into a care plan without independent clinical review."}
+        {CLINICAL_AI_ENABLED ? t.warnAi : t.warnTemplate}
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
@@ -305,13 +303,13 @@ export default function AiAssistantPage() {
                   <Icon name="chat" width={24} height={24} />
                 </span>
                 <h3 className="mt-4 text-sm font-semibold text-[var(--color-ink)]">
-                  Ask a clinical question
+                  {t.emptyTitle}
                 </h3>
                 <p className="mt-1 max-w-sm text-sm text-[var(--color-ink-soft)]">
-                  Try one of the suggested prompts, or type your own question below.
+                  {t.emptyBody}
                 </p>
                 <div className="mt-4 flex max-w-md flex-wrap justify-center gap-2">
-                  {suggestedPrompts.map((prompt) => (
+                  {prompts.map((prompt) => (
                     <button
                       key={prompt}
                       type="button"
@@ -339,8 +337,8 @@ export default function AiAssistantPage() {
                     "group relative rounded-2xl px-4 py-3 text-sm leading-relaxed",
                     msg.clinicalDraft ? "max-w-[96%]" : "max-w-[85%]",
                     msg.role === "user"
-                      ? "rounded-br-md bg-[var(--color-primary)] text-white"
-                      : "rounded-bl-md bg-[var(--color-surface-muted)] text-[var(--color-ink)]"
+                      ? "rounded-ee-md bg-[var(--color-primary)] text-white"
+                      : "rounded-es-md bg-[var(--color-surface-muted)] text-[var(--color-ink)]"
                   )}
                 >
                   {isClinicalDraftMessage(msg) ? (
@@ -360,8 +358,8 @@ export default function AiAssistantPage() {
                     <button
                       type="button"
                       onClick={() => copyMessage(msg)}
-                      className="absolute -right-2 -top-2 grid h-7 w-7 place-items-center rounded-full border border-[var(--color-border)] bg-white text-[var(--color-ink-faint)] opacity-0 shadow-sm transition-opacity hover:text-[var(--color-primary)] group-hover:opacity-100 focus-visible:opacity-100"
-                      aria-label="Copy answer"
+                      className="absolute -end-2 -top-2 grid h-7 w-7 place-items-center rounded-full border border-[var(--color-border)] bg-white text-[var(--color-ink-faint)] opacity-0 shadow-sm transition-opacity hover:text-[var(--color-primary)] group-hover:opacity-100 focus-visible:opacity-100"
+                      aria-label={t.copyAnswer}
                     >
                       <Icon
                         name={copiedId === msg.id ? "check" : "copy"}
@@ -376,7 +374,7 @@ export default function AiAssistantPage() {
 
             {thinking && (
               <div className="flex justify-start">
-                <div className="flex items-center gap-2 rounded-2xl rounded-bl-md bg-[var(--color-surface-muted)] px-4 py-3">
+                <div className="flex items-center gap-2 rounded-2xl rounded-es-md bg-[var(--color-surface-muted)] px-4 py-3">
                   <span className="h-2 w-2 animate-bounce rounded-full bg-[var(--color-ink-faint)] [animation-delay:0ms]" />
                   <span className="h-2 w-2 animate-bounce rounded-full bg-[var(--color-ink-faint)] [animation-delay:120ms]" />
                   <span className="h-2 w-2 animate-bounce rounded-full bg-[var(--color-ink-faint)] [animation-delay:240ms]" />
@@ -413,12 +411,12 @@ export default function AiAssistantPage() {
               }}
               rows={1}
               maxLength={CLINICAL_AI_ENABLED ? 2000 : 4000}
-              aria-label="Clinical question"
-              placeholder="Ask about tests, plans, exercises, progression…"
+              aria-label={t.question}
+              placeholder={t.placeholder}
               className="max-h-32 flex-1 resize-none rounded-xl border border-[var(--color-border)] bg-white px-3 py-2.5 text-sm placeholder:text-[var(--color-ink-faint)] focus:border-[var(--color-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/20"
             />
-            <Button type="submit" disabled={!input.trim() || thinking} aria-label="Send">
-              <Icon name="send" width={16} height={16} />
+            <Button type="submit" disabled={!input.trim() || thinking} aria-label={t.send}>
+              <Icon name="send" width={16} height={16} className="rtl:-scale-x-100" />
             </Button>
           </form>
         </Card>
@@ -427,19 +425,20 @@ export default function AiAssistantPage() {
         <div className="space-y-4">
           <Card>
             <CardHeader
-              title="Case Context"
-              subtitle="The assistant considers this case"
+              title={t.contextTitle}
+              subtitle={t.contextSubtitle}
               icon={<Icon name="user" width={18} height={18} />}
             />
             <CardBody className="space-y-3">
               <Select
                 value={currentCase?.id ?? ""}
                 onChange={(e) => setCurrentCase(e.target.value || null)}
+                aria-label={t.caseAria}
               >
-                <option value="">No case context</option>
+                <option value="">{t.noContext}</option>
                 {cases.map((c) => (
                   <option key={c.id} value={c.id}>
-                    {c.name || "Unnamed"}
+                    {c.name || t.unnamed}
                   </option>
                 ))}
               </Select>
@@ -455,11 +454,11 @@ export default function AiAssistantPage() {
                   </p>
                   <div className="flex flex-wrap gap-1.5 pt-1">
                     <Badge tone={currentCase.painIntensity >= 7 ? "danger" : "warn"}>
-                      Pain {currentCase.painIntensity}/10
+                      {t.pain(currentCase.painIntensity)}
                     </Badge>
                     {currentCase.region && (
                       <Badge tone="primary">
-                        {getRegion(currentCase.region)?.label}
+                        {regionLabel(currentCase.region, locale)}
                       </Badge>
                     )}
                     {currentCase.duration && <Badge>{currentCase.duration}</Badge>}
@@ -467,7 +466,7 @@ export default function AiAssistantPage() {
                 </div>
               ) : (
                 <p className="text-xs text-[var(--color-ink-faint)]">
-                  Select a case so answers can reference its details.
+                  {t.selectCaseHint}
                 </p>
               )}
             </CardBody>
@@ -496,6 +495,7 @@ function ClinicalDraftBubble({
     editedOutput?: ClinicalDraft
   ) => Promise<boolean>;
 }) {
+  const t = useText(aiAssistantText);
   const { clinicalDraft: draft, aiMetadata } = message;
   const [editing, setEditing] = useState(false);
   const [editedAnswer, setEditedAnswer] = useState(draft.answer);
@@ -513,16 +513,14 @@ function ClinicalDraftBubble({
         answer: editedAnswer.trim(),
       });
       if (!candidate.success) {
-        setReviewError("The edited answer is empty or exceeds the safe limit.");
+        setReviewError(t.editInvalid);
         return;
       }
       editedOutput = candidate.data;
     }
     const saved = await onReview(decision, editedOutput);
     if (!saved) {
-      setReviewError(
-        "The review decision was not saved. The draft remains unapproved."
-      );
+      setReviewError(t.reviewFailed);
       return;
     }
     setEditing(false);
@@ -542,8 +540,8 @@ function ClinicalDraftBubble({
       <div className="flex flex-wrap items-center gap-2 border-b border-[var(--color-border)] pb-3">
         <Badge tone={statusTone}>
           {reviewed
-            ? `Clinician ${aiMetadata.reviewStatus}`
-            : "Unreviewed AI draft"}
+            ? t.reviewStatus[aiMetadata.reviewStatus] ?? aiMetadata.reviewStatus
+            : t.unreviewed}
         </Badge>
         <span className="text-[10px] text-[var(--color-ink-faint)]">
           {aiMetadata.model} · {aiMetadata.promptVersion}
@@ -552,7 +550,7 @@ function ClinicalDraftBubble({
           type="button"
           onClick={onCopy}
           className="ms-auto grid h-7 w-7 place-items-center rounded-full border border-[var(--color-border)] bg-white text-[var(--color-ink-faint)] hover:text-[var(--color-primary)]"
-          aria-label="Copy draft answer"
+          aria-label={t.copyDraft}
         >
           <Icon name={copied ? "check" : "copy"} width={13} height={13} />
         </button>
@@ -563,19 +561,18 @@ function ClinicalDraftBubble({
           role="alert"
           className="rounded-lg bg-[var(--color-danger-soft)] px-3 py-2 text-xs text-[var(--color-danger)]"
         >
-          The model marked this draft for medical review. Do not progress
-          treatment from this output.
+          {t.medicalReview}
         </p>
       )}
       {draft.abstained && (
         <p className="rounded-lg bg-[var(--color-warn-soft)] px-3 py-2 text-xs text-[var(--color-warn)]">
-          Model abstained: {draft.abstainReason ?? "insufficient context"}
+          {t.abstained(draft.abstainReason)}
         </p>
       )}
 
       {editing ? (
         <label className="block text-xs font-medium text-[var(--color-ink-soft)]">
-          Edit the answer after checking the original record
+          {t.editLabel}
           <textarea
             value={editedAnswer}
             maxLength={4000}
@@ -590,7 +587,7 @@ function ClinicalDraftBubble({
       {draft.possibleHypotheses.length > 0 && (
         <section>
           <h4 className="text-xs font-semibold text-[var(--color-ink)]">
-            Non-definitive hypotheses
+            {t.hypotheses}
           </h4>
           <div className="mt-2 space-y-2">
             {draft.possibleHypotheses.map((hypothesis) => (
@@ -600,11 +597,11 @@ function ClinicalDraftBubble({
               >
                 <p className="text-xs font-semibold">{hypothesis.label}</p>
                 <DraftList
-                  title="Supporting context"
+                  title={t.supporting}
                   items={hypothesis.supportingContext}
                 />
                 <DraftList
-                  title="Against / missing"
+                  title={t.against}
                   items={hypothesis.conflictingOrMissingContext}
                 />
               </div>
@@ -614,15 +611,15 @@ function ClinicalDraftBubble({
       )}
 
       <div className="grid gap-3 sm:grid-cols-2">
-        <DraftList title="Assessment priorities" items={draft.assessmentPriorities} />
-        <DraftList title="Treatment considerations" items={draft.treatmentConsiderations} />
+        <DraftList title={t.priorities} items={draft.assessmentPriorities} />
+        <DraftList title={t.treatment} items={draft.treatmentConsiderations} />
         <DraftList
-          title="Contraindications / stop rules"
+          title={t.stopRules}
           items={draft.contraindicationsAndStopRules}
         />
-        <DraftList title="Missing information" items={draft.missingInformation} />
+        <DraftList title={t.missing} items={draft.missingInformation} />
         <div className="sm:col-span-2">
-          <DraftList title="Must verify" items={draft.verificationItems} />
+          <DraftList title={t.verify} items={draft.verificationItems} />
         </div>
       </div>
 
@@ -637,7 +634,7 @@ function ClinicalDraftBubble({
           {editing ? (
             <>
               <Button size="sm" disabled={busy} onClick={() => void decide("edited")}>
-                Save edited review
+                {t.saveEdited}
               </Button>
               <Button
                 size="sm"
@@ -649,13 +646,13 @@ function ClinicalDraftBubble({
                   setReviewError(null);
                 }}
               >
-                Cancel
+                {t.cancel}
               </Button>
             </>
           ) : (
             <>
               <Button size="sm" disabled={busy} onClick={() => void decide("accepted")}>
-                Mark reviewed & accept
+                {t.accept}
               </Button>
               <Button
                 size="sm"
@@ -663,7 +660,7 @@ function ClinicalDraftBubble({
                 disabled={busy}
                 onClick={() => setEditing(true)}
               >
-                Edit before accepting
+                {t.edit}
               </Button>
               <Button
                 size="sm"
@@ -671,7 +668,7 @@ function ClinicalDraftBubble({
                 disabled={busy}
                 onClick={() => void decide("rejected")}
               >
-                Reject draft
+                {t.reject}
               </Button>
             </>
           )}

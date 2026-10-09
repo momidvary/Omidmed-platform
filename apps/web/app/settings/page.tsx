@@ -11,6 +11,8 @@ import { locales, type Locale } from "@/lib/i18n/translations";
 import { isSupabaseConfigured } from "@/lib/supabase/client";
 import { hasDataConfigurationError, isMockMode } from "@/lib/config";
 import { useAuth } from "@/lib/store/AuthContext";
+import { useText } from "@/lib/i18n/text";
+import { settingsText } from "./text";
 
 interface BrowserSettings {
   clinicName: string;
@@ -45,6 +47,7 @@ function readBrowserSettings(): BrowserSettings {
 
 export default function SettingsPage() {
   const { locale, setLocale, t } = useLocale();
+  const s = useText(settingsText);
   const { profile, activeClinicId } = useAuth();
   const [initialSettings] = useState(readBrowserSettings);
   const [clinicName, setClinicName] = useState(initialSettings.clinicName);
@@ -89,55 +92,51 @@ export default function SettingsPage() {
   return (
     <div className="space-y-6">
       <PageIntro
-        title="Settings"
-        description={
-          isMockMode
-            ? "Browser-only preferences for the explicit demo environment."
-            : "Authenticated account context and non-clinical browser preferences."
-        }
+        title={s.title}
+        description={isMockMode ? s.introDemo : s.introReal}
       />
 
       <Card>
         <CardHeader
-          title="Profile & Preferences"
+          title={s.profileTitle}
           icon={<Icon name="settings" width={18} height={18} />}
         />
         <CardBody className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {isMockMode ? (
             <>
-              <Field label="Demo clinic name">
+              <Field label={s.demoClinic}>
                 <Input
                   value={clinicName}
                   onChange={(e) => setClinicName(e.target.value)}
-                  placeholder="e.g. City Physio Clinic"
+                  placeholder={s.demoClinicPlaceholder}
                 />
               </Field>
-              <Field label="Demo therapist name">
+              <Field label={s.demoTherapist}>
                 <Input
                   value={therapistName}
                   onChange={(e) => setTherapistName(e.target.value)}
-                  placeholder="e.g. Dr. Omidvary"
+                  placeholder={s.demoTherapistPlaceholder}
                 />
               </Field>
             </>
           ) : (
             <dl className="grid gap-3 rounded-xl bg-[var(--color-surface-muted)] p-4 text-sm sm:col-span-2 sm:grid-cols-3">
               <div>
-                <dt className="text-xs text-[var(--color-ink-faint)]">Authenticated profile</dt>
+                <dt className="text-xs text-[var(--color-ink-faint)]">{s.profile}</dt>
                 <dd className="mt-1 font-medium text-[var(--color-ink)]">
-                  {profile?.fullName || "Unavailable"}
+                  {profile?.fullName || s.unavailable}
                 </dd>
               </div>
               <div>
-                <dt className="text-xs text-[var(--color-ink-faint)]">Role</dt>
+                <dt className="text-xs text-[var(--color-ink-faint)]">{s.role}</dt>
                 <dd className="mt-1 font-medium text-[var(--color-ink)]">
-                  {profile?.role ?? "Unavailable"}
+                  {profile ? s.roles[profile.role] ?? profile.role : s.unavailable}
                 </dd>
               </div>
               <div>
-                <dt className="text-xs text-[var(--color-ink-faint)]">Active clinic</dt>
+                <dt className="text-xs text-[var(--color-ink-faint)]">{s.activeClinic}</dt>
                 <dd className="mt-1 font-medium text-[var(--color-ink)]">
-                  {activeClinic?.name ?? "No clinic selected"}
+                  {activeClinic?.name ?? s.noClinic}
                 </dd>
               </div>
             </dl>
@@ -154,30 +153,30 @@ export default function SettingsPage() {
               ))}
             </Select>
           </Field>
-          <Field label="Units">
+          <Field label={s.units}>
             <Select
               value={units}
               onChange={(e) =>
                 setUnits(e.target.value === "imperial" ? "imperial" : "metric")
               }
             >
-              <option value="metric">Metric (kg, cm)</option>
-              <option value="imperial">Imperial (lb, in)</option>
+              <option value="metric">{s.metric}</option>
+              <option value="imperial">{s.imperial}</option>
             </Select>
           </Field>
         </CardBody>
         <div className="border-t border-[var(--color-border)] px-5 py-4">
           <Button onClick={save}>
             <Icon name="check" width={16} height={16} />
-            {saved ? "Saved!" : "Save browser preferences"}
+            {saved ? s.saved : s.save}
           </Button>
         </div>
       </Card>
 
       <Card>
         <CardHeader
-          title="Supabase Connection"
-          subtitle="Cloud database for cases, patients and tickets"
+          title={s.dbTitle}
+          subtitle={s.dbSubtitle}
           icon={<Icon name="shield" width={18} height={18} />}
         />
         <CardBody className="space-y-3">
@@ -191,27 +190,25 @@ export default function SettingsPage() {
             />
             <p className="text-sm font-medium text-[var(--color-ink)]">
               {hasDataConfigurationError
-                ? "Configuration error — cloud mode is unavailable"
+                ? s.configError
                 : isMockMode
-                  ? "Explicit demo mode — no cloud writes"
+                  ? s.demoMode
                   : isSupabaseConfigured
-                    ? "Cloud configuration loaded"
-                    : "Cloud configuration unavailable"}
+                    ? s.cloudLoaded
+                    : s.cloudUnavailable}
             </p>
           </div>
           <p className="text-sm text-[var(--color-ink-soft)]">
-            {isMockMode
-              ? "Demo data stays in this browser and is never represented as a cloud save. To test real authentication and RLS, copy "
-              : "Clinical records on this screen are not stored in browser preferences. Deployment configuration comes from "}
-            <span className="sr-only">configuration file </span>
+            {isMockMode ? s.dbDemoBody : s.dbRealBody}
+            <span className="sr-only">{s.configFile}</span>
             <code className="rounded bg-[var(--color-surface-muted)] px-1.5 py-0.5 text-xs">
               apps/web/.env.local.example
             </code>{" "}
-            and migrations in{" "}
+            {s.andMigrations}{" "}
             <code className="rounded bg-[var(--color-surface-muted)] px-1.5 py-0.5 text-xs">
               database/migrations/
             </code>{" "}
-            through the tracked migration runner. See the Persian setup guide in{" "}
+            {s.migrationRunner}{" "}
             <code className="rounded bg-[var(--color-surface-muted)] px-1.5 py-0.5 text-xs">
               docs/RAHNAMA-FA.md
             </code>
@@ -222,35 +219,32 @@ export default function SettingsPage() {
 
       <Card>
         <CardHeader
-          title="AI Connection"
-          subtitle="Audited clinical-draft capability"
+          title={s.aiTitle}
+          subtitle={s.aiSubtitle}
           icon={<Icon name="sparkle" width={18} height={18} />}
         />
         <CardBody className="space-y-3">
           <p className="text-sm text-[var(--color-ink-soft)]">
-            {clinicalAiUiEnabled
-              ? "The browser gate for audited clinical drafts is enabled. Server approval, provider configuration, quota reservation, stored-case safety and clinician review are still verified on every request; this indicator does not prove provider availability."
-              : "Audited clinical drafts are disabled in this deployment. Deterministic templates are not represented as a connected diagnostic AI service."}
+            {clinicalAiUiEnabled ? s.aiEnabled : s.aiDisabled}
           </p>
-          <Field label="AI API key">
-            <Input disabled placeholder="Configure via server environment variables — never in the browser" />
+          <Field label={s.aiKey}>
+            <Input disabled placeholder={s.aiKeyPlaceholder} />
           </Field>
         </CardBody>
       </Card>
 
       {isMockMode && <Card>
         <CardHeader
-          title="Local Data"
-          subtitle="Cases are stored only in this browser"
+          title={s.localTitle}
+          subtitle={s.localSubtitle}
           icon={<Icon name="alert" width={18} height={18} />}
         />
         <CardBody className="flex flex-wrap items-center justify-between gap-3">
           <p className="max-w-md text-sm text-[var(--color-ink-soft)]">
-            Clearing local data removes all saved cases and preferences from
-            this browser and restores the sample cases. This cannot be undone.
+            {s.localBody}
           </p>
           <Button variant="danger" onClick={clearData}>
-            {cleared ? "Cleared…" : "Clear local data"}
+            {cleared ? s.cleared : s.clear}
           </Button>
         </CardBody>
       </Card>}

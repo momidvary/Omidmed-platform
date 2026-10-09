@@ -22,6 +22,9 @@ import type {
   PrescriptionRecord,
 } from "@/lib/types";
 import { localDateValue, uid } from "@/lib/utils";
+import { useLocale } from "@/lib/store/LocaleContext";
+import { intlLocale, useText } from "@/lib/i18n/text";
+import { prescriptionText } from "./prescriptionText";
 
 interface DraftItem extends PrescriptionItemInput {
   rowId: string;
@@ -49,6 +52,9 @@ export function PrescriptionBuilder({
   region?: BodyRegionId;
   safetyCleared: boolean;
 }) {
+  const t = useText(prescriptionText);
+  const { locale } = useLocale();
+  const when = (value: string) => new Date(value).toLocaleString(intlLocale(locale));
   const patientReadyExercises = useMemo(
     () =>
       exercises
@@ -64,7 +70,11 @@ export function PrescriptionBuilder({
   const [endDate, setEndDate] = useState(plusDays(42));
   const [reviewDate, setReviewDate] = useState(plusDays(14));
   const [precautions, setPrecautions] = useState("");
-  const [scheduleTimezone, setScheduleTimezone] = useState("");
+  // Rendered only after client-side data loads, so the browser timezone is a
+  // safe, editable default (Asia/Tehran for clinics in Iran).
+  const [scheduleTimezone, setScheduleTimezone] = useState(() =>
+    typeof Intl !== "undefined" ? Intl.DateTimeFormat().resolvedOptions().timeZone ?? "" : ""
+  );
   const [stopRules, setStopRules] = useState("");
   const [items, setItems] = useState<DraftItem[]>([emptyItem()]);
   const [stored, setStored] = useState<PrescriptionMutationResult | null>(null);
@@ -98,7 +108,7 @@ export function PrescriptionBuilder({
         records: records ?? [],
         error:
           records === null
-            ? "Prescription history could not be loaded."
+            ? "load_failed"
             : null,
       });
     }
@@ -127,35 +137,35 @@ export function PrescriptionBuilder({
     if (items.some((item) => item.targetDurationSeconds !== undefined
       ? !integer(item.targetDurationSeconds, 21600, 5)
       : !integer(item.targetSets, 50) || !integer(item.targetReps, 1000))) {
-      return "Enter sets and repetitions per set, or total duration in seconds, for each exercise.";
+      return t.errTargets;
     }
     try {
-      if (!scheduleTimezone.trim()) return "Enter the patient's timezone.";
+      if (!scheduleTimezone.trim()) return t.errTimezone;
       new Intl.DateTimeFormat("en", { timeZone: scheduleTimezone.trim() });
     } catch {
-      return "Enter a valid timezone, for example Asia/Tehran.";
+      return t.errTimezoneInvalid;
     }
-    if (!safetyCleared) return "The case safety screen is no longer clear.";
+    if (!safetyCleared) return t.errSafety;
     if (!startDate || !reviewDate || reviewDate < startDate) {
-      return "Review date must be on or after the start date.";
+      return t.errReviewDate;
     }
     if (endDate && endDate < startDate) {
-      return "End date must be on or after the start date.";
+      return t.errEndDate;
     }
     if (precautions.trim().length < 3) {
-      return "Document precautions, or explicitly write that none are documented.";
+      return t.errPrecautions;
     }
     if (stopRules.trim().length < 3) {
-      return "Document patient-facing stop rules.";
+      return t.errStopRules;
     }
     if (items.length < 1 || items.length > 20) {
-      return "A prescription must contain 1 to 20 exercises.";
+      return t.errCount;
     }
     const ids = items.map((item) => item.exerciseId);
     if (ids.some((id) => !patientReadyExercises.some((exercise) => exercise.id === id))) {
-      return "Select a patient-ready exercise for every row.";
+      return t.errExercise;
     }
-    if (new Set(ids).size !== ids.length) return "Do not prescribe an exercise twice.";
+    if (new Set(ids).size !== ids.length) return t.errDuplicate;
     if (
       items.some(
         (item) =>
@@ -166,7 +176,7 @@ export function PrescriptionBuilder({
           item.daysPerWeek > 7
       )
     ) {
-      return "Complete a valid dosage and weekly frequency for every exercise.";
+      return t.errDosage;
     }
     return null;
   }
@@ -198,9 +208,7 @@ export function PrescriptionBuilder({
     });
     setBusy(false);
     if (!result) {
-      setError(
-        "Prescription draft was not saved. Confirm the treatment plan is still approved and the safety screen is clear."
-      );
+      setError(t.saveFailed);
       return;
     }
     setStored(result);
@@ -243,9 +251,7 @@ export function PrescriptionBuilder({
     const result = await publishPrescription(stored.id);
     setBusy(false);
     if (!result) {
-      setError(
-        "Publish was blocked. Re-check current safety, treatment-plan approval and assignment. The existing patient program was not changed."
-      );
+      setError(t.publishBlocked);
       return;
     }
     setStored(result);
@@ -259,7 +265,7 @@ export function PrescriptionBuilder({
     const ok = await revokePrescription(currentlyPublished.id);
     setBusy(false);
     if (!ok) {
-      setError("The published prescription was not revoked. Retry before advising the patient that it is stopped.");
+      setError(t.revokeFailed);
       return;
     }
     if (stored?.id === currentlyPublished.id) setStored(null);
@@ -270,17 +276,17 @@ export function PrescriptionBuilder({
   return (
     <Card>
       <CardHeader
-        title="Patient exercise prescription"
-        subtitle="Only exercises with complete Persian patient content are listed. Save a draft, then explicitly publish it to replace the current patient program."
+        title={t.title}
+        subtitle={t.subtitle}
         icon={<Icon name="exercise" width={18} height={18} />}
       />
       <CardBody className="space-y-5">
-        <Field label="Patient timezone" required hint="Use the patient's local timezone, for example Asia/Tehran.">
-          <Input value={scheduleTimezone} disabled={busy} placeholder="Asia/Tehran"
+        <Field label={t.timezone} required hint={t.timezoneHint}>
+          <Input value={scheduleTimezone} disabled={busy} placeholder="Asia/Tehran" dir="ltr"
             onChange={(event) => { setScheduleTimezone(event.target.value); invalidateStored(); }} />
         </Field>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <Field label="Start date" required>
+          <Field label={t.startDate} required>
             <Input
               type="date"
               value={startDate}
@@ -291,7 +297,7 @@ export function PrescriptionBuilder({
               }}
             />
           </Field>
-          <Field label="End date">
+          <Field label={t.endDate}>
             <Input
               type="date"
               min={startDate}
@@ -303,7 +309,7 @@ export function PrescriptionBuilder({
               }}
             />
           </Field>
-          <Field label="Review date" required>
+          <Field label={t.reviewDate} required>
             <Input
               type="date"
               min={startDate}
@@ -319,9 +325,9 @@ export function PrescriptionBuilder({
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field
-            label="Patient-facing precautions"
+            label={t.precautions}
             required
-            hint="Use explicit wording; do not leave this blank."
+            hint={t.precautionsHint}
           >
             <Textarea
               value={precautions}
@@ -334,7 +340,7 @@ export function PrescriptionBuilder({
               className="min-h-24"
             />
           </Field>
-          <Field label="Stop rules" required hint="When must the patient stop and contact the clinic or seek urgent care?">
+          <Field label={t.stopRules} required hint={t.stopRulesHint}>
             <Textarea
               value={stopRules}
               maxLength={4000}
@@ -354,7 +360,7 @@ export function PrescriptionBuilder({
               key={item.rowId}
               className="grid grid-cols-1 gap-3 rounded-xl border border-[var(--color-border)] p-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_8rem_auto]"
             >
-              <Field label={`Exercise ${index + 1}`} required>
+              <Field label={t.exercise(index + 1)} required>
                 <Select
                   value={item.exerciseId}
                   disabled={busy}
@@ -362,15 +368,17 @@ export function PrescriptionBuilder({
                     updateItem(item.rowId, { exerciseId: event.target.value })
                   }
                 >
-                  <option value="">Select…</option>
+                  <option value="">{t.select}</option>
                   {patientReadyExercises.map((exercise) => (
                     <option key={exercise.id} value={exercise.id}>
-                      {exercise.name} · {exerciseFa[exercise.id].name}
+                      {locale === "fa"
+                        ? `${exerciseFa[exercise.id].name} · ${exercise.name}`
+                        : `${exercise.name} · ${exerciseFa[exercise.id].name}`}
                     </option>
                   ))}
                 </Select>
               </Field>
-              <Field label="Dosage shown to patient" required>
+              <Field label={t.dosage} required>
                 <Input
                   value={item.dosageFa}
                   maxLength={500}
@@ -382,27 +390,27 @@ export function PrescriptionBuilder({
                 />
               </Field>
               <div className="space-y-2">
-                <Field label="Target measurement" required>
+                <Field label={t.target} required>
                   <Select value={item.targetDurationSeconds === undefined ? "reps" : "duration"} disabled={busy}
                     onChange={(event) => updateItem(item.rowId, event.target.value === "duration"
                       ? { targetSets: undefined, targetReps: undefined, targetDurationSeconds: 0 }
                       : { targetSets: undefined, targetReps: undefined, targetDurationSeconds: undefined })}>
-                    <option value="reps">Sets and repetitions per set</option><option value="duration">Total duration (seconds)</option>
+                    <option value="reps">{t.targetReps}</option><option value="duration">{t.targetDuration}</option>
                   </Select>
                 </Field>
-                {item.targetDurationSeconds !== undefined ? <Field label="Total seconds" required>
+                {item.targetDurationSeconds !== undefined ? <Field label={t.totalSeconds} required>
                   <Input type="number" min={5} max={21600} value={item.targetDurationSeconds || ""} disabled={busy}
                     onChange={(event) => updateItem(item.rowId, { targetDurationSeconds: Number(event.target.value) })} />
                 </Field> : <>
-                  <Field label="Sets" required><Input type="number" min={1} max={50} value={item.targetSets ?? ""} disabled={busy}
+                  <Field label={t.sets} required><Input type="number" min={1} max={50} value={item.targetSets ?? ""} disabled={busy}
                     onChange={(event) => updateItem(item.rowId, { targetSets: Number(event.target.value) })} /></Field>
-                  <Field label="Repetitions per set" required><Input type="number" min={1} max={1000} value={item.targetReps ?? ""} disabled={busy}
+                  <Field label={t.reps} required><Input type="number" min={1} max={1000} value={item.targetReps ?? ""} disabled={busy}
                     onChange={(event) => updateItem(item.rowId, { targetReps: Number(event.target.value) })} /></Field>
                 </>}
               </div>
               <fieldset className="space-y-1">
-                <legend>Exercise days</legend>
-                {["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"].map((label, day) => (
+                <legend>{t.days}</legend>
+                {t.weekdays.map((label, day) => (
                   <label key={day} className="flex items-center gap-2 text-xs">
                     <input type="checkbox" checked={item.scheduledWeekdays.includes(day)} disabled={busy}
                       onChange={(event) => {
@@ -423,7 +431,7 @@ export function PrescriptionBuilder({
                   );
                   invalidateStored();
                 }}
-                aria-label={`Remove exercise ${index + 1}`}
+                aria-label={t.remove(index + 1)}
               >
                 <Icon name="close" width={16} height={16} />
               </Button>
@@ -439,7 +447,7 @@ export function PrescriptionBuilder({
               invalidateStored();
             }}
           >
-            Add exercise
+            {t.add}
           </Button>
         </div>
 
@@ -447,18 +455,18 @@ export function PrescriptionBuilder({
           <div className="flex flex-wrap items-center gap-2">
             <Badge tone={stored?.status === "published" ? "success" : "warn"}>
               {stored
-                ? `Prescription v${stored.version} · ${stored.status}`
-                : "Unsaved prescription"}
+                ? t.versionStatus(stored.version, t.statuses[stored.status] ?? stored.status)
+                : t.unsaved}
             </Badge>
             {currentlyPublished && (
               <Badge tone="success">
-                Current patient version: {currentlyPublished.version}
+                {t.currentVersion(currentlyPublished.version)}
               </Badge>
             )}
           </div>
           {!stored ? (
             <Button onClick={saveDraft} disabled={busy || !safetyCleared}>
-              {busy ? "Saving…" : "Save prescription draft"}
+              {busy ? t.saving : t.save}
             </Button>
           ) : stored.status === "draft" ? (
             <div className="space-y-3">
@@ -471,21 +479,19 @@ export function PrescriptionBuilder({
                   onChange={(event) => setPublishConfirmed(event.target.checked)}
                 />
                 <span>
-                  I verified each exercise, dosage, schedule, precaution, stop
-                  rule and review date against the patient record. Publishing
-                  will revoke the previous patient-visible version.
+                  {t.publishAttest}
                 </span>
               </label>
               <Button
                 onClick={publish}
                 disabled={busy || !publishConfirmed || !safetyCleared}
               >
-                {busy ? "Publishing…" : "Publish to patient portal"}
+                {busy ? t.publishing : t.publish}
               </Button>
             </div>
           ) : (
             <p role="status" className="text-sm text-[var(--color-success)]">
-              This version is now patient-visible. The portal will load it on refresh.
+              {t.published}
             </p>
           )}
           {error && (
@@ -496,27 +502,27 @@ export function PrescriptionBuilder({
         </div>
 
         {historyLoading ? (
-          <Spinner label="Loading prescription history…" />
+          <Spinner label={t.loadingHistory} />
         ) : scopedHistory.error ? (
           <div role="alert" className="space-y-2 text-sm text-[var(--color-danger)]">
-            <p>{scopedHistory.error}</p>
+            <p>{t.historyFailed}</p>
             <Button
               size="sm"
               variant="secondary"
               onClick={() => setHistoryRetry((value) => value + 1)}
             >
-              Retry
+              {t.retry}
             </Button>
           </div>
         ) : scopedHistory.records.length > 0 ? (
           <div className="space-y-3 border-t border-[var(--color-border)] pt-4">
             <h4 className="text-sm font-semibold text-[var(--color-ink)]">
-              Prescription history
+              {t.history}
             </h4>
             {scopedHistory.records.map((record) => (
               <div key={record.id} className="flex flex-wrap items-center gap-2 text-xs">
-                <span>Version {record.version}</span>
-                <span>{record.scheduleTimezone ?? "Legacy schedule"}</span>
+                <span>{t.version(record.version)}</span>
+                <span dir="ltr">{record.scheduleTimezone ?? t.legacySchedule}</span>
                 <Badge
                   tone={
                     record.status === "published"
@@ -526,10 +532,10 @@ export function PrescriptionBuilder({
                         : "warn"
                   }
                 >
-                  {record.status}
+                  {t.statuses[record.status] ?? record.status}
                 </Badge>
                 <span className="text-[var(--color-ink-faint)]">
-                  {record.items.length} exercise(s) · {new Date(record.createdAt).toLocaleString()}
+                  {t.itemsAt(record.items.length, when(record.createdAt))}
                 </span>
                 {record.status === "draft" &&
                   record.treatmentPlanId === treatmentPlanId &&
@@ -540,7 +546,7 @@ export function PrescriptionBuilder({
                       disabled={busy}
                       onClick={() => openSavedDraft(record)}
                     >
-                      Open for review
+                      {t.openForReview}
                     </Button>
                   )}
               </div>
@@ -557,8 +563,7 @@ export function PrescriptionBuilder({
                     onChange={(event) => setRevokeConfirmed(event.target.checked)}
                   />
                   <span>
-                    I intend to stop the current patient-visible prescription.
-                    The patient will have no active published program after revocation.
+                    {t.revokeAttest}
                   </span>
                 </label>
                 <Button
@@ -567,7 +572,7 @@ export function PrescriptionBuilder({
                   disabled={busy || !revokeConfirmed}
                   onClick={revokeCurrent}
                 >
-                  Revoke current prescription
+                  {t.revoke}
                 </Button>
               </div>
             )}

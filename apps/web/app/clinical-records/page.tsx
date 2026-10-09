@@ -23,6 +23,9 @@ import type {
   OutcomeMeasurement,
   PatientRegistryItem,
 } from "@/lib/types";
+import { useLocale } from "@/lib/store/LocaleContext";
+import { intlLocale, useText } from "@/lib/i18n/text";
+import { clinicalRecordsText } from "./text";
 
 function localDateTimeInput(value = new Date()): string {
   const adjusted = new Date(value.getTime() - value.getTimezoneOffset() * 60_000);
@@ -34,11 +37,11 @@ function localDateInput(value = new Date()): string {
   return adjusted.toISOString().slice(0, 10);
 }
 
-function formatDateTime(value: string): string {
+function formatDateTime(value: string, locale: string, unknown: string): string {
   const parsed = new Date(value);
   return Number.isNaN(parsed.getTime())
-    ? "Unknown date"
-    : parsed.toLocaleString("en-GB", {
+    ? unknown
+    : parsed.toLocaleString(locale, {
         dateStyle: "medium",
         timeStyle: "short",
       });
@@ -71,6 +74,8 @@ const emptyOutcomeForm = () => ({
 
 export default function ClinicalRecordsPage() {
   const { profile, activeClinicId } = useAuth();
+  const t = useText(clinicalRecordsText);
+  const { locale } = useLocale();
   const canAccess =
     profile?.role === "clinic_owner" || profile?.role === "therapist";
   const [search, setSearch] = useState("");
@@ -194,7 +199,7 @@ export default function ClinicalRecordsPage() {
     return (
       !hasUnsavedClinicalDraft ||
       window.confirm(
-        "Discard the unsaved clinical note or outcome draft before changing patient context?"
+        t.discardConfirm
       )
     );
   }
@@ -244,14 +249,12 @@ export default function ClinicalRecordsPage() {
       (sessionForm.supersedesId &&
         sessionForm.correctionReason.trim().length < 3)
     ) {
-      setFeedback(
-        "Enter clinical content; a correction also requires a reason."
-      );
+      setFeedback(t.needContent);
       return;
     }
     const occurredAt = new Date(sessionForm.occurredAt);
     if (Number.isNaN(occurredAt.getTime())) {
-      setFeedback("Choose a valid session date and time.");
+      setFeedback(t.invalidTime);
       return;
     }
     setSubmitting("session");
@@ -272,13 +275,11 @@ export default function ClinicalRecordsPage() {
     setSubmitting(null);
     if (scopeRef.current !== scope) return;
     if (!ok) {
-      setFeedback(
-        "Session note was not signed. Check assignment, content and connection; the draft remains here."
-      );
+      setFeedback(t.sessionFailed);
       return;
     }
     setSessionForm(emptySessionForm());
-    setFeedback("Signed session note appended to the record.");
+    setFeedback(t.sessionSaved);
     setRefreshToken((value) => value + 1);
   }
 
@@ -298,7 +299,7 @@ export default function ClinicalRecordsPage() {
       (outcomeForm.supersedesId &&
         outcomeForm.correctionReason.trim().length < 3)
     ) {
-      setFeedback("Choose a reviewed measure and enter a score in its range.");
+      setFeedback(t.outcomeInvalid);
       return;
     }
     setSubmitting("outcome");
@@ -317,13 +318,11 @@ export default function ClinicalRecordsPage() {
     setSubmitting(null);
     if (scopeRef.current !== scope) return;
     if (!ok) {
-      setFeedback(
-        "Outcome was not signed. Check assignment, date and reviewed score range; the draft remains here."
-      );
+      setFeedback(t.outcomeFailed);
       return;
     }
     setOutcomeForm(emptyOutcomeForm());
-    setFeedback("Versioned outcome measurement appended to the record.");
+    setFeedback(t.outcomeSaved);
     setRefreshToken((value) => value + 1);
   }
 
@@ -331,7 +330,7 @@ export default function ClinicalRecordsPage() {
     if (
       hasUnsavedSessionDraft &&
       !window.confirm(
-        "Replace the unsaved session-note draft with this correction?"
+        t.replaceSession
       )
     ) {
       return;
@@ -346,14 +345,14 @@ export default function ClinicalRecordsPage() {
       supersedesId: note.id,
       correctionReason: "",
     });
-    setFeedback("Correction mode: the signed original remains in history.");
+    setFeedback(t.correctionMode);
   }
 
   function correctOutcome(measurement: OutcomeMeasurement) {
     if (
       hasUnsavedOutcomeDraft &&
       !window.confirm(
-        "Replace the unsaved outcome-measure draft with this correction?"
+        t.replaceOutcome
       )
     ) {
       return;
@@ -366,20 +365,20 @@ export default function ClinicalRecordsPage() {
       supersedesId: measurement.id,
       correctionReason: "",
     });
-    setFeedback("Correction mode: the signed original remains in history.");
+    setFeedback(t.correctionMode);
   }
 
   if (isMockMode) {
     return (
       <div className="space-y-6">
         <PageIntro
-          title="Clinical Records"
-          description="Signed session notes and validated outcome measurements."
+          title={t.title}
+          description={t.demoIntro}
         />
         <EmptyState
           icon="new-case"
-          title="No fabricated clinical documentation"
-          description="This append-only workflow is available only with authenticated Supabase and migration 018. Demo mode does not invent signed notes or scores."
+          title={t.demoTitle}
+          description={t.demoBody}
         />
       </div>
     );
@@ -388,11 +387,11 @@ export default function ClinicalRecordsPage() {
   if (!canAccess) {
     return (
       <div className="space-y-6">
-        <PageIntro title="Clinical Records" description="Signed clinical documentation." />
+        <PageIntro title={t.title} description={t.shortIntro} />
         <EmptyState
           icon="shield"
-          title="Clinical access required"
-          description="Only clinic owners and assigned therapists can read or append this record."
+          title={t.accessTitle}
+          description={t.accessBody}
         />
       </div>
     );
@@ -401,11 +400,11 @@ export default function ClinicalRecordsPage() {
   if (!activeClinicId) {
     return (
       <div className="space-y-6">
-        <PageIntro title="Clinical Records" description="Signed clinical documentation." />
+        <PageIntro title={t.title} description={t.shortIntro} />
         <EmptyState
           icon="search"
-          title="Select an active clinic"
-          description="Choose the tenant before opening patient documentation."
+          title={t.clinicTitle}
+          description={t.clinicBody}
         />
       </div>
     );
@@ -418,12 +417,12 @@ export default function ClinicalRecordsPage() {
   return (
     <div className="space-y-6">
       <PageIntro
-        title="Clinical Records"
-        description="Append-only session documentation and versioned, range-checked outcome measures. Corrections never overwrite the signed original."
+        title={t.title}
+        description={t.intro}
       />
 
       <Card>
-        <CardHeader title="Patient and care episode" icon={<Icon name="user" />} />
+        <CardHeader title={t.patientEpisode} icon={<Icon name="user" />} />
         <CardBody className="space-y-4">
           <form
             className="flex flex-col gap-2 sm:flex-row"
@@ -433,23 +432,22 @@ export default function ClinicalRecordsPage() {
               value={search}
               maxLength={80}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search patient name"
-              aria-label="Search patient name"
+              placeholder={t.searchPlaceholder}
+              aria-label={t.searchPlaceholder}
             />
             <Button type="submit" variant="secondary">
-              <Icon name="search" width={15} height={15} /> Search
+              <Icon name="search" width={15} height={15} /> {t.search}
             </Button>
           </form>
           {patientsLoading ? (
-            <Spinner label="Loading authorized patients…" />
+            <Spinner label={t.loadingPatients} />
           ) : patientsError ? (
             <div
               role="alert"
               className="rounded-xl border border-[var(--color-danger)]/40 bg-[var(--color-danger-soft)] px-4 py-3 text-sm text-[var(--color-danger)]"
             >
               <p>
-                Patient list could not be loaded. This is not an empty registry;
-                check the connection and retry.
+                {t.patientsFailed}
               </p>
               <Button
                 type="button"
@@ -458,22 +456,22 @@ export default function ClinicalRecordsPage() {
                 className="mt-3"
                 onClick={() => setPatientRetryToken((value) => value + 1)}
               >
-                Retry patient list
+                {t.retryPatients}
               </Button>
             </div>
           ) : (
             <Field
-              label="Patient"
-              hint="Only patients visible through the active clinic and current assignment are listed."
+              label={t.patient}
+              hint={t.patientHint}
             >
               <Select
                 value={selectedPatientId}
                 onChange={(event) => selectPatient(event.target.value)}
               >
-                <option value="">Select a patient</option>
+                <option value="">{t.selectPatient}</option>
                 {patients.map((patient) => (
                   <option key={patient.id} value={patient.id}>
-                    {patient.fullName} — {patient.activeEpisode?.titleFa ?? patient.latestEpisode?.titleFa ?? "No episode"}
+                    {patient.fullName} — {patient.activeEpisode?.titleFa ?? patient.latestEpisode?.titleFa ?? t.noEpisode}
                   </option>
                 ))}
               </Select>
@@ -483,7 +481,7 @@ export default function ClinicalRecordsPage() {
             <div className="flex flex-wrap gap-2 text-xs">
               <Badge tone="primary">{selectedPatient.fullName}</Badge>
               <Badge tone={selectedPatient.activeEpisode ? "success" : "neutral"}>
-                {selectedPatient.activeEpisode ? "active episode" : "historical episode"}
+                {selectedPatient.activeEpisode ? t.activeEpisode : t.historicalEpisode}
               </Badge>
               {selectedEpisode && <Badge>{selectedEpisode.titleFa}</Badge>}
             </div>
@@ -494,8 +492,8 @@ export default function ClinicalRecordsPage() {
       {!selectedEpisode ? (
         <EmptyState
           icon="new-case"
-          title="Choose a patient with a care episode"
-          description="The signed timeline is scoped to one explicit episode."
+          title={t.chooseTitle}
+          description={t.chooseBody}
         />
       ) : (
         <>
@@ -508,13 +506,13 @@ export default function ClinicalRecordsPage() {
           <div className="grid gap-5 xl:grid-cols-2">
             <Card>
               <CardHeader
-                title={sessionForm.supersedesId ? "Correct session note" : "Sign session note"}
-                subtitle="SOAP-style fields remain immutable after signing."
+                title={sessionForm.supersedesId ? t.correctSession : t.signSession}
+                subtitle={t.sessionSubtitle}
                 icon={<Icon name="new-case" />}
               />
               <CardBody>
                 <form onSubmit={saveSession} className="space-y-3">
-                  <Field label="Session date and time" required>
+                  <Field label={t.sessionTime} required>
                     <Input
                       type="datetime-local"
                       value={sessionForm.occurredAt}
@@ -525,7 +523,7 @@ export default function ClinicalRecordsPage() {
                     />
                   </Field>
                   {(["subjective", "objective", "interventions", "response", "plan"] as const).map((field) => (
-                    <Field key={field} label={field[0].toUpperCase() + field.slice(1)}>
+                    <Field key={field} label={t.fields[field]}>
                       <Textarea
                         value={sessionForm[field]}
                         maxLength={10000}
@@ -536,7 +534,7 @@ export default function ClinicalRecordsPage() {
                     </Field>
                   ))}
                   {sessionForm.supersedesId && (
-                    <Field label="Correction reason" required>
+                    <Field label={t.correctionReason} required>
                       <Input
                         value={sessionForm.correctionReason}
                         minLength={3}
@@ -550,11 +548,11 @@ export default function ClinicalRecordsPage() {
                   )}
                   <div className="flex flex-wrap gap-2">
                     <Button type="submit" disabled={submitting !== null}>
-                      {submitting === "session" ? "Signing…" : "Append signed note"}
+                      {submitting === "session" ? t.signing : t.appendNote}
                     </Button>
                     {sessionForm.supersedesId && (
                       <Button type="button" variant="secondary" onClick={() => setSessionForm(emptySessionForm())}>
-                        Cancel correction
+                        {t.cancelCorrection}
                       </Button>
                     )}
                   </div>
@@ -564,8 +562,8 @@ export default function ClinicalRecordsPage() {
 
             <Card>
               <CardHeader
-                title={outcomeForm.supersedesId ? "Correct outcome" : "Record outcome"}
-                subtitle="Instrument version, unit and scoring range are stamped by the database."
+                title={outcomeForm.supersedesId ? t.correctOutcome : t.recordOutcome}
+                subtitle={t.outcomeSubtitle}
                 icon={<Icon name="analysis" />}
               />
               <CardBody>
@@ -576,8 +574,7 @@ export default function ClinicalRecordsPage() {
                       className="rounded-xl border border-[var(--color-danger)]/40 bg-[var(--color-danger-soft)] px-4 py-3 text-sm text-[var(--color-danger)]"
                     >
                       <p>
-                        The reviewed outcome-measure catalog could not be loaded.
-                        No score can be signed until it is available.
+                        {t.catalogFailed}
                       </p>
                       <Button
                         type="button"
@@ -586,7 +583,7 @@ export default function ClinicalRecordsPage() {
                         className="mt-3"
                         onClick={retryInstrumentCatalog}
                       >
-                        Retry instrument catalog
+                        {t.retryCatalog}
                       </Button>
                     </div>
                   )}
@@ -597,11 +594,10 @@ export default function ClinicalRecordsPage() {
                         role="alert"
                         className="rounded-xl bg-[var(--color-warn-soft)] px-4 py-3 text-sm text-[var(--color-warn)]"
                       >
-                        No active reviewed outcome instruments are configured.
-                        Ask the platform administrator to verify migration 018.
+                        {t.noInstruments}
                       </p>
                     )}
-                  <Field label="Reviewed instrument" required>
+                  <Field label={t.instrument} required>
                     <Select
                       value={outcomeForm.instrumentKey}
                       disabled={
@@ -617,8 +613,8 @@ export default function ClinicalRecordsPage() {
                     >
                       <option value="">
                         {instrumentsLoading
-                          ? "Loading reviewed instruments…"
-                          : "Select an instrument"}
+                          ? t.loadingInstruments
+                          : t.selectInstrument}
                       </option>
                       {instruments.map((instrument) => (
                         <option key={instrument.key} value={instrument.key}>
@@ -629,7 +625,7 @@ export default function ClinicalRecordsPage() {
                   </Field>
                   <div className="grid gap-3 sm:grid-cols-2">
                     <Field
-                      label="Score"
+                      label={t.score}
                       hint={selectedInstrument ? `${selectedInstrument.scoreMin}–${selectedInstrument.scoreMax} ${selectedInstrument.unit}` : undefined}
                       required
                     >
@@ -645,7 +641,7 @@ export default function ClinicalRecordsPage() {
                         }
                       />
                     </Field>
-                    <Field label="Measured date" required>
+                    <Field label={t.measuredDate} required>
                       <Input
                         type="date"
                         value={outcomeForm.measuredAt}
@@ -656,7 +652,7 @@ export default function ClinicalRecordsPage() {
                       />
                     </Field>
                   </div>
-                  <Field label="Clinical note">
+                  <Field label={t.clinicalNote}>
                     <Textarea
                       value={outcomeForm.notes}
                       maxLength={5000}
@@ -666,7 +662,7 @@ export default function ClinicalRecordsPage() {
                     />
                   </Field>
                   {outcomeForm.supersedesId && (
-                    <Field label="Correction reason" required>
+                    <Field label={t.correctionReason} required>
                       <Input
                         value={outcomeForm.correctionReason}
                         minLength={3}
@@ -688,11 +684,11 @@ export default function ClinicalRecordsPage() {
                         !selectedInstrument
                       }
                     >
-                      {submitting === "outcome" ? "Signing…" : "Append outcome"}
+                      {submitting === "outcome" ? t.signing : t.appendOutcome}
                     </Button>
                     {outcomeForm.supersedesId && (
                       <Button type="button" variant="secondary" onClick={() => setOutcomeForm(emptyOutcomeForm())}>
-                        Cancel correction
+                        {t.cancelCorrection}
                       </Button>
                     )}
                   </div>
@@ -702,15 +698,14 @@ export default function ClinicalRecordsPage() {
           </div>
 
           <Card>
-            <CardHeader title="Signed timeline" icon={<Icon name="clock" />} />
+            <CardHeader title={t.timeline} icon={<Icon name="clock" />} />
             <CardBody className="space-y-6">
               {recordsLoading ? (
-                <Spinner label="Loading signed documentation…" />
+                <Spinner label={t.loadingDocs} />
               ) : recordsError ? (
                 <div role="alert" className="text-sm text-[var(--color-danger)]">
                   <p>
-                    Documentation could not be loaded. Existing rows are not
-                    shown as current.
+                    {t.docsFailed}
                   </p>
                   <Button
                     type="button"
@@ -719,35 +714,35 @@ export default function ClinicalRecordsPage() {
                     className="mt-3"
                     onClick={() => setRefreshToken((value) => value + 1)}
                   >
-                    Retry signed timeline
+                    {t.retryTimeline}
                   </Button>
                 </div>
               ) : documentation.sessionNotes.length === 0 &&
                 documentation.outcomeMeasurements.length === 0 ? (
-                <p className="text-sm text-[var(--color-ink-soft)]">No signed documentation for this episode yet.</p>
+                <p className="text-sm text-[var(--color-ink-soft)]">{t.noDocs}</p>
               ) : (
                 <div className="grid gap-6 lg:grid-cols-2">
                   <section>
-                    <h2 className="mb-3 text-sm font-bold text-[var(--color-ink)]">Session notes</h2>
+                    <h2 className="mb-3 text-sm font-bold text-[var(--color-ink)]">{t.sessionNotes}</h2>
                     <ol className="space-y-3">
                       {documentation.sessionNotes.map((note) => (
                         <li key={note.id} className="rounded-xl border border-[var(--color-border)] p-4">
                           <div className="flex flex-wrap items-center justify-between gap-2">
-                            <time className="text-xs text-[var(--color-ink-soft)]">{formatDateTime(note.occurredAt)}</time>
-                            <Badge tone={note.isCurrent ? "success" : "neutral"}>{note.isCurrent ? "current" : "superseded"}</Badge>
+                            <time className="text-xs text-[var(--color-ink-soft)]">{formatDateTime(note.occurredAt, intlLocale(locale), t.unknownDate)}</time>
+                            <Badge tone={note.isCurrent ? "success" : "neutral"}>{note.isCurrent ? t.current : t.superseded}</Badge>
                           </div>
                           <dl className="mt-3 space-y-2 text-sm">
                             {(["subjective", "objective", "interventions", "response", "plan"] as const).map((field) => note[field] ? (
                               <div key={field}>
-                                <dt className="text-xs font-semibold capitalize text-[var(--color-ink-faint)]">{field}</dt>
+                                <dt className="text-xs font-semibold text-[var(--color-ink-faint)]">{t.fields[field]}</dt>
                                 <dd className="whitespace-pre-wrap text-[var(--color-ink)]">{note[field]}</dd>
                               </div>
                             ) : null)}
                           </dl>
-                          {note.correctionReason && <p className="mt-3 text-xs text-[var(--color-warn)]">Correction: {note.correctionReason}</p>}
+                          {note.correctionReason && <p className="mt-3 text-xs text-[var(--color-warn)]">{t.correction(note.correctionReason)}</p>}
                           {note.isCurrent && (
                             <Button className="mt-3" size="sm" variant="secondary" onClick={() => correctSession(note)}>
-                              Create correction
+                              {t.createCorrection}
                             </Button>
                           )}
                         </li>
@@ -755,23 +750,23 @@ export default function ClinicalRecordsPage() {
                     </ol>
                   </section>
                   <section>
-                    <h2 className="mb-3 text-sm font-bold text-[var(--color-ink)]">Outcome measures</h2>
+                    <h2 className="mb-3 text-sm font-bold text-[var(--color-ink)]">{t.outcomes}</h2>
                     <ol className="space-y-3">
                       {documentation.outcomeMeasurements.map((measurement) => (
                         <li key={measurement.id} className="rounded-xl border border-[var(--color-border)] p-4">
                           <div className="flex flex-wrap items-center justify-between gap-2">
                             <div>
                               <p className="text-sm font-semibold text-[var(--color-ink)]">{measurement.instrumentName}</p>
-                              <p className="text-xs text-[var(--color-ink-soft)]">{measurement.measuredAt} · version {measurement.instrumentVersion}</p>
+                              <p className="text-xs text-[var(--color-ink-soft)]">{t.measuredVersion(measurement.measuredAt, measurement.instrumentVersion)}</p>
                             </div>
                             <Badge tone={measurement.isCurrent ? "primary" : "neutral"}>{measurement.score} {measurement.unit}</Badge>
                           </div>
-                          <p className="mt-2 text-xs text-[var(--color-ink-soft)]">Reviewed range {measurement.scoreMin}–{measurement.scoreMax}; {measurement.direction.replace("-", " ")}.</p>
+                          <p className="mt-2 text-xs text-[var(--color-ink-soft)]">{t.range(measurement.scoreMin, measurement.scoreMax, t.directions[measurement.direction] ?? measurement.direction)}</p>
                           {measurement.notes && <p className="mt-2 whitespace-pre-wrap text-sm text-[var(--color-ink)]">{measurement.notes}</p>}
-                          {measurement.correctionReason && <p className="mt-2 text-xs text-[var(--color-warn)]">Correction: {measurement.correctionReason}</p>}
+                          {measurement.correctionReason && <p className="mt-2 text-xs text-[var(--color-warn)]">{t.correction(measurement.correctionReason)}</p>}
                           {measurement.isCurrent && (
                             <Button className="mt-3" size="sm" variant="secondary" onClick={() => correctOutcome(measurement)}>
-                              Create correction
+                              {t.createCorrection}
                             </Button>
                           )}
                         </li>

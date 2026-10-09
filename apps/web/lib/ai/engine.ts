@@ -7,6 +7,11 @@ import type {
 } from "@/lib/types";
 import { getRegion } from "@/lib/data/bodyRegions";
 import type { ExerciseFa } from "@/lib/data/exerciseFa";
+import {
+  detectSafetySignals,
+  hasClinicalSafetyClearance,
+  safetyFlagLabels,
+} from "@/lib/clinical/safety";
 
 /*
  * ─────────────────────────────────────────────────────────────
@@ -26,16 +31,6 @@ import type { ExerciseFa } from "@/lib/data/exerciseFa";
 export function delay<T>(value: T, ms = 700): Promise<T> {
   return new Promise((resolve) => setTimeout(() => resolve(value), ms));
 }
-
-const RED_FLAG_KEYWORDS: { pattern: RegExp; message: string }[] = [
-  { pattern: /weight loss|cancer|tumou?r|malignan/i, message: "History/features suggestive of malignancy — screen carefully and consider referral." },
-  { pattern: /night pain|constant pain|unremitting/i, message: "Constant/night pain reported — screen for serious pathology." },
-  { pattern: /fever|infection|chills/i, message: "Possible infective features — screen and refer if indicated." },
-  { pattern: /bladder|bowel|saddle|incontinen/i, message: "Possible cauda equina features — urgent medical referral if present." },
-  { pattern: /trauma|fall|accident|fracture/i, message: "Significant trauma — consider fracture screening/imaging." },
-  { pattern: /chest pain|short(ness)? of breath|palpitation/i, message: "Cardiorespiratory symptoms — screen and refer if indicated." },
-  { pattern: /calf|dvt|clot|swollen leg/i, message: "Possible DVT features — screen (e.g. Wells) and refer urgently if suspected." },
-];
 
 /** Generate structured clinical reasoning from a patient case. */
 export function buildReasoning(c: PatientCase): ClinicalReasoning {
@@ -72,21 +67,39 @@ export function buildReasoning(c: PatientCase): ClinicalReasoning {
       ]
     : ["Add region and history detail to refine differentials."];
 
-  const yellowFlags: string[] = [];
-  if (c.painIntensity >= 7) yellowFlags.push("High reported pain intensity — assess distress and beliefs.");
-  if (/(work|job|sitting at work)/i.test(c.functionalLimitations)) yellowFlags.push("Work-related limitation — explore fear of movement and workplace factors.");
-  if (/(chronic|months|weeks)/i.test(c.duration) && c.painIntensity >= 5) yellowFlags.push("Persistent symptoms — screen for unhelpful beliefs and low activity.");
-  if (yellowFlags.length === 0) yellowFlags.push("No obvious psychosocial flags from the intake — confirm in interview.");
+  const yellowFlags: string[] = [
+    "Psychosocial risk has not been established by this intake. Ask validated questions about distress, recovery expectations, fear, sleep, work and social context.",
+  ];
 
   const redFlags: string[] = [];
   const haystack = [
     c.mainComplaint, c.mechanism, c.medicalHistory, c.surgicalHistory,
     c.medications, c.functionalLimitations, c.imaging, c.aggravating,
+    c.painLocation,
   ].join(" ");
-  for (const rf of RED_FLAG_KEYWORDS) {
-    if (rf.pattern.test(haystack)) redFlags.push(rf.message);
+  const structuredFlags = c.safetyScreen?.selectedFlagIds ?? [];
+  if (!c.safetyScreen?.screenedAt) {
+    redFlags.push(
+      "Safety screen incomplete — absence of detected keywords is not clinical clearance."
+    );
+  } else if (structuredFlags.length > 0) {
+    redFlags.push(
+      ...safetyFlagLabels(structuredFlags).map(
+        (label) =>
+          `Structured screen concern: ${label}. Follow the recorded escalation pathway.`
+      )
+    );
+  } else {
+    redFlags.push(
+      "Structured screen completed with no selected concerns; continue to verify throughout examination."
+    );
   }
-  if (redFlags.length === 0) redFlags.push("No red flags detected from the intake text — complete a full safety screen to confirm.");
+
+  for (const signal of detectSafetySignals(haystack)) {
+    redFlags.push(
+      `Supplemental text warning (${signal.disposition}): ${signal.id}. Verify immediately using the structured screen.`
+    );
+  }
 
   const missingInfo = [
     !c.imaging || /not performed|none/i.test(c.imaging) ? "Any imaging results, if available." : null,
@@ -133,13 +146,35 @@ function pickOutcomeMeasures(c: PatientCase): string[] {
 
 /** Generate a structured treatment plan from planner inputs. */
 export function buildTreatmentPlan(input: TreatmentPlanInput): TreatmentPlan {
+  if (!input.safetyConfirmed) {
+    throw new Error(
+      "A completed clinical safety screen is required before treatment planning."
+    );
+  }
+  if (input.stage === "post-op" && !input.postOpDetails?.protocolConfirmed) {
+    throw new Error(
+      "The surgical protocol, precautions and weight-bearing status must be confirmed before post-operative planning."
+    );
+  }
+
   const region = getRegion(input.region);
   const acute = input.stage === "acute" || input.irritability === "high";
   const postOp = input.stage === "post-op";
 
-  const manualTherapy = acute
-    ? ["Gentle soft-tissue techniques for pain relief", "Grade I–II joint mobilisation as tolerated"]
-    : ["Grade III–IV mobilisation to restore range", "Soft-tissue work as an adjunct to exercise"];
+  const manualTherapy = postOp
+    ? [
+        "Use only techniques explicitly permitted by the surgeon's protocol and documented precautions.",
+        "Treat manual therapy as an optional adjunct; stop if symptoms worsen or precautions are breached.",
+      ]
+    : acute
+      ? [
+          "Consider gentle symptom-modulation techniques only after contraindications are excluded.",
+          "Reassess the response during and after treatment; avoid forcing painful range.",
+        ]
+      : [
+          "Consider joint or soft-tissue techniques only when examination findings support them.",
+          "Use manual therapy as an adjunct to active rehabilitation, with documented response.",
+        ];
 
   const exerciseTherapy = acute
     ? ["Low-load, pain-guided movement", "Isometrics for early loading", "Frequent short sessions"]
@@ -147,7 +182,11 @@ export function buildTreatmentPlan(input: TreatmentPlanInput): TreatmentPlan {
 
   const mobility = region?.exerciseSuggestions.slice(0, 2) ?? ["Region-appropriate mobility drills"];
   const strengthening = postOp
-    ? ["Isometric activation of key muscles", "Progress to open/closed chain per protocol"]
+    ? [
+        `Procedure: ${input.postOpDetails?.procedure || "not specified"}. Follow the confirmed protocol and precautions.`,
+        `Weight-bearing status: ${input.postOpDetails?.weightBearingStatus || "not specified"}.`,
+        "Progress open/closed-chain loading only when permitted by the operating team.",
+      ]
     : ["Target the main impairment: " + (input.mainImpairment || "identified weakness"), "Progressive overload 2–3×/week"];
 
   const motorControl = ["Task-specific control drills", "Quality-of-movement retraining", "Breathing and relaxation as needed"];
@@ -156,7 +195,11 @@ export function buildTreatmentPlan(input: TreatmentPlanInput): TreatmentPlan {
   const education = [
     ...(region?.educationPoints.slice(0, 2) ?? []),
     "Explain expected timeline and the role of active rehab.",
-    input.painSeverity >= 6 ? "Pain-science education: hurt does not always equal harm." : "Reassure and encourage graded activity.",
+    input.painSeverity >= 9
+      ? "Very high pain requires reassessment before progression; do not rely on reassurance alone."
+      : input.painSeverity >= 6
+        ? "Explain pain carefully without dismissing symptoms; use the examination and safety screen to guide load."
+        : "Encourage graded activity within the agreed symptom-response rules.",
   ];
 
   const homeProgram = [
@@ -191,6 +234,11 @@ export function buildEducation(c: PatientCase): {
   contact: string[];
   homeAdvice: string[];
 } {
+  if (!hasClinicalSafetyClearance(c.safetyScreen)) {
+    throw new Error(
+      "Patient advice cannot be generated until the structured safety screen is complete and clear."
+    );
+  }
   const region = c.region ? getRegion(c.region) : undefined;
   const area = c.painLocation || region?.label.toLowerCase() || "the affected area";
 
@@ -269,12 +317,28 @@ export function buildPatientChatReply(
 ): string {
   const q = question.replace(/[‌\s]+/g, " ").toLowerCase();
 
+  const safetySignals = detectSafetySignals(q);
+  if (safetySignals.some((signal) => signal.disposition === "emergency")) {
+    return (
+      "⚠️ توضیح شما می‌تواند با یک وضعیت اورژانسی سازگار باشد. تمرین را متوقف کنید و منتظر پاسخ تیکت یا این گفت‌وگو نمانید. " +
+      "همین حالا با اورژانس محل زندگی تماس بگیرید (در ایران ۱۱۵) یا به نزدیک‌ترین اورژانس مراجعه کنید. اگر تنها هستید از فرد دیگری کمک بخواهید. " +
+      "این پیام تشخیص پزشکی نیست و این گفت‌وگو به‌صورت خودکار برای درمانگر ارسال نمی‌شود."
+    );
+  }
+  if (safetySignals.some((signal) => signal.disposition === "urgent")) {
+    return (
+      "⚠️ این علامت نیازمند ارزیابی سریع پزشکی است. تمرین را فعلاً متوقف کنید و امروز با پزشک یا مرکز درمانی تماس بگیرید. " +
+      "اگر علائم شدید یا رو به بدترشدن است، با اورژانس محل زندگی تماس بگیرید (در ایران ۱۱۵). منتظر پاسخ تیکت نمانید."
+    );
+  }
+
   // 1) Safety first: pain / worrying symptoms → guidance + ticket nudge.
   if (/(درد|ورم|تورم|گزگز|بی[\s‌]?حس|سوزش)/.test(q)) {
     return (
-      "توضیح شما ثبت شد. 🌡 اگر هنگام تمرین درد تیز، ورم جدید، گزگز یا بی‌حسی دارید، همان تمرین را فعلاً متوقف کنید و ادامه ندهید.\n\n" +
+      "اگر هنگام تمرین درد تیز، ورم جدید، گزگز یا بی‌حسی دارید، همان تمرین را فعلاً متوقف کنید و ادامه ندهید.\n\n" +
       "پیشنهاد می‌کنم از بخش «تیکت‌ها» یک تیکت برای فیزیوتراپیست خود ثبت کنید و بنویسید کدام تمرین و کدام قسمت بدن بود تا برنامه‌تان بررسی و در صورت نیاز اصلاح شود.\n\n" +
-      "⚠️ اگر درد شدید و ناگهانی، تب، یا از دست دادن کنترل ادرار/مدفوع دارید، همین امروز با پزشک تماس بگیرید یا به اورژانس مراجعه کنید."
+      "این گفت‌وگو ذخیره یا خودکار برای درمانگر ارسال نمی‌شود؛ فقط تیکت ثبت‌شده قابل مشاهده است.\n\n" +
+      "⚠️ اگر درد شدید و ناگهانی، تب، تنگی نفس، درد قفسه سینه یا از دست دادن کنترل ادرار/مدفوع دارید، منتظر پاسخ نمانید و با اورژانس تماس بگیرید."
     );
   }
 
@@ -307,9 +371,18 @@ export function buildPatientChatReply(
       recent.length > 0
         ? (recent.reduce((s, e) => s + e.painLevel, 0) / recent.length).toFixed(1)
         : "—";
+    const worsening =
+      recent.length >= 2 &&
+      (recent.at(-1)?.painLevel ?? 0) - (recent[0]?.painLevel ?? 0) >= 2;
+    if (worsening || (recent.at(-1)?.painLevel ?? 0) >= 7) {
+      return (
+        `میانگین درد ثبت‌شده اخیر شما حدود ${avg} از ۱۰ است و روند نیاز به بررسی دارد. ` +
+        "تا زمان بررسی، شدت تمرین را افزایش ندهید و برای فیزیوتراپیست تیکت ثبت کنید. اگر درد شدید یا علامت نگران‌کننده دارید، منتظر تیکت نمانید و ارزیابی پزشکی بگیرید."
+      );
+    }
     return (
       `طبق گزارش‌های خودتان، میانگین درد شما در هفته اخیر حدود ${avg} از ۱۰ بوده است. ` +
-      "روند کلی شما در تب «پیشرفت من» قابل مشاهده است. بهبود تدریجی طبیعی است؛ مهم، ادامه منظم تمرین‌هاست. " +
+      "روند کلی شما در تب «پیشرفت من» قابل مشاهده است. فقط در محدوده تجویزشده ادامه دهید و شدت را خودسرانه افزایش ندهید. " +
       "ارزیابی دقیق پیشرفت را فیزیوتراپیست شما در جلسه حضوری انجام می‌دهد."
     );
   }
@@ -330,16 +403,72 @@ export function buildPatientChatReply(
  * therapist responds. Replace with a real triage call if desired.
  */
 export function buildTicketAutoReply(message: string): string {
-  const hasPain = /(درد|ورم|تورم|گزگز|بی[\s‌]?حس)/.test(message);
-  if (hasPain) {
+  const normalized = message.normalize("NFKC");
+  const isArabic =
+    /[أإؤئءةى]|(?:ألم|الصدر|ضيق|التنفس|تورم|خدر|حمى|البول|الأمعاء)/.test(
+      normalized
+    );
+  const isPersian = /[\u0600-\u06ff]/.test(normalized) && !isArabic;
+  const language = isArabic ? "ar" : isPersian ? "fa" : "en";
+  const signals = detectSafetySignals(normalized);
+  const disposition = signals[0]?.disposition;
+
+  if (disposition === "emergency") {
+    if (language === "fa") {
+      return (
+        "⚠️ تیکت ثبت شد، اما هنوز مشاهده آن توسط درمانگر تأیید نشده است. متن شما می‌تواند با یک وضعیت اورژانسی سازگار باشد. " +
+        "تمرین را متوقف کنید و همین حالا با اورژانس محل زندگی تماس بگیرید (در ایران ۱۱۵) یا به نزدیک‌ترین اورژانس مراجعه کنید. منتظر پاسخ تیکت نمانید. این پیام خودکار و تشخیص پزشکی نیست."
+      );
+    }
+    if (language === "ar") {
+      return (
+        "⚠️ تم تسجيل التذكرة، لكن لم يتم تأكيد اطلاع المعالج عليها. قد تتوافق الأعراض المكتوبة مع حالة طارئة. " +
+        "أوقف التمرين واتصل بخدمات الطوارئ المحلية الآن (115 في إيران) أو اذهب إلى أقرب قسم طوارئ. لا تنتظر رداً على التذكرة. هذه رسالة آلية وليست تشخيصاً طبياً."
+      );
+    }
     return (
-      "پیام شما ثبت شد و برای فیزیوتراپیست ارسال گردید. تا زمان بررسی، همان تمرین را متوقف یا با دامنه و شدت کمتر انجام دهید. " +
-      "اگر درد شدید، ورم ناگهانی، تب یا بی‌حسی پیشرونده دارید، منتظر پاسخ نمانید و با پزشک یا اورژانس تماس بگیرید. (پاسخ اولیه خودکار — فیزیوتراپیست به‌زودی پاسخ می‌دهد)"
+      "⚠️ Your ticket was recorded, but clinician review is not confirmed. The symptoms described may require emergency assessment. " +
+      "Stop exercising and contact local emergency services now (115 in Iran, where applicable) or go to the nearest emergency department. Do not wait for a ticket reply. This is an automated acknowledgement, not a diagnosis."
     );
   }
-  return (
-    "پیام شما ثبت شد و برای فیزیوتراپیست ارسال گردید. معمولاً در اولین فرصت کاری پاسخ داده می‌شود. (پاسخ اولیه خودکار)"
-  );
+
+  if (disposition === "urgent") {
+    if (language === "fa") {
+      return (
+        "⚠️ تیکت ثبت شد، اما هنوز مشاهده آن توسط درمانگر تأیید نشده است. علامت نوشته‌شده نیازمند ارزیابی سریع پزشکی است؛ تمرین را فعلاً متوقف کنید و امروز با پزشک یا مرکز درمانی تماس بگیرید. " +
+        "اگر علامت شدید یا رو به بدترشدن است، با اورژانس تماس بگیرید و منتظر پاسخ تیکت نمانید. این پیام خودکار است."
+      );
+    }
+    if (language === "ar") {
+      return (
+        "⚠️ تم تسجيل التذكرة، لكن لم يتم تأكيد اطلاع المعالج عليها. تحتاج الأعراض المكتوبة إلى تقييم طبي سريع؛ أوقف التمرين مؤقتاً واتصل بطبيب أو مركز صحي اليوم. " +
+        "إذا كانت الأعراض شديدة أو تتفاقم فاتصل بالطوارئ ولا تنتظر رداً على التذكرة. هذه رسالة آلية."
+      );
+    }
+    return (
+      "⚠️ Your ticket was recorded, but clinician review is not confirmed. The symptom described needs prompt medical assessment; pause exercise and contact a doctor or medical service today. " +
+      "If it is severe or worsening, contact emergency services and do not wait for a ticket reply. This is an automated acknowledgement."
+    );
+  }
+
+  const hasExerciseSymptom =
+    /(درد|ورم|تورم|گزگز|بی[\s‌-]?حس|pain|swelling|tingling|numb|ألم|تورم|خدر)/i.test(
+      normalized
+    );
+
+  if (language === "fa") {
+    return hasExerciseSymptom
+      ? "تیکت ثبت شد، اما هنوز مشاهده آن توسط درمانگر تأیید نشده است. تمرین علامت‌زا را فعلاً متوقف کنید و برای علائم فوری یا نگران‌کننده از تیکت استفاده نکنید؛ با پزشک یا اورژانس تماس بگیرید. این فقط پاسخ خودکار است."
+      : "تیکت ثبت شد، اما این پاسخ خودکار به معنای مشاهده یا پذیرش آن توسط درمانگر نیست. تیکت مسیر اورژانسی نیست؛ برای علائم فوری با پزشک یا اورژانس تماس بگیرید.";
+  }
+  if (language === "ar") {
+    return hasExerciseSymptom
+      ? "تم تسجيل التذكرة، لكن لم يتم تأكيد اطلاع المعالج عليها. أوقف التمرين المسبب للأعراض مؤقتاً، ولا تستخدم التذكرة للحالات العاجلة؛ اتصل بطبيب أو بالطوارئ. هذه رسالة آلية فقط."
+      : "تم تسجيل التذكرة، لكن هذه الرسالة الآلية لا تعني أن المعالج شاهدها أو قبلها. التذاكر ليست قناة طوارئ؛ اتصل بطبيب أو بالطوارئ عند وجود أعراض عاجلة.";
+  }
+  return hasExerciseSymptom
+    ? "Your ticket was recorded, but clinician review is not confirmed. Pause the symptom-provoking exercise for now. Tickets are not an emergency channel; contact a doctor or emergency service for urgent symptoms. This is an automated acknowledgement."
+    : "Your ticket was recorded, but this automated acknowledgement does not confirm clinician review or acceptance. Tickets are not an emergency channel; contact a doctor or emergency service for urgent symptoms.";
 }
 
 /*

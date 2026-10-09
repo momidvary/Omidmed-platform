@@ -12,6 +12,14 @@ export function formatDate(iso: string): string {
   });
 }
 
+/** Calendar date in the user's local timezone (not UTC). */
+export function localDateValue(date = new Date()): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 /** Simple id generator for mock/local data. */
 export function uid(prefix = "id"): string {
   return `${prefix}_${Math.random().toString(36).slice(2, 9)}`;

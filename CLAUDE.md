@@ -1,98 +1,117 @@
-# PhysioAI Assistant - Claude Instructions
+# PhysioAI Assistant — Repository Instructions
 
-## Project Identity
+## Project identity
 
-PhysioAI Assistant is an AI-powered clinical decision-support web app for
-physiotherapists. It helps with clinical reasoning, assessment, treatment
-planning, exercise prescription, red-flag safety screening, and patient
-education.
+PhysioAI is a multilingual physiotherapy decision-support application. It
+supports structured clinical workflows but is not a validated medical device,
+diagnostic service, emergency service or autonomous treatment system.
 
-This project replaced the earlier "OmidMed ordering platform" concept.
-Do not rebuild ordering/e-commerce features.
+This repository replaced the earlier OmidMed ordering-platform concept. Do not
+reintroduce ordering or e-commerce features.
 
-## Main Users
+## Non-negotiable clinical safety
 
-- Physiotherapists
-- Rehab clinicians
-- Clinic owners
-- Physiotherapy assistants under supervision
+- Never present a definitive diagnosis, autonomous clearance or unsupervised
+  treatment decision.
+- Describe generated reasoning as provisional clinical hypotheses that require
+  examination and clinician judgment.
+- An incomplete or concerning safety screen must block treatment, education,
+  clinical-AI and prescription-publish workflows as designed.
+- Urgent and emergency signals must direct the user to the appropriate clinical
+  escalation pathway; an automated acknowledgement is not proof of clinician
+  review.
+- AI output must remain a draft until an authorized clinician explicitly
+  reviews it. AI must never publish a plan or mutate the clinical record.
+- Do not imply that the posture sandbox analyses an image. No real vision model
+  is currently connected.
 
-## Clinical Safety Rules (non-negotiable)
+## Current architecture
 
-- The app must NEVER present a final medical diagnosis.
-- Always use the wording "possible clinical hypotheses" and remind the user
-  to confirm with clinical examination.
-- Red-flag screening must always warn: "Refer to physician / emergency care
-  if clinically indicated."
-- Every AI-generated page must show the clinical safety disclaimer
-  (`Disclaimer` component in `components/ui/Misc.tsx`).
+- The Next.js application is in `apps/web` and uses the App Router, React,
+  TypeScript and Tailwind CSS.
+- Supabase Auth and RLS are the source of truth in real mode. All reads and
+  writes must remain scoped to the explicitly selected active clinic.
+- Access is least-privilege:
+  - clinic owners manage authorized workflows in their clinic;
+  - therapists access clinical data only for patients assigned to them;
+  - clinic staff do not receive implicit clinical-PHI access;
+  - linked patient accounts access only their own patient-facing records;
+  - platform administrators do not receive implicit break-glass PHI access.
+- A real case is linked to the correct clinic, patient and care episode.
+  Treatment-plan and prescription history is versioned; signed/published
+  records are not silently rewritten.
+- The patient portal can represent more than one linked family member. Selection
+  must be explicit and drafts/state must not leak between patients or accounts.
+- National ID is a record field, never an authentication credential.
 
-## Current MVP Scope
+## Runtime modes
 
-- 10 clinician pages: Dashboard, New Case, Case Analysis, Treatment Planner,
-  Exercise Library, AI Assistant, Posture Analysis (3-view photo upload +
-  mock vision findings), Red Flag Checker, Patient Education, Settings.
-- Clinician UI i18n (en/fa/ar) via `lib/i18n/translations.ts` +
-  `LocaleContext`; fa/ar are RTL. Chrome/nav/posture/settings translated;
-  deep clinical content is progressive. Patient portal stays Persian-native.
-- Supabase Auth + RLS are real: roles in `profiles` (platform_admin /
-  clinic_owner / therapist / clinic_staff / patient), schema in
-  `database/migrations/001_schema.sql`, policies in `002_rls.sql` (no anon
-  policies), dev-only seed in `database/seed/seed.dev.sql`. Clinic data is
-  isolated per clinic; therapists see their clinic's or assigned patients;
-  patients see only themselves. One patient can have multiple
-  care_episodes.
-- Patient Portal at `/patient` (Persian, RTL, Vazirmatn font): Supabase
-  email+password auth (sign-up + clinic links the account via
-  patient_users). National-ID login is REMOVED — never reintroduce it as
-  a credential; national_id is a record field only. Persian exercise
-  content in `apps/web/lib/data/exerciseFa.ts`.
-- Data modes (`lib/config.ts`): mock mode (NEXT_PUBLIC_DATA_MODE=mock or
-  missing env) = local demo, no auth. Real mode = no localStorage
-  fallback; storage status shown via `SaveStatusPill` (Connected/Saving/
-  Saved/Offline/Save failed); failed saves must never clear user input.
-- Persian setup guide: `docs/RAHNAMA-FA.md`.
-- The "AI" is a mock heuristic engine in `apps/web/lib/ai/engine.ts`.
+- `NEXT_PUBLIC_DATA_MODE=mock` is an explicit auth-free demo mode and may use
+  local sample state. It must never contain real patient data.
+- Development may fall back to mock mode when Supabase is not configured.
+- Production is fail-closed: missing Supabase configuration must not activate
+  mock mode, bypass authentication or load sample patient records.
+- Real-mode persistence failures must remain visible to the user and must not
+  be disguised as successful local saves.
 
-## AI Integration Rule
+## AI boundaries
 
-All AI behaviour flows through `apps/web/lib/ai/engine.ts`. Each function is
-marked with "🔌 REAL AI API INTEGRATION POINT". When connecting a real
-provider, keep the function signatures and return types identical so the UI
-needs no changes. API keys must live in server-side environment variables —
-never in the browser, never committed.
+Two separate mechanisms exist and must not be conflated:
 
-## Technical Direction
+1. Deterministic decision-support templates live in
+   `apps/web/lib/ai/engine.ts`. They are not model responses.
+2. Optional OpenAI clinical drafts use guarded server-side route handlers under
+   `apps/web/app/api/ai/clinical-draft/`. They are disabled by default and
+   require all operational gates, authenticated/authorized persisted context,
+   current safety clearance, bounded structured input/output, audit,
+   idempotency/quota controls and explicit clinician review.
 
-- Next.js App Router + React 19 + TypeScript everywhere
-- Tailwind CSS 4 (design tokens defined in `apps/web/app/globals.css`)
-- Reusable primitives in `apps/web/components/ui/`
-- App shell (sidebar + topbar) in `apps/web/components/layout/`
-- Mock data in `apps/web/lib/data/`
-- GitHub for version control
+Provider keys and Supabase secret/service keys are server-only. Never put them
+in a `NEXT_PUBLIC_` variable, browser code, logs, fixtures or committed files.
+On refusal, timeout or failure, do not manufacture a fallback clinical answer.
 
-## Architecture Rules
+## Database rules
 
-- Build incrementally; make the smallest safe change.
-- Do not modify unrelated files.
-- Do not delete existing files without confirmation.
-- Keep the project production-ready: `npm run build` and `npm run lint`
-  must pass in `apps/web` before committing.
-- Responsive design is required (desktop, tablet, mobile).
-- Every feature must be documented in README.md.
+- Canonical migrations are the numerically ordered SQL files in
+  `database/migrations`. Read every applicable migration and the current
+  security tests before changing schema or authorization.
+- Production migration execution uses `database/scripts/migrate.mjs`; preserve
+  its checksum ledger, advisory lock and fail-closed baseline behavior.
+- The initial schema migration removes the legacy demo schema. Use it only for
+  a new database or an explicitly approved baseline; never replay it on an
+  existing production database.
+- Preserve RLS, tenant-integrity triggers, actor derivation and append-only audit
+  behavior. Client-supplied clinic IDs, authors, reviewers or timestamps are not
+  authorization.
+- `database/seed/seed.dev.sql` is development-only and must never be run in
+  production.
+- Plain PostgreSQL CI is not a substitute for controlled staging checks with
+  real Supabase Auth, PostgREST and deployment configuration.
 
-## Future Roadmap (do not build unless asked)
+## Engineering rules
 
-- Persian (RTL) UI
-- Real AI provider integration (server-side route handlers)
-- Supabase auth + persistence
-- Progress tracking / outcome-measure charts
-- Printable or PDF patient handouts
+- Preserve unrelated work in the dirty tree and make the smallest safe change.
+- Use the reusable UI primitives and existing locale/direction mechanisms.
+- Treat Persian and Arabic RTL, keyboard operation, error recovery and mobile
+  layouts as product requirements.
+- Add regression coverage for security, safety and tenant-boundary changes.
+- Do not weaken a fail-closed path merely to make a demo or test pass.
+- Keep feature and deployment claims aligned with
+  `apps/web/README.md`, `docs/RAHNAMA-FA.md` and
+  `docs/PRODUCT_READINESS_FA.md`.
 
-## Working Style
+## Verification
 
-1. Understand the current scope.
-2. Make the smallest safe change.
-3. Verify with build + lint (and browser check for UI changes).
-4. Explain what changed.
-5. Update documentation if needed.
+Run relevant checks in `apps/web`:
+
+```bash
+npm run lint
+npm run typecheck
+npm test
+npm run build
+npm run test:e2e
+```
+
+A passing local build does not authorize production deployment or clinical use.
+Infrastructure, RLS on the target project, backup/restore, privacy, clinical
+validation and release approval remain separate gates.

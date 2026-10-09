@@ -22,6 +22,11 @@ export const sampleCases: PatientCase[] = [
     functionalLimitations: "Difficulty sitting at work, cannot lift child",
     patientGoal: "Return to pain-free desk work and light exercise",
     region: "low-back",
+    safetyScreen: {
+      screenedAt: "2026-07-05T09:10:00.000Z",
+      selectedFlagIds: [],
+      disposition: "clear",
+    },
   },
   {
     id: "case_demo_tka",
@@ -43,6 +48,12 @@ export const sampleCases: PatientCase[] = [
     functionalLimitations: "Limited knee flexion, uses walker",
     patientGoal: "Walk independently and climb stairs",
     region: "post-op",
+    safetyScreen: {
+      screenedAt: "2026-07-07T14:35:00.000Z",
+      selectedFlagIds: [],
+      disposition: "clear",
+      notes: "Post-operative protocol and surgeon precautions must still be confirmed.",
+    },
   },
   {
     id: "case_demo_shoulder",
@@ -64,5 +75,10 @@ export const sampleCases: PatientCase[] = [
     functionalLimitations: "Cannot reach overhead shelves, disturbed sleep",
     patientGoal: "Sleep without pain and return to gym",
     region: "shoulder",
+    safetyScreen: {
+      screenedAt: "2026-07-08T11:00:00.000Z",
+      selectedFlagIds: [],
+      disposition: "clear",
+    },
   },
 ];

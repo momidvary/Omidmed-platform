@@ -1,10 +1,11 @@
 import type { Patient, ProgressEntry } from "@/lib/types";
+import { localDateValue } from "@/lib/utils";
 
 /** yyyy-mm-dd for `daysAgo` days before today (local time). */
 function dateAgo(daysAgo: number): string {
   const d = new Date();
   d.setDate(d.getDate() - daysAgo);
-  return d.toISOString().slice(0, 10);
+  return localDateValue(d);
 }
 
 /** Build demo progress entries from (daysAgo, pain, completed) triples. */
@@ -16,7 +17,8 @@ function entries(rows: [number, number, boolean][]): ProgressEntry[] {
   }));
 }
 
-// Demo patients for the portal. Login with the national id (کد ملی).
+// Demo patients for the portal (mock mode only — opened from the demo
+// picker; national ID is a record field, never a login credential).
 export const samplePatients: Patient[] = [
   {
     id: "pt_reza",
@@ -47,6 +49,7 @@ export const samplePatients: Patient[] = [
         subject: "کشش پشت زانو",
         message: "موقع سُر دادن پاشنه، پشت زانوم کشش نسبتاً زیادی حس می‌کنم. طبیعیه؟",
         status: "answered",
+        priority: "routine",
         replies: [
           {
             id: "tr_demo_1",

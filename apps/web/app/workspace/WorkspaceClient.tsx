@@ -9,12 +9,18 @@ import { Icon } from "@/components/ui/Icon";
 import { EmptyState, PageIntro, Spinner } from "@/components/ui/Misc";
 import { isMockMode } from "@/lib/config";
 import { hasClinicalSafetyClearance } from "@/lib/clinical/safety";
+import {
+  carePathwayStates,
+  type CareStep,
+  type StepState,
+} from "@/lib/clinical/carePathway";
 import { regionLabel } from "@/lib/data/bodyRegionsFa";
 import { intlLocale, useText } from "@/lib/i18n/text";
 import { useAuth } from "@/lib/store/AuthContext";
 import { useCases } from "@/lib/store/CaseContext";
 import { useLocale } from "@/lib/store/LocaleContext";
 import {
+  fetchCaseFindings,
   fetchClinicalAlerts,
   fetchClinicalDocumentation,
   fetchClinicianTickets,
@@ -23,8 +29,16 @@ import {
   fetchTreatmentPlans,
 } from "@/lib/supabase/db";
 import type { OutcomeMeasurement, PatientCase } from "@/lib/types";
-import { isUuid } from "@/lib/utils";
+import { cn, isUuid } from "@/lib/utils";
 import { workspaceText } from "./text";
+
+interface PathwayStep {
+  key: CareStep;
+  title: string;
+  state: StepState;
+  detail?: string;
+  action?: { label: string; run: () => void };
+}
 
 interface Loaded<T> {
   loading: boolean;
@@ -155,6 +169,11 @@ export function WorkspaceClient() {
     fetchPrescriptionHistory(episode?.id as string)
   );
   const plans = useSection(caseKey, () => fetchTreatmentPlans(latestCase?.id as string));
+  // fetchCaseFindings: undefined = failed, null = nothing saved yet.
+  const findings = useSection(caseKey ? `${caseKey}:findings` : null, async () => {
+    const row = await fetchCaseFindings(latestCase?.id as string);
+    return row === undefined ? null : { row };
+  });
   const alerts = useSection(clinicKey, () => fetchClinicalAlerts(activeClinicId as string));
   const tickets = useSection(clinicKey, () => fetchClinicianTickets(activeClinicId as string));
 
@@ -279,6 +298,133 @@ export function WorkspaceClient() {
   const trends = outcomeTrends(documentation.data?.outcomeMeasurements ?? []);
   const latestDisposition = latestCase?.safetyScreen?.disposition ?? "not-screened";
   const latestCleared = hasClinicalSafetyClearance(latestCase?.safetyScreen);
+  const newAssessmentHref = `/new-case?patient=${encodeURIComponent(record.id)}`;
+  const recordsHref = `/clinical-records?patient=${encodeURIComponent(record.id)}`;
+  const noteCount = (documentation.data?.sessionNotes ?? []).filter((note) => note.isCurrent).length;
+  const planApproved = latestPlan?.status === "approved";
+
+  const states = carePathwayStates({
+    cases: !hydrated ? "loading" : loadError ? "failed" : "ready",
+    hasCase: Boolean(latestCase),
+    safetyCleared: latestCleared,
+    findings: findings.loading ? "loading" : findings.failed ? "failed" : findings.data?.row ? "saved" : "none",
+    plan: plans.loading
+      ? "loading"
+      : plans.failed
+        ? "failed"
+        : planApproved
+          ? "approved"
+          : latestPlan?.status === "draft"
+            ? "draft"
+            : "none",
+    program: prescriptions.loading
+      ? "loading"
+      : prescriptions.failed
+        ? "failed"
+        : currentProgram?.status === "published"
+          ? "published"
+          : currentProgram?.status === "suspended"
+            ? "suspended"
+            : "none",
+    hasEpisode: Boolean(episode),
+    sessions: documentation.loading
+      ? "loading"
+      : documentation.failed
+        ? "failed"
+        : noteCount > 0
+          ? "some"
+          : "none",
+  });
+
+  const pathway: PathwayStep[] = [
+    {
+      key: "assessment",
+      title: t.stepAssessment,
+      state: states.assessment,
+      detail: latestCase ? formatDate(latestCase.createdAt, dateLocale) : undefined,
+      action: latestCase
+        ? undefined
+        : { label: t.actStartAssessment, run: () => router.push(newAssessmentHref) },
+    },
+    {
+      key: "exam",
+      title: t.stepExam,
+      state: states.exam,
+      detail: !latestCase
+        ? undefined
+        : !latestCleared
+          ? t.detailSafety
+          : findings.failed
+            ? t.sectionFailed
+            : findings.data?.row
+              ? t.detailFindings(findings.data.row.version)
+              : undefined,
+      action: latestCase
+        ? {
+            label: findings.data?.row ? t.actOpen : t.actExam,
+            run: () => openCase(latestCase.id, "/case-analysis"),
+          }
+        : undefined,
+    },
+    {
+      key: "plan",
+      title: t.stepPlan,
+      state: states.plan,
+      detail: plans.failed
+        ? t.sectionFailed
+        : latestPlan
+          ? t.planStatus[latestPlan.status] ?? latestPlan.status
+          : undefined,
+      action:
+        latestCase && latestCleared
+          ? {
+              label: latestPlan?.status === "draft" ? t.actReviewPlan : planApproved ? t.actOpen : t.actPlan,
+              run: () => openCase(latestCase.id, "/treatment-planner"),
+            }
+          : undefined,
+    },
+    {
+      key: "program",
+      title: t.stepProgram,
+      state: states.program,
+      detail: prescriptions.failed
+        ? t.sectionFailed
+        : currentProgram
+          ? `${t.programStatus[currentProgram.status] ?? currentProgram.status} · ${t.exercisesCount(currentProgram.items.length)}`
+          : undefined,
+      action:
+        planApproved && latestCase
+          ? {
+              label: currentProgram?.status === "published" ? t.actOpen : t.actProgram,
+              run: () => openCase(latestCase.id, "/treatment-planner#home-program"),
+            }
+          : undefined,
+    },
+    {
+      key: "sessions",
+      title: t.stepSessions,
+      state: states.sessions,
+      detail: documentation.failed
+        ? t.sectionFailed
+        : noteCount > 0
+          ? t.notesCount(noteCount)
+          : undefined,
+      action: episode
+        ? { label: t.actNote, run: () => router.push(recordsHref) }
+        : undefined,
+    },
+  ];
+
+  const stateLabel: Record<StepState, string> = {
+    done: t.stateDone,
+    next: t.stateNext,
+    todo: t.stateTodo,
+    waiting: t.stateWaiting,
+    blocked: t.stateBlocked,
+    locked: t.stateLocked,
+    loading: t.loading,
+    unknown: t.stateUnknown,
+  };
 
   return (
     <div className="space-y-6">
@@ -320,33 +466,96 @@ export function WorkspaceClient() {
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <ButtonLink href="/new-case" size="sm">
-              <Icon name="new-case" width={14} height={14} />
-              {t.newAssessment}
-            </ButtonLink>
-            <ButtonLink
-              href={`/clinical-records?patient=${encodeURIComponent(record.id)}`}
-              size="sm"
-              variant="secondary"
-            >
-              <Icon name="edit" width={14} height={14} />
-              {t.sessionNotes}
-            </ButtonLink>
             {latestCase && (
-              <Button
-                size="sm"
-                variant="secondary"
-                onClick={() => openCase(latestCase.id, "/treatment-planner")}
-              >
-                <Icon name="treatment" width={14} height={14} />
-                {t.planner}
-              </Button>
+              <ButtonLink href={newAssessmentHref} size="sm" variant="secondary">
+                <Icon name="plus" width={14} height={14} />
+                {t.newAssessment}
+              </ButtonLink>
             )}
             <ButtonLink href="/tickets" size="sm" variant="secondary">
-              <Icon name="chat" width={14} height={14} />
+              <Icon name="inbox" width={14} height={14} />
               {t.inbox}
             </ButtonLink>
           </div>
+        </CardBody>
+      </Card>
+
+      <Card>
+        <CardHeader
+          title={t.pathwayTitle}
+          subtitle={t.pathwaySubtitle}
+          icon={<Icon name="arrow" className="rtl:rotate-180" />}
+        />
+        <CardBody>
+          <ol className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+            {pathway.map((step, index) => {
+              const emphasis = step.state === "next" || step.state === "waiting" || step.state === "blocked";
+              return (
+                <li
+                  key={step.key}
+                  aria-current={step.state === "next" ? "step" : undefined}
+                  className={cn(
+                    "flex flex-col gap-2 rounded-xl border p-3",
+                    step.state === "next"
+                      ? "border-[var(--color-primary)] bg-[var(--color-primary-tint)]"
+                      : step.state === "blocked"
+                        ? "border-[var(--color-danger)]/40 bg-[var(--color-danger-soft)]"
+                        : step.state === "waiting"
+                          ? "border-[var(--color-warn)]/40 bg-[var(--color-warn-soft)]"
+                          : "border-[var(--color-border)] bg-white",
+                    step.state === "locked" && "opacity-60"
+                  )}
+                >
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={cn(
+                        "grid h-6 w-6 shrink-0 place-items-center rounded-full text-xs font-bold",
+                        step.state === "done"
+                          ? "bg-[var(--color-success)] text-white"
+                          : step.state === "next"
+                            ? "bg-[var(--color-primary)] text-white"
+                            : "bg-[var(--color-surface-muted)] text-[var(--color-ink-soft)]"
+                      )}
+                    >
+                      {step.state === "done" ? (
+                        <Icon name="check" width={14} height={14} />
+                      ) : (
+                        (index + 1).toLocaleString(locale === "fa" ? "fa-IR" : "en-US")
+                      )}
+                    </span>
+                    <span className="text-sm font-semibold text-[var(--color-ink)]">{step.title}</span>
+                  </div>
+                  <p
+                    className={cn(
+                      "text-xs",
+                      step.state === "blocked"
+                        ? "font-semibold text-[var(--color-danger)]"
+                        : step.state === "waiting"
+                          ? "font-semibold text-[var(--color-warn)]"
+                          : step.state === "next"
+                            ? "font-semibold text-[var(--color-primary-strong)]"
+                            : "text-[var(--color-ink-soft)]"
+                    )}
+                  >
+                    {stateLabel[step.state]}
+                    {step.detail && (
+                      <span className="block font-normal text-[var(--color-ink-soft)]">{step.detail}</span>
+                    )}
+                  </p>
+                  {step.action && step.state !== "locked" && (
+                    <Button
+                      size="sm"
+                      variant={emphasis ? "primary" : "secondary"}
+                      className="mt-auto"
+                      onClick={step.action.run}
+                    >
+                      {step.action.label}
+                    </Button>
+                  )}
+                </li>
+              );
+            })}
+          </ol>
         </CardBody>
       </Card>
 
@@ -441,64 +650,6 @@ export function WorkspaceClient() {
           </CardBody>
         </Card>
 
-        <div className="space-y-5">
-          <Card>
-            <CardHeader title={t.planTitle} icon={<Icon name="treatment" />} />
-            <CardBody>
-              {!latestCase ? (
-                <p className="text-sm text-[var(--color-ink-soft)]">{t.planNoCase}</p>
-              ) : plans.loading ? (
-                <Spinner label={t.loading} />
-              ) : plans.failed ? (
-                <p role="alert" className="text-sm text-[var(--color-danger)]">{t.sectionFailed}</p>
-              ) : !latestPlan ? (
-                <p className="text-sm text-[var(--color-ink-soft)]">{t.planEmpty}</p>
-              ) : (
-                <div className="flex flex-wrap items-center gap-2 text-sm">
-                  <Badge tone={latestPlan.status === "approved" ? "success" : latestPlan.status === "draft" ? "warn" : "neutral"}>
-                    {t.planStatus[latestPlan.status] ?? latestPlan.status}
-                  </Badge>
-                  <span className="text-xs text-[var(--color-ink-soft)]">
-                    {t.version(latestPlan.version)} · {formatDate(latestPlan.reviewedAt ?? latestPlan.createdAt, dateLocale)}
-                  </span>
-                </div>
-              )}
-            </CardBody>
-          </Card>
-
-          <Card>
-            <CardHeader title={t.programTitle} icon={<Icon name="exercise" />} />
-            <CardBody>
-              {!episode ? (
-                <p className="text-sm text-[var(--color-ink-soft)]">{t.noEpisode}</p>
-              ) : prescriptions.loading ? (
-                <Spinner label={t.loading} />
-              ) : prescriptions.failed ? (
-                <p role="alert" className="text-sm text-[var(--color-danger)]">{t.sectionFailed}</p>
-              ) : !currentProgram ? (
-                <p className="text-sm text-[var(--color-ink-soft)]">{t.programEmpty}</p>
-              ) : (
-                <div className="flex flex-wrap items-center gap-2 text-sm">
-                  <Badge
-                    tone={
-                      currentProgram.status === "published"
-                        ? "success"
-                        : currentProgram.status === "suspended"
-                          ? "danger"
-                          : "neutral"
-                    }
-                  >
-                    {t.programStatus[currentProgram.status] ?? currentProgram.status}
-                  </Badge>
-                  <span className="text-xs text-[var(--color-ink-soft)]">
-                    {t.version(currentProgram.version)} · {t.exercisesCount(currentProgram.items.length)} ·{" "}
-                    {t.reviewBy(formatDate(currentProgram.reviewDate, dateLocale))}
-                  </span>
-                </div>
-              )}
-            </CardBody>
-          </Card>
-        </div>
 
         <Card>
           <CardHeader title={t.sessionsTitle} icon={<Icon name="clock" />} />

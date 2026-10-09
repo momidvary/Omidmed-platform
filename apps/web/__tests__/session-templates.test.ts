@@ -125,6 +125,11 @@ describe("navigation", () => {
     expect(active.map((item) => item.key)).toEqual(["patients"]);
     expect(navItems.filter((item) => isNavActive(item, "/")).map((i) => i.key)).toEqual(["dashboard"]);
     expect(navItems.filter((item) => isNavActive(item, "/patient")).length).toBe(0);
+    // Care steps are opened from the patient workspace and highlight Patients.
+    for (const path of ["/new-case", "/case-analysis", "/treatment-planner", "/clinical-records"]) {
+      expect(navItems.filter((item) => isNavActive(item, path)).map((i) => i.key)).toContain("patients");
+    }
+    expect(navItems.filter((item) => isNavActive(item, "/patients")).map((i) => i.key)).toEqual(["patients"]);
   });
 });
 

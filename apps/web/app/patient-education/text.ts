@@ -11,7 +11,7 @@ const en = {
   unnamed: "Unnamed",
   noCaseTitle: "No case selected",
   noCaseBody: "Pick a case (or create one) to generate a patient-friendly explanation.",
-  newCase: "New Patient Case",
+  newCase: "New Assessment",
   gatePassed: "Safety gate passed for this case",
   gateLocked: "Patient handout generation locked",
   gatePassedBody:
@@ -47,7 +47,7 @@ export const educationText: PageText<typeof en> = {
     unnamed: "بدون نام",
     noCaseTitle: "موردی انتخاب نشده است",
     noCaseBody: "یک مورد انتخاب کنید (یا بسازید) تا توضیحی قابل‌فهم برای بیمار تولید شود.",
-    newCase: "مورد جدید بیمار",
+    newCase: "ارزیابی جدید",
     gatePassed: "دروازه ایمنی برای این مورد تأیید شده است",
     gateLocked: "تولید بروشور بیمار قفل است",
     gatePassedBody:

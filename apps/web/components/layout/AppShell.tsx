@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { Sidebar } from "./Sidebar";
 import { Icon } from "@/components/ui/Icon";
-import { isNavActive, navItems } from "@/lib/nav";
+import { currentNavItem, navItems } from "@/lib/nav";
 import { useLocale } from "@/lib/store/LocaleContext";
 import { locales } from "@/lib/i18n/translations";
 import type { Locale } from "@/lib/i18n/translations";
@@ -73,7 +73,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   const current =
-    navItems.find((n) => isNavActive(n, pathname)) ?? navItems[0];
+    currentNavItem(pathname) ?? navItems[0];
 
   return (
     <div

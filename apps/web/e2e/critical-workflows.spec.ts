@@ -82,3 +82,47 @@ test("demo settings and clinical records never claim cloud persistence", async (
     page.getByRole("button", { name: "Correct record" })
   ).toHaveCount(0);
 });
+
+test("sidebar keeps care steps inside the patient flow", async ({ page }) => {
+  await page.goto("/");
+  const nav = page.locator("aside nav");
+  await expect(nav.locator('a[href="/patients"]')).toBeVisible();
+  await expect(nav.locator('a[href="/new-case"]')).toHaveCount(0);
+  await expect(nav.locator('a[href="/case-analysis"]')).toHaveCount(0);
+  await expect(nav.locator('a[href="/exercise-library"]')).toHaveCount(0);
+
+  await nav.getByRole("button", { name: "Tools" }).click();
+  await expect(nav.locator('a[href="/exercise-library"]')).toBeVisible();
+
+  await page.goto("/new-case");
+  await expect(nav.locator('a[href="/patients"]')).toHaveAttribute(
+    "aria-current",
+    "page"
+  );
+  await expect(page.getByRole("heading", { name: "New Assessment", level: 1 })).toBeVisible();
+});
+
+test("assessment is split into steps and still requires the safety screen", async ({
+  page,
+}) => {
+  await page.goto("/new-case");
+  const form = page.locator("main form");
+
+  await form.getByRole("button", { name: "Next" }).click();
+  await expect(page.getByText("Main complaint is required.")).toBeVisible();
+
+  await page.getByLabel("Patient name").fill("Step Test");
+  await page.getByLabel("Body region").selectOption("knee");
+  await page.getByLabel("Main complaint").fill("Knee pain on stairs");
+  await form.getByRole("button", { name: "Next" }).click();
+  await form.getByRole("button", { name: "Skip" }).click();
+
+  await form.getByRole("button", { name: "Save and continue to examination" }).click();
+  await expect(
+    page.getByText("Complete the structured red-flag screen before creating the case.")
+  ).toBeVisible();
+
+  await form.getByRole("checkbox").check();
+  await form.getByRole("button", { name: "Save and continue to examination" }).click();
+  await expect(page).toHaveURL(/\/case-analysis/);
+});

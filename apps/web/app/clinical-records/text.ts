@@ -13,7 +13,7 @@ const en = {
   replaceSession: "Replace the unsaved session-note draft with this correction?",
   replaceOutcome: "Replace the unsaved outcome-measure draft with this correction?",
   correctionMode: "Correction mode: the signed original remains in history.",
-  title: "Clinical Records",
+  title: "Session Notes",
   demoIntro: "Signed session notes and validated outcome measurements.",
   demoTitle: "No fabricated clinical documentation",
   demoBody:
@@ -112,7 +112,7 @@ export const clinicalRecordsText: PageText<ClinicalRecordsText> = {
     replaceSession: "پیش‌نویس ذخیره‌نشده یادداشت جلسه با این اصلاح جایگزین شود؟",
     replaceOutcome: "پیش‌نویس ذخیره‌نشده سنجش پیامد با این اصلاح جایگزین شود؟",
     correctionMode: "حالت اصلاح: نسخه امضاشده اصلی در تاریخچه باقی می‌ماند.",
-    title: "پرونده بالینی",
+    title: "یادداشت جلسات",
     demoIntro: "یادداشت‌های امضاشده جلسات و سنجش‌های پیامد معتبر.",
     demoTitle: "مستندات بالینی ساختگی تولید نمی‌شود",
     demoBody:

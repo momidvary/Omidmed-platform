@@ -100,6 +100,26 @@ const paths: Record<string, React.ReactNode> = {
     </>
   ),
   menu: <path d="M4 6h16M4 12h16M4 18h16" />,
+  chevron: <path d="m6 9 6 6 6-6" />,
+  users: (
+    <>
+      <circle cx="9" cy="8" r="3.5" />
+      <path d="M2.5 20a6.5 6.5 0 0 1 13 0" />
+      <path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14a6.5 6.5 0 0 1 3.5 6" />
+    </>
+  ),
+  inbox: (
+    <>
+      <path d="M4 13V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v7" />
+      <path d="M4 13h4l1.5 3h5L16 13h4v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-5Z" />
+    </>
+  ),
+  tools: (
+    <>
+      <path d="M14.5 6.5a4 4 0 0 0 5 5l-8.5 8.5a2.1 2.1 0 0 1-3-3l8.5-8.5" />
+      <path d="M14.5 6.5 17 4l3 3-2.5 2.5" />
+    </>
+  ),
   close: <path d="M6 6l12 12M18 6 6 18" />,
   user: (
     <>

@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button, ButtonLink } from "@/components/ui/Button";
 import { Card, CardBody, CardHeader } from "@/components/ui/Card";
 import { Field, Input, Select, Textarea } from "@/components/ui/Form";
@@ -78,8 +80,8 @@ const emptyRegistry: RegistryState = {
   error: null,
 };
 
-function emptyQuery(clinicId: string | null): RegistryQuery {
-  return { clinicId, draft: "", applied: "", page: 1 };
+function emptyQuery(clinicId: string | null, search = ""): RegistryQuery {
+  return { clinicId, draft: search, applied: search, page: 1 };
 }
 
 function emptyPatientForm(clinicId: string | null): PatientFormDraft {
@@ -153,7 +155,8 @@ function validatePatientForm(form: PatientFormDraft, t: PatientsText): {
     errors.birthYear = t.errBirthYear(CURRENT_YEAR);
   }
 
-  if (titleFa.length < 2) {
+  // The reason for visit is optional; an empty one becomes a dated title.
+  if (titleFa.length === 1) {
     errors.titleFa = t.errTitle2;
   } else if (titleFa.length > 160) {
     errors.titleFa = t.errTitle160;
@@ -175,7 +178,9 @@ function validatePatientForm(form: PatientFormDraft, t: PatientsText): {
       phone: phone || null,
       birthYear,
       gender: form.gender || null,
-      titleFa,
+      titleFa:
+        titleFa ||
+        t.defaultEpisodeTitle(new Date().toLocaleDateString("fa-IR")),
       weeklyTarget,
     },
   };
@@ -203,6 +208,19 @@ function genderLabel(gender: Gender | null, t: PatientsText): string {
 }
 
 export default function PatientRegistryPage() {
+  return (
+    <Suspense fallback={<Spinner label="…" />}>
+      <PatientRegistry />
+    </Suspense>
+  );
+}
+
+function PatientRegistry() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const openNewForm = searchParams.get("new") === "1";
+  // A search started on the dashboard arrives as ?q=.
+  const initialSearch = (searchParams.get("q") ?? "").slice(0, 80);
   const {
     profile,
     activeClinicId,
@@ -211,7 +229,7 @@ export default function PatientRegistryPage() {
   const t = useText(patientsText);
   const [registry, setRegistry] = useState<RegistryState>(emptyRegistry);
   const [query, setQuery] = useState<RegistryQuery>(() => emptyQuery(null));
-  const [showCreate, setShowCreate] = useState(false);
+  const [showCreate, setShowCreate] = useState(openNewForm);
   const [form, setForm] = useState<PatientFormDraft>(() =>
     emptyPatientForm(null)
   );
@@ -233,7 +251,9 @@ export default function PatientRegistryPage() {
   const canAccess =
     profile?.role === "clinic_owner" || profile?.role === "therapist";
   const scopedQuery =
-    query.clinicId === activeClinicId ? query : emptyQuery(activeClinicId);
+    query.clinicId === activeClinicId
+      ? query
+      : emptyQuery(activeClinicId, initialSearch);
   const scopedForm =
     form.clinicId === activeClinicId ? form : emptyPatientForm(activeClinicId);
   const requestKey = activeClinicId
@@ -382,7 +402,7 @@ export default function PatientRegistryPage() {
     setSubmitting(true);
     setFeedback(null);
 
-    const ok = await createPatientEpisode({
+    const created = await createPatientEpisode({
       clinicId,
       ...validated.normalized,
       assignedTherapistId: profile.role === "therapist" ? profile.id : null,
@@ -392,7 +412,14 @@ export default function PatientRegistryPage() {
     setSubmitting(false);
     if (activeClinicRef.current !== clinicId) return;
 
-    if (!ok) {
+    if (created?.patientId) {
+      // Straight to the new patient's workspace, where the next step is the
+      // first assessment.
+      router.push(`/workspace?patient=${encodeURIComponent(created.patientId)}`);
+      return;
+    }
+
+    if (!created) {
       setFeedback({
         clinicId,
         tone: "error",
@@ -518,6 +545,21 @@ export default function PatientRegistryPage() {
                       }
                       maxLength={120}
                       autoComplete="name"
+                      autoFocus
+                    />
+                  </Field>
+                  <Field
+                    label={t.episodeTitle}
+                    hint={t.episodeTitleHint}
+                    error={formErrors.titleFa}
+                  >
+                    <Input
+                      value={scopedForm.titleFa}
+                      onChange={(event) =>
+                        updateForm("titleFa", event.target.value)
+                      }
+                      maxLength={160}
+                      dir="auto"
                     />
                   </Field>
                   <Field
@@ -564,37 +606,34 @@ export default function PatientRegistryPage() {
                       <option value="other">{t.other}</option>
                     </Select>
                   </Field>
-                  <Field
-                    label={t.episodeTitle}
-                    required
-                    error={formErrors.titleFa}
-                  >
-                    <Input
-                      value={scopedForm.titleFa}
-                      onChange={(event) =>
-                        updateForm("titleFa", event.target.value)
-                      }
-                      maxLength={160}
-                      dir="auto"
-                    />
-                  </Field>
-                  <Field
-                    label={t.weeklyTarget}
-                    required
-                    hint={t.weeklyTargetHint}
-                    error={formErrors.weeklyTarget}
-                  >
-                    <Input
-                      value={scopedForm.weeklyTarget}
-                      onChange={(event) =>
-                        updateForm("weeklyTarget", event.target.value)
-                      }
-                      inputMode="numeric"
-                      maxLength={2}
-                      dir="ltr"
-                    />
-                  </Field>
                 </div>
+
+                <details
+                  open={Boolean(formErrors.weeklyTarget) || undefined}
+                  className="rounded-xl border border-[var(--color-border)] px-4 py-3"
+                >
+                  <summary className="cursor-pointer text-sm font-medium text-[var(--color-ink-soft)]">
+                    {t.moreSettings}
+                  </summary>
+                  <div className="mt-3 max-w-xs">
+                    <Field
+                      label={t.weeklyTarget}
+                      required
+                      hint={t.weeklyTargetHint}
+                      error={formErrors.weeklyTarget}
+                    >
+                      <Input
+                        value={scopedForm.weeklyTarget}
+                        onChange={(event) =>
+                          updateForm("weeklyTarget", event.target.value)
+                        }
+                        inputMode="numeric"
+                        maxLength={2}
+                        dir="ltr"
+                      />
+                    </Field>
+                  </div>
+                </details>
 
                 <p className="rounded-xl bg-[var(--color-surface-muted)] px-4 py-3 text-xs text-[var(--color-ink-soft)]">
                   {profile?.role === "therapist"
@@ -802,9 +841,13 @@ function RegistryTable({
             {patients.map((patient) => (
               <tr key={patient.id} className="align-top">
                 <td className="px-5 py-4">
-                  <p className="font-semibold text-[var(--color-ink)]" dir="auto">
+                  <Link
+                    href={`/workspace?patient=${encodeURIComponent(patient.id)}`}
+                    className="font-semibold text-[var(--color-ink)] hover:text-[var(--color-primary-strong)] hover:underline"
+                    dir="auto"
+                  >
                     {patient.fullName}
-                  </p>
+                  </Link>
                   <p className="mt-1 text-xs text-[var(--color-ink-soft)]" dir="ltr">
                     {patient.phone ?? t.noPhone}
                   </p>

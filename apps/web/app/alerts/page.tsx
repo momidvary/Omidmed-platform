@@ -9,6 +9,7 @@ import { Icon } from "@/components/ui/Icon";
 import { EmptyState, PageIntro, Spinner } from "@/components/ui/Misc";
 import { isMockMode } from "@/lib/config";
 import { useAuth } from "@/lib/store/AuthContext";
+import { useAttention } from "@/lib/store/AttentionContext";
 import {
   acknowledgeClinicalAlert,
   fetchClinicalAlerts,
@@ -74,6 +75,7 @@ function alertDetail(alert: ClinicalAlert, t: AlertsText): string {
 
 export default function ClinicalAlertsPage() {
   const { profile, activeClinicId } = useAuth();
+  const { refresh: refreshAttention } = useAttention();
   const t = useText(alertsText);
   const { locale } = useLocale();
   const fmt = (value: string | number | null) => formatDateTime(value, intlLocale(locale), t);
@@ -215,6 +217,7 @@ export default function ClinicalAlertsPage() {
       ),
     }));
     setFeedback(t.ackSaved);
+    refreshAttention();
   }
 
   async function resolve(alert: ClinicalAlert) {
@@ -263,6 +266,7 @@ export default function ClinicalAlertsPage() {
         ? t.resolvedResumed
         : t.resolvedPaused
     );
+    refreshAttention();
   }
 
   if (isMockMode) {

@@ -944,13 +944,15 @@ function PlannerForm() {
       {!isMockMode &&
         currentCase?.episodeId &&
         approvedPlanId && (
-          <PrescriptionBuilder
-            key={`${currentCase.episodeId}:${approvedPlanId}`}
-            treatmentPlanId={approvedPlanId}
-            episodeId={currentCase.episodeId}
-            region={currentCase.region}
-            safetyCleared={safetyCleared}
-          />
+          <div id="home-program" className="scroll-mt-24">
+            <PrescriptionBuilder
+              key={`${currentCase.episodeId}:${approvedPlanId}`}
+              treatmentPlanId={approvedPlanId}
+              episodeId={currentCase.episodeId}
+              region={currentCase.region}
+              safetyCleared={safetyCleared}
+            />
+          </div>
         )}
 
       <Disclaimer />

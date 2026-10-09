@@ -29,7 +29,7 @@ const en = {
   closeFailed:
     "Ticket was not closed. Resolve any linked clinical alert first, then retry; your note is still here.",
   closeSaved: "Ticket closed with an attributed closure note.",
-  title: "Clinical Ticket Inbox",
+  title: "Patient Messages",
   shortIntro: "Patient messages that need clinician review and a documented response.",
   intro:
     "Review patient messages, triage time-sensitive language and keep replies in the clinical thread.",
@@ -120,7 +120,7 @@ export const ticketsText: PageText<typeof en> = {
     closeFailed:
       "تیکت بسته نشد. ابتدا هشدار بالینی مرتبط را رفع کنید و دوباره تلاش کنید؛ یادداشت شما هنوز اینجاست.",
     closeSaved: "تیکت با یادداشت بستن منتسب به شما بسته شد.",
-    title: "صندوق تیکت‌های بالینی",
+    title: "پیام‌های بیماران",
     shortIntro: "پیام‌های بیمار که به بررسی درمانگر و پاسخ مستند نیاز دارند.",
     intro:
       "پیام‌های بیماران را بررسی کنید، عبارات حساس به زمان را تریاژ کنید و پاسخ‌ها را در رشته بالینی نگه دارید.",

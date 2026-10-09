@@ -13,7 +13,9 @@ import {
  *
  * Server env: SEND_SMS_HOOK_SECRET (the "v1,whsec_…" value from the hook
  * settings), MELIPAYAMAK_API_KEY, MELIPAYAMAK_OTP_PATTERN (approved
- * pattern bodyId) — or SMS_PROVIDER=mock for local development only.
+ * pattern bodyId), optional MELIPAYAMAK_USERNAME (panel username: the
+ * key is then the panel APIKey and the panel web service is used) — or
+ * SMS_PROVIDER=mock for local development only.
  */
 
 const MAX_BODY_BYTES = 16_384;
@@ -69,6 +71,7 @@ export async function POST(request: Request) {
     MELIPAYAMAK_API_KEY: process.env.MELIPAYAMAK_API_KEY,
     MELIPAYAMAK_OTP_PATTERN: process.env.MELIPAYAMAK_OTP_PATTERN,
     MELIPAYAMAK_SENDER: process.env.MELIPAYAMAK_SENDER,
+    MELIPAYAMAK_USERNAME: process.env.MELIPAYAMAK_USERNAME,
     NODE_ENV: process.env.NODE_ENV,
   });
   if (!provider) {

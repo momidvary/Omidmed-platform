@@ -39,3 +39,11 @@ export function uuid(): string {
     return (c === "x" ? r : (r & 0x3) | 0x8).toString(16);
   });
 }
+
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** True for a canonical UUID, e.g. a record id taken from the URL. */
+export function isUuid(value: string | null | undefined): value is string {
+  return typeof value === "string" && UUID_PATTERN.test(value);
+}

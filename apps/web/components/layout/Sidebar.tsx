@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { navItems } from "@/lib/nav";
+import { isNavActive, navItems } from "@/lib/nav";
 import { Icon } from "@/components/ui/Icon";
 import { useLocale } from "@/lib/store/LocaleContext";
 import { cn } from "@/lib/utils";
@@ -27,8 +27,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
 
       <nav className="flex-1 space-y-0.5 overflow-y-auto px-3 pb-4">
         {navItems.map((item) => {
-          const active =
-            item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+          const active = isNavActive(item, pathname);
           return (
             <Link
               key={item.href}

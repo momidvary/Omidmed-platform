@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Button } from "@/components/ui/Button";
+import { Button, ButtonLink } from "@/components/ui/Button";
 import { Card, CardBody, CardHeader } from "@/components/ui/Card";
 import { Field, Input, Select, Textarea } from "@/components/ui/Form";
 import { Icon } from "@/components/ui/Icon";
@@ -858,15 +858,24 @@ function RegistryTable({
                   </time>
                 </td>
                 <td className="px-5 py-4">
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant={selectedPatientId === patient.id ? "primary" : "secondary"}
-                    onClick={() => onManage(patient.id)}
-                  >
-                    <Icon name="edit" width={14} height={14} />
-                    {t.manage}
-                  </Button>
+                  <div className="flex flex-wrap gap-2">
+                    <ButtonLink
+                      href={`/workspace?patient=${encodeURIComponent(patient.id)}`}
+                      size="sm"
+                    >
+                      <Icon name="user" width={14} height={14} />
+                      {t.workspace}
+                    </ButtonLink>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={selectedPatientId === patient.id ? "primary" : "secondary"}
+                      onClick={() => onManage(patient.id)}
+                    >
+                      <Icon name="edit" width={14} height={14} />
+                      {t.manage}
+                    </Button>
+                  </div>
                 </td>
               </tr>
             ))}

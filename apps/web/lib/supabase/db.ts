@@ -543,11 +543,14 @@ export async function fetchPatientRegistry({
   search = "",
   page = 1,
   pageSize = 20,
+  patientId,
 }: {
   clinicId: string;
   search?: string;
   page?: number;
   pageSize?: number;
+  /** Load one patient (still clinic-scoped and RLS-filtered). */
+  patientId?: string;
 }): Promise<PatientRegistryResult | null> {
   const supabase = getSupabase();
   if (!supabase || !clinicId) return null;
@@ -576,6 +579,7 @@ export async function fetchPatientRegistry({
       .range(from, from + safePageSize - 1);
 
     if (term) patientsQuery = patientsQuery.ilike("full_name", `%${term}%`);
+    if (patientId) patientsQuery = patientsQuery.eq("id", patientId);
 
     const patientResult = await withTimeout(patientsQuery);
     if (!patientResult) {

@@ -1,16 +1,31 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Badge } from "@/components/ui/Badge";
-import { Button } from "@/components/ui/Button";
+import { Button, ButtonLink } from "@/components/ui/Button";
 import { Card, CardBody, CardHeader } from "@/components/ui/Card";
 import { Field, Input, Select, Textarea } from "@/components/ui/Form";
 import { Icon } from "@/components/ui/Icon";
 import { EmptyState, PageIntro, Spinner } from "@/components/ui/Misc";
 import { isMockMode } from "@/lib/config";
 import { useAuth } from "@/lib/store/AuthContext";
+import { useCases } from "@/lib/store/CaseContext";
+import { isUuid } from "@/lib/utils";
+import {
+  SESSION_TEMPLATE_IDS,
+  SOAP_FIELDS,
+  appendToField,
+  stripEmptyPrompts,
+  carryForwardFromNote,
+  findingsToNoteText,
+  sessionTemplate,
+  sessionTemplateLabel,
+  type SessionTemplateId,
+} from "@/lib/clinical/sessionTemplates";
 import {
   appendClinicalSessionNote,
+  fetchCaseFindings,
   fetchClinicalDocumentation,
   fetchOutcomeInstruments,
   fetchPatientRegistry,
@@ -73,7 +88,18 @@ const emptyOutcomeForm = () => ({
 });
 
 export default function ClinicalRecordsPage() {
+  return (
+    <Suspense fallback={<Spinner label="…" />}>
+      <ClinicalRecords />
+    </Suspense>
+  );
+}
+
+function ClinicalRecords() {
   const { profile, activeClinicId } = useAuth();
+  const { cases } = useCases();
+  const patientParam = useSearchParams().get("patient");
+  const preselectedPatientId = isUuid(patientParam) ? patientParam : null;
   const t = useText(clinicalRecordsText);
   const { locale } = useLocale();
   const canAccess =
@@ -100,6 +126,7 @@ export default function ClinicalRecordsPage() {
     null
   );
   const [feedback, setFeedback] = useState<string | null>(null);
+  const [findingsBusy, setFindingsBusy] = useState(false);
   const scopeRef = useRef(`${profile?.id ?? "none"}:${activeClinicId ?? "none"}`);
 
   useEffect(() => {
@@ -114,21 +141,30 @@ export default function ClinicalRecordsPage() {
     setSelectedPatientId("");
     setPatientsLoading(true);
     setPatientsError(false);
+    // A patient opened from the workspace is loaded directly until the
+    // clinician runs their own search.
+    const directPatientId =
+      !submittedSearch && preselectedPatientId ? preselectedPatientId : undefined;
     fetchPatientRegistry({
       clinicId: activeClinicId,
       search: submittedSearch,
       page: 1,
       pageSize: 50,
+      patientId: directPatientId,
     }).then((result) => {
       if (cancelled) return;
-      setPatients(result?.patients ?? []);
+      const rows = result?.patients ?? [];
+      setPatients(rows);
       setPatientsError(result === null);
       setPatientsLoading(false);
+      if (directPatientId && rows.some((row) => row.id === directPatientId)) {
+        setSelectedPatientId(directPatientId);
+      }
     });
     return () => {
       cancelled = true;
     };
-  }, [activeClinicId, canAccess, submittedSearch, patientRetryToken]);
+  }, [activeClinicId, canAccess, submittedSearch, patientRetryToken, preselectedPatientId]);
 
   useEffect(() => {
     if (isMockMode || !canAccess) return;
@@ -150,6 +186,13 @@ export default function ClinicalRecordsPage() {
   );
   const selectedEpisode =
     selectedPatient?.activeEpisode ?? selectedPatient?.latestEpisode ?? null;
+
+  // Async inserts must land only in the draft of the episode they were
+  // requested for, never in a patient selected while they were loading.
+  const selectedEpisodeRef = useRef<string | null>(null);
+  useEffect(() => {
+    selectedEpisodeRef.current = selectedEpisode?.id ?? null;
+  }, [selectedEpisode?.id]);
 
   useEffect(() => {
     const episodeId = selectedEpisode?.id;
@@ -237,13 +280,14 @@ export default function ClinicalRecordsPage() {
     event.preventDefault();
     if (!selectedEpisode || submitting) return;
     const scope = scopeRef.current;
-    const hasContent = [
-      sessionForm.subjective,
-      sessionForm.objective,
-      sessionForm.interventions,
-      sessionForm.response,
-      sessionForm.plan,
-    ].some((value) => value.trim().length > 0);
+    const soap = {
+      subjective: stripEmptyPrompts(sessionForm.subjective),
+      objective: stripEmptyPrompts(sessionForm.objective),
+      interventions: stripEmptyPrompts(sessionForm.interventions),
+      response: stripEmptyPrompts(sessionForm.response),
+      plan: stripEmptyPrompts(sessionForm.plan),
+    };
+    const hasContent = Object.values(soap).some((value) => value.length > 0);
     if (
       !hasContent ||
       (sessionForm.supersedesId &&
@@ -262,11 +306,7 @@ export default function ClinicalRecordsPage() {
     const ok = await appendClinicalSessionNote({
       episodeId: selectedEpisode.id,
       occurredAt: occurredAt.toISOString(),
-      subjective: sessionForm.subjective,
-      objective: sessionForm.objective,
-      interventions: sessionForm.interventions,
-      response: sessionForm.response,
-      plan: sessionForm.plan,
+      ...soap,
       supersedesId: sessionForm.supersedesId,
       correctionReason: sessionForm.supersedesId
         ? sessionForm.correctionReason
@@ -324,6 +364,71 @@ export default function ClinicalRecordsPage() {
     setOutcomeForm(emptyOutcomeForm());
     setFeedback(t.outcomeSaved);
     setRefreshToken((value) => value + 1);
+  }
+
+  const latestCurrentNote =
+    documentation.sessionNotes.find((note) => note.isCurrent) ?? null;
+  const episodeCase = selectedEpisode
+    ? cases.find(
+        (candidate) =>
+          candidate.episodeId === selectedEpisode.id &&
+          candidate.patientId === selectedPatient?.id
+      ) ?? null
+    : null;
+
+  function sessionHasText(): boolean {
+    return SOAP_FIELDS.some((field) => sessionForm[field].trim().length > 0);
+  }
+
+  function applyTemplate(id: SessionTemplateId) {
+    if (sessionHasText() && !window.confirm(t.replaceWithTemplate)) return;
+    setSessionForm((current) => ({ ...current, ...sessionTemplate(id, locale) }));
+    setFeedback(t.templateApplied);
+  }
+
+  function copyLastSession() {
+    if (!latestCurrentNote) return;
+    if (sessionHasText() && !window.confirm(t.replaceWithTemplate)) return;
+    setSessionForm((current) => ({
+      ...current,
+      ...carryForwardFromNote(latestCurrentNote),
+    }));
+    setFeedback(t.copiedLast);
+  }
+
+  async function insertSavedFindings() {
+    if (!episodeCase || !selectedEpisode || findingsBusy) return;
+    const scope = scopeRef.current;
+    const episodeId = selectedEpisode.id;
+    setFindingsBusy(true);
+    const row = await fetchCaseFindings(episodeCase.id);
+    setFindingsBusy(false);
+    if (
+      scopeRef.current !== scope ||
+      selectedEpisodeRef.current !== episodeId ||
+      (row && row.caseId !== episodeCase.id)
+    ) {
+      return;
+    }
+    if (row === undefined) {
+      setFeedback(t.findingsFailed);
+      return;
+    }
+    if (row === null) {
+      setFeedback(t.findingsNone);
+      return;
+    }
+    const text = findingsToNoteText(row.findings, row.region, locale);
+    if (!text.subjective && !text.objective) {
+      setFeedback(t.findingsNone);
+      return;
+    }
+    setSessionForm((current) => ({
+      ...current,
+      subjective: appendToField(current.subjective, text.subjective),
+      objective: appendToField(current.objective, text.objective),
+    }));
+    setFeedback(t.findingsInserted);
   }
 
   function correctSession(note: ClinicalSessionNote) {
@@ -478,12 +583,21 @@ export default function ClinicalRecordsPage() {
             </Field>
           )}
           {selectedPatient && (
-            <div className="flex flex-wrap gap-2 text-xs">
+            <div className="flex flex-wrap items-center gap-2 text-xs">
               <Badge tone="primary">{selectedPatient.fullName}</Badge>
               <Badge tone={selectedPatient.activeEpisode ? "success" : "neutral"}>
                 {selectedPatient.activeEpisode ? t.activeEpisode : t.historicalEpisode}
               </Badge>
               {selectedEpisode && <Badge>{selectedEpisode.titleFa}</Badge>}
+              <ButtonLink
+                href={`/workspace?patient=${encodeURIComponent(selectedPatient.id)}`}
+                size="sm"
+                variant="ghost"
+                className="ms-auto"
+              >
+                <Icon name="user" width={14} height={14} />
+                {t.openWorkspace}
+              </ButtonLink>
             </div>
           )}
         </CardBody>
@@ -512,6 +626,51 @@ export default function ClinicalRecordsPage() {
               />
               <CardBody>
                 <form onSubmit={saveSession} className="space-y-3">
+                  {!sessionForm.supersedesId && (
+                    <div className="flex flex-wrap items-end gap-2 rounded-xl bg-[var(--color-surface-muted)] p-3">
+                      <div className="min-w-48 flex-1">
+                      <Field label={t.startFrom}>
+                        <Select
+                          value=""
+                          onChange={(event) => {
+                            const id = event.target.value as SessionTemplateId;
+                            if (id) applyTemplate(id);
+                          }}
+                        >
+                          <option value="">{t.templatePlaceholder}</option>
+                          {SESSION_TEMPLATE_IDS.map((id) => (
+                            <option key={id} value={id}>
+                              {sessionTemplateLabel(id, locale)}
+                            </option>
+                          ))}
+                        </Select>
+                      </Field>
+                      </div>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="secondary"
+                        disabled={!latestCurrentNote}
+                        title={t.copyLastHint}
+                        onClick={copyLastSession}
+                      >
+                        <Icon name="copy" width={14} height={14} />
+                        {t.copyLast}
+                      </Button>
+                      {episodeCase && (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="secondary"
+                          disabled={findingsBusy}
+                          onClick={() => void insertSavedFindings()}
+                        >
+                          <Icon name="analysis" width={14} height={14} />
+                          {t.insertFindings}
+                        </Button>
+                      )}
+                    </div>
+                  )}
                   <Field label={t.sessionTime} required>
                     <Input
                       type="datetime-local"

@@ -57,6 +57,7 @@ export type PhoneOtpError =
   | "invalid_code"
   | "too_many"
   | "sms_failed"
+  | "sms_not_configured"
   | "not_enabled"
   | "network"
   | "generic";
@@ -71,6 +72,15 @@ export function classifyPhoneOtpError(error: {
   const message = (error.message ?? "").toLowerCase();
   if (code === "otp_disabled" || code === "user_not_found" || message.includes("signups not allowed")) {
     return "not_registered";
+  }
+  // A failing Send SMS hook surfaces as unexpected_failure with a hook
+  // message: 401 → hook secret mismatch, 502 → MeliPayamak refused the
+  // send, anything else (500/404/…) → hook URL or server env not set up.
+  if (message.includes("hook")) {
+    if (message.includes("authorization")) return "sms_not_configured";
+    if (/\b502\b/.test(message)) return "sms_failed";
+    if (/\b(429|503)\b/.test(message) || message.includes("timeout")) return "sms_failed";
+    return "sms_not_configured";
   }
   if (code === "otp_expired" || code === "invalid_credentials" || message.includes("expired") || message.includes("invalid")) {
     return "invalid_code";

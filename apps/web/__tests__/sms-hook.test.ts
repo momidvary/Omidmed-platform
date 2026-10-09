@@ -2,8 +2,10 @@
 import { createHmac } from "node:crypto";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  MeliPayamakPanelSmsProvider,
   MeliPayamakSmsProvider,
   classifyMeliPayamakError,
+  classifyPanelResult,
   getSmsProvider,
   maskPhone,
   toLocalIranFormat,
@@ -160,8 +162,12 @@ describe("POST /api/auth/sms-hook", () => {
     vi.stubEnv("SEND_SMS_HOOK_SECRET", HOOK_SECRET);
     vi.stubEnv("SMS_PROVIDER", "mock");
     const body = JSON.stringify({ user: { phone: PHONE }, sms: { otp: TOKEN } });
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
     const res = await POST(request(body, { ...sign(body), signature: "v1,AAAA" }));
     expect(res.status).toBe(401);
+    expect(error.mock.calls.map((c) => String(c[0]))).toEqual([
+      expect.stringContaining("invalid signature"),
+    ]);
   });
 
   it("delivers a correctly signed request", async () => {
@@ -185,5 +191,87 @@ describe("POST /api/auth/sms-hook", () => {
     expect(await res.json()).toEqual({
       error: { http_code: 500, message: "SMS provider is not configured" },
     });
+  });
+});
+
+describe("MeliPayamak panel web service (username + panel APIKey)", () => {
+  const USERNAME = "09121112233";
+
+  it("sends the pattern with the APIKey as password and accepts a recId", async () => {
+    const { fetch, calls } = fakeFetch({
+      body: { Value: "4234567890123456789", RetStatus: 1, StrRetStatus: "Ok" },
+    });
+    const logger = captureLogger();
+    const provider = new MeliPayamakPanelSmsProvider(USERNAME, API_KEY, "123456", fetch, logger);
+    await expect(provider.sendOtp({ phone: PHONE, token: TOKEN })).resolves.toEqual({
+      ok: true,
+      provider: "melipayamak-panel",
+    });
+    expect(calls[0].url).toBe("https://rest.payamak-panel.com/api/SendSMS/BaseServiceNumber");
+    expect(calls[0].init?.headers).toEqual({
+      "Content-Type": "application/x-www-form-urlencoded",
+    });
+    expect(Object.fromEntries(new URLSearchParams(calls[0].init?.body))).toEqual({
+      username: USERNAME,
+      password: API_KEY,
+      bodyId: "123456",
+      to: "09123456789",
+      text: TOKEN,
+    });
+    expect(logger.lines).toEqual([]);
+  });
+
+  it.each([
+    [{ Value: "0", RetStatus: 0 }, "invalid_api_key"],
+    [{ Value: "-4", RetStatus: 1 }, "invalid_pattern"],
+    [{ Value: "2", RetStatus: 2 }, "insufficient_credit"],
+    [{ Value: "-1", RetStatus: 1 }, "webservice_disabled"],
+    [{ Value: "999", RetStatus: 1 }, "provider_value_999"],
+  ])("reports %o as %s without leaking secrets", async (body, detail) => {
+    const { fetch } = fakeFetch({ body });
+    const logger = captureLogger();
+    const provider = new MeliPayamakPanelSmsProvider(USERNAME, API_KEY, "123456", fetch, logger);
+    await expect(provider.sendOtp({ phone: PHONE, token: TOKEN })).resolves.toEqual({
+      ok: false,
+      provider: "melipayamak-panel",
+      detail,
+    });
+    expectNoSecretsIn(logger.lines);
+    for (const line of logger.lines) expect(line).not.toContain(USERNAME);
+  });
+
+  it("never echoes an unexpected Value in the label", () => {
+    expect(classifyPanelResult("09123456789 secret")).toBe("provider_value_unknown");
+  });
+
+  it("is selected when MELIPAYAMAK_USERNAME is set, with Persian digits normalised", async () => {
+    const { fetch, calls } = fakeFetch({ body: { Value: "4234567890123456789", RetStatus: 1 } });
+    const provider = getSmsProvider(
+      {
+        MELIPAYAMAK_API_KEY: " ۳a۹۰۰۲۶۳-key ",
+        MELIPAYAMAK_OTP_PATTERN: "۱۲۳۴۵۶",
+        MELIPAYAMAK_USERNAME: "۰۹۱۲۱۱۱۲۲۳۳",
+        NODE_ENV: "production",
+      },
+      fetch,
+      captureLogger()
+    );
+    expect(provider?.name).toBe("melipayamak-panel");
+    await provider?.sendOtp({ phone: PHONE, token: TOKEN });
+    expect(Object.fromEntries(new URLSearchParams(calls[0].init?.body))).toMatchObject({
+      username: USERNAME,
+      password: "3a900263-key",
+      bodyId: "123456",
+    });
+  });
+
+  it("needs a pattern bodyId when a username is set", () => {
+    expect(
+      getSmsProvider({
+        MELIPAYAMAK_API_KEY: API_KEY,
+        MELIPAYAMAK_USERNAME: USERNAME,
+        MELIPAYAMAK_SENDER: "5000",
+      })
+    ).toBeNull();
   });
 });

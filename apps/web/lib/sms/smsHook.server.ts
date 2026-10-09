@@ -1,4 +1,5 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
+import { toEnglishDigits } from "@/lib/phone";
 
 /*
  * Supabase Auth "Send SMS" hook support: delivers the phone sign-in code
@@ -137,6 +138,97 @@ export class MeliPayamakSmsProvider implements SmsProvider {
   }
 }
 
+/**
+ * BaseServiceNumber `Value` codes (pattern send through the panel web
+ * service) mapped to stable labels. Success is a long numeric recId.
+ */
+const PANEL_VALUE_LABELS: Record<string, string> = {
+  "0": "invalid_api_key", // wrong username or API key (password)
+  "-1": "webservice_disabled",
+  "-2": "rate_limited",
+  "-3": "invalid_pattern", // sender line of the pattern is not defined
+  "-4": "invalid_pattern", // bodyId wrong or pattern not approved
+  "-5": "invalid_pattern", // text does not match the pattern variables
+  "-6": "provider_internal_error",
+  "-7": "invalid_pattern",
+  "-10": "invalid_pattern",
+  "2": "insufficient_credit",
+  "10": "account_inactive",
+  "11": "not_sent",
+  "12": "account_documents_incomplete",
+  "16": "invalid_number",
+  "35": "invalid_number", // recipient is on the blacklist
+};
+
+export function classifyPanelResult(value: string, retStatus?: number): string {
+  if (PANEL_VALUE_LABELS[value]) return PANEL_VALUE_LABELS[value];
+  if (retStatus === 0) return "invalid_api_key";
+  return `provider_value_${/^-?\d{1,4}$/.test(value) ? value : "unknown"}`;
+}
+
+/**
+ * MeliPayamak panel web service, authenticated with the panel username and
+ * the panel APIKey (Developers → Web service settings), which MeliPayamak
+ * documents as a replacement for the panel password:
+ *   POST https://rest.payamak-panel.com/api/SendSMS/BaseServiceNumber
+ *   form: username, password=<APIKey>, bodyId, to="09…", text=<args joined by ';'>
+ *   → { Value: "<recId>" | "<error code>", RetStatus, StrRetStatus }
+ */
+export class MeliPayamakPanelSmsProvider implements SmsProvider {
+  name = "melipayamak-panel";
+
+  constructor(
+    private username: string,
+    private apiKey: string,
+    private otpPattern: string,
+    private fetchImpl: FetchLike = globalThis.fetch as unknown as FetchLike,
+    private logger: Logger = console
+  ) {}
+
+  async sendOtp({ phone, token }: { phone: string; token: string }): Promise<SmsSendResult> {
+    const bodyId = Number(this.otpPattern);
+    if (!Number.isInteger(bodyId) || bodyId <= 0) {
+      this.logger.error("[sms-hook] MELIPAYAMAK_OTP_PATTERN is not a numeric bodyId");
+      return { ok: false, provider: this.name, detail: "invalid_pattern" };
+    }
+    const form = new URLSearchParams({
+      username: this.username,
+      password: this.apiKey,
+      bodyId: String(bodyId),
+      to: toLocalIranFormat(phone),
+      text: token,
+    });
+    try {
+      const res = await this.fetchImpl(
+        "https://rest.payamak-panel.com/api/SendSMS/BaseServiceNumber",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: form.toString(),
+        }
+      );
+      const parsed = (await res.json().catch(() => null)) as
+        | { Value?: unknown; RetStatus?: unknown }
+        | null;
+      const value = parsed?.Value == null ? "" : String(parsed.Value).trim();
+      const retStatus = typeof parsed?.RetStatus === "number" ? parsed.RetStatus : undefined;
+      if (res.ok && retStatus === 1 && /^\d{5,}$/.test(value)) {
+        return { ok: true, provider: this.name };
+      }
+      const detail = res.ok
+        ? classifyPanelResult(value, retStatus)
+        : classifyMeliPayamakError(res.status);
+      this.logger.error(
+        `[sms-hook] melipayamak panel failed http=${res.status} ret=${retStatus ?? "none"} detail=${detail} to=${maskPhone(phone)}`
+      );
+      return { ok: false, provider: this.name, detail };
+    } catch {
+      this.logger.error(`[sms-hook] melipayamak panel network error to=${maskPhone(phone)}`);
+      return { ok: false, provider: this.name, detail: "network" };
+    }
+  }
+}
+
 /** Development only: pretends to deliver, never reveals the code. */
 export class MockSmsProvider implements SmsProvider {
   name = "mock";
@@ -152,6 +244,7 @@ export interface SmsEnv {
   MELIPAYAMAK_API_KEY?: string;
   MELIPAYAMAK_OTP_PATTERN?: string;
   MELIPAYAMAK_SENDER?: string;
+  MELIPAYAMAK_USERNAME?: string;
   NODE_ENV?: string;
 }
 
@@ -170,10 +263,18 @@ export function getSmsProvider(
     return env.NODE_ENV === "production" ? null : new MockSmsProvider(logger);
   }
   if (which !== "melipayamak") return null;
-  const apiKey = env.MELIPAYAMAK_API_KEY?.trim();
-  const pattern = env.MELIPAYAMAK_OTP_PATTERN?.trim() || undefined;
-  const sender = env.MELIPAYAMAK_SENDER?.trim() || undefined;
+  // Panels display keys and numbers with Persian digits; copies keep them.
+  const clean = (value?: string) => toEnglishDigits(value ?? "").trim() || undefined;
+  const apiKey = clean(env.MELIPAYAMAK_API_KEY);
+  const pattern = clean(env.MELIPAYAMAK_OTP_PATTERN);
+  const sender = clean(env.MELIPAYAMAK_SENDER);
+  const username = clean(env.MELIPAYAMAK_USERNAME);
   if (!apiKey || (!pattern && !sender)) return null;
+  if (username) {
+    // Panel APIKey + username: pattern send through the panel web service.
+    if (!pattern) return null;
+    return new MeliPayamakPanelSmsProvider(username, apiKey, pattern, fetchImpl, logger);
+  }
   return new MeliPayamakSmsProvider(apiKey, pattern, sender, fetchImpl, logger);
 }
 

@@ -44,6 +44,35 @@ describe("phone OTP error classification", () => {
     [{ code: "phone_provider_disabled" }, "not_enabled"],
     [{ code: "sms_send_failed" }, "sms_failed"],
     [{ code: "hook_timeout" }, "sms_failed"],
+    // Messages GoTrue returns when the Send SMS hook answers with an error.
+    [
+      { code: "unexpected_failure", status: 500, message: "Hook requires authorization token" },
+      "sms_not_configured",
+    ],
+    [
+      {
+        code: "unexpected_failure",
+        status: 500,
+        message: "Unexpected status code returned from hook: 500",
+      },
+      "sms_not_configured",
+    ],
+    [
+      {
+        code: "unexpected_failure",
+        status: 500,
+        message: "Unexpected status code returned from hook: 404",
+      },
+      "sms_not_configured",
+    ],
+    [
+      {
+        code: "unexpected_failure",
+        status: 500,
+        message: "Unexpected status code returned from hook: 502",
+      },
+      "sms_failed",
+    ],
     [{ code: "unexpected_failure", status: 500 }, "generic"],
   ])("%o → %s", (error, expected) => {
     expect(classifyPhoneOtpError(error)).toBe(expected);

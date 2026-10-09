@@ -45,7 +45,12 @@ export async function POST(request: Request) {
     },
     rawBody
   );
-  if (!verified) return hookError(401, "invalid signature");
+  if (!verified) {
+    console.error(
+      "[sms-hook] invalid signature: SEND_SMS_HOOK_SECRET does not match the Supabase hook secret"
+    );
+    return hookError(401, "invalid signature");
+  }
 
   let payload: { user?: { phone?: unknown }; sms?: { otp?: unknown } };
   try {

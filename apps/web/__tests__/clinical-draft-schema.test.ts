@@ -3,13 +3,16 @@ import {
   ClinicalDraftCaseContextSchema,
   ClinicalDraftSchema,
   clinicalDraftSafetyViolation,
+  type StructuredFindingsContext,
 } from "@/lib/ai/clinicalDraftSchema";
 import {
   CLINICAL_AI_LIMIT_DEFAULTS,
+  clinicalAiFreeText,
   minimizeClinicalAiPayload,
   redactDirectIdentifiers,
   resolveClinicalAiLimits,
 } from "@/lib/ai/clinicalDraftPolicy";
+import { buildStructuredFindingsContext } from "@/lib/clinical/reasoning/aiContext";
 
 const validDraft = {
   answer:
@@ -48,6 +51,7 @@ const validContext = {
   medications: "not recorded",
   functionalLimitations: "stairs",
   patientGoal: "return to walking",
+  structuredFindings: null as StructuredFindingsContext | null,
 };
 
 describe("clinical draft schema", () => {
@@ -202,5 +206,96 @@ describe("clinical AI data minimization", () => {
     expect(serialized).not.toContain("۰۹۱۲۱۲۳۴۵۶۷");
     expect(minimized.caseContext.painIntensity).toBe(4);
     expect(minimized.redactionCount).toBe(3);
+  });
+});
+
+describe("structured findings in the AI case context", () => {
+  const row = {
+    region: "knee",
+    knowledge_version: "physio-kb-1",
+    findings: {
+      intake: {
+        answers: { k_pop_rapid_swelling: "yes", k_locking: "no", k_twisting: "unknown" },
+        irritability: "moderate",
+      },
+      exam: {
+        tests: { k_lachman: "positive", k_mcmurray: "equivocal" },
+        notes: { rom: "Flexion 100°, call 09121234567 if needed", other: "  " },
+      },
+    },
+  };
+
+  it("labels recorded findings and includes the rule-based ranking to critique", () => {
+    const context = buildStructuredFindingsContext(row, "knee", 23)!;
+    expect(context.history).toEqual([
+      { item: "Pop at injury with rapid swelling (within ~2 hours)", answer: "yes" },
+      { item: "Locking or catching", answer: "no" },
+    ]);
+    expect(context.examTests.map((t) => [t.test, t.result])).toEqual([
+      ["Lachman test", "positive"],
+      ["McMurray test", "equivocal"],
+    ]);
+    expect(context.examTests[0].accuracy).toContain("Benjaminse");
+    expect(context.examNotes).toEqual([
+      { field: "rom", note: "Flexion 100°, call 09121234567 if needed" },
+    ]);
+    expect(context.ruleBasedRanking[0].hypothesis).toBe("ACL injury");
+    expect(context.ruleBasedRanking[0].reasons.join(" ")).toContain("Lachman test");
+    expect(
+      ClinicalDraftCaseContextSchema.safeParse({ ...validContext, structuredFindings: context })
+        .success
+    ).toBe(true);
+  });
+
+  it("omits findings that are absent, empty, invalid or from another region", () => {
+    expect(buildStructuredFindingsContext(null, "knee", 30)).toBeNull();
+    expect(buildStructuredFindingsContext(row, "hip", 30)).toBeNull();
+    expect(buildStructuredFindingsContext(row, null, 30)).toBeNull();
+    expect(
+      buildStructuredFindingsContext({ ...row, findings: { intake: {} } }, "knee", 30)
+    ).toBeNull();
+    expect(
+      buildStructuredFindingsContext(
+        {
+          ...row,
+          findings: {
+            intake: { answers: { k_locking: "unknown" }, irritability: null },
+            exam: { tests: {}, notes: {} },
+          },
+        },
+        "knee",
+        30
+      )
+    ).toBeNull();
+  });
+
+  it("redacts identifiers in examination notes before audit and generation", () => {
+    const structuredFindings = buildStructuredFindingsContext(row, "knee", 23)!;
+    const minimized = minimizeClinicalAiPayload("Rank the differential", {
+      ...validContext,
+      structuredFindings,
+    });
+    expect(JSON.stringify(minimized)).not.toContain("09121234567");
+    expect(minimized.caseContext.structuredFindings?.examNotes[0].note).toContain(
+      "[REDACTED_IDENTIFIER]"
+    );
+    expect(minimized.redactionCount).toBe(1);
+    expect(minimized.caseContext.structuredFindings?.history).toEqual(
+      structuredFindings.history
+    );
+  });
+
+  it("scans examination notes but not knowledge-base labels for safety signals", () => {
+    const structuredFindings = buildStructuredFindingsContext(row, "knee", 23)!;
+    const text = clinicalAiFreeText("question", {
+      ...validContext,
+      structuredFindings: {
+        ...structuredFindings,
+        examNotes: [{ field: "neuro", note: "new saddle numbness reported" }],
+      },
+    });
+    expect(text).toContain("new saddle numbness reported");
+    expect(text).not.toContain("Lachman test");
+    expect(text).toContain(validContext.mainComplaint);
   });
 });

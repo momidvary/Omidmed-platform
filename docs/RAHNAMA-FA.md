@@ -42,6 +42,8 @@
    27. `027_patient_prescription_visibility.sql` — بدون آن بیمار برنامه تمرینی
        منتشرشده خود را نمی‌بیند.
    28. `028_patient_phone_accounts.sql` — اتصال حساب پرتال بیمار با شماره همراه.
+   29. `029_case_clinical_findings.sql` — ثبت ساختاریافته شرح حال و معاینه و
+       رتبه‌بندی فرضیه‌ها (راهنما: `docs/CLINICAL_REASONING_FA.md`).
 
    اگر دیتابیس را قبلاً با `02_all_migrations.sql` ساخته‌اید، migrationهای جدید را
    با فایل‌های پوشه `database/supabase-sql-editor/upgrades/` (به ترتیب شماره) در
@@ -218,6 +220,10 @@ CLINICAL_AI_DAILY_CLINIC_LIMIT=
 قبل از تماس provider اتمیک reserve می‌شود، quota دارد، خروجی با schema و قواعد
 ایمنی کنترل می‌شود و بدون accept/edit/reject درمانگر هیچ اثر بالینی یا انتشار
 مستقیم ندارد. در refusal، timeout یا خطا هیچ پاسخ بالینی جایگزین ساخته نمی‌شود.
+
+از نسخه `clinical-draft-v3`، آخرین یافته‌های ساختاریافته ذخیره‌شده کیس (با برچسب،
+یادداشت‌ها پس از حذف شناسه) و رتبه‌بندی قاعده‌محور هم به ورودی ممیزی‌شده اضافه
+می‌شود تا مدل آن را نقد کند. راهنمای کامل: `docs/CLINICAL_REASONING_FA.md`.
 
 ## ۸ — آزمون پیش از انتشار
 

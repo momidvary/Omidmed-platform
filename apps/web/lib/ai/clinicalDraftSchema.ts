@@ -141,6 +141,55 @@ export const ClinicalDraftSchema = ClinicalDraftBaseSchema.superRefine(
 
 export type ClinicalDraft = z.infer<typeof ClinicalDraftSchema>;
 
+/**
+ * Clinician-recorded structured findings (migration 029) labelled from the
+ * knowledge base, plus the transparent rule-based ranking for the model to
+ * critique. Bounded so the audited context stays small.
+ */
+export const StructuredFindingsContextSchema = z
+  .object({
+    knowledgeVersion: z.string().trim().min(1).max(40),
+    region: z.string().trim().min(1).max(40),
+    irritability: z.enum(["low", "moderate", "high"]).nullable(),
+    history: z
+      .array(
+        z.object({ item: requiredText(300), answer: z.enum(["yes", "no"]) }).strict()
+      )
+      .max(80),
+    examTests: z
+      .array(
+        z
+          .object({
+            test: requiredText(200),
+            result: z.enum(["positive", "negative", "equivocal"]),
+            accuracy: z.string().trim().max(500).nullable(),
+          })
+          .strict()
+      )
+      .max(80),
+    examNotes: z
+      .array(z.object({ field: requiredText(40), note: requiredText(2_000) }).strict())
+      .max(7),
+    ruleBasedRanking: z
+      .array(
+        z
+          .object({
+            hypothesis: requiredText(200),
+            relativeSupport: z.number().int().min(-100).max(100),
+            requiresMedicalReview: z.boolean(),
+            reasons: z.array(requiredText(400)).max(30),
+          })
+          .strict()
+      )
+      .max(10),
+    suggestedNextTests: z.array(requiredText(200)).max(4),
+  })
+  .strict();
+
+export type StructuredFindingsContext = z.infer<
+  typeof StructuredFindingsContextSchema
+>;
+
 export const ClinicalDraftCaseContextSchema = z
   .object({
     age: z.number().int().min(0).max(120).nullable(),
@@ -159,6 +208,7 @@ export const ClinicalDraftCaseContextSchema = z
     medications: optionalCaseText(10_000),
     functionalLimitations: optionalCaseText(10_000),
     patientGoal: optionalCaseText(5_000),
+    structuredFindings: StructuredFindingsContextSchema.nullable().default(null),
   })
   .strict()
   .superRefine((contextValue, context) => {

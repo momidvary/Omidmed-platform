@@ -1553,6 +1553,224 @@ begin
 end $$;
 reset role;
 
+-- Migration 029: structured findings are append-only, validated, attributed
+-- by the database and visible only to clinicians managing the record.
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"10000000-0000-4000-8000-000000000003","role":"authenticated"}', true);
+do $$
+declare
+  v_first uuid;
+  v_second uuid;
+  v_version integer;
+  v_author uuid;
+  v_findings jsonb := '{
+    "intake": {"answers": {"k_twisting": "yes", "k_locking": "no"}, "irritability": "moderate"},
+    "exam": {"tests": {"k_mcmurray": "positive"}, "notes": {"rom": "Flexion 120"}}
+  }'::jsonb;
+begin
+  select findings_version_id, findings_version, authored_by
+    into v_first, v_version, v_author
+  from public.record_case_clinical_findings(
+    '50000000-0000-4000-8000-000000000001', null, 'physio-kb-1', v_findings
+  );
+  if v_version <> 1
+     or v_author <> '10000000-0000-4000-8000-000000000003'
+     or not exists (
+       select 1 from public.case_clinical_findings findings
+       where findings.id = v_first
+         and findings.region = 'knee'
+         and findings.clinic_id = '20000000-0000-4000-8000-000000000001'
+         and findings.findings = v_findings
+     ) then
+    raise exception 'FAIL: initial clinical findings were not recorded faithfully';
+  end if;
+
+  begin
+    perform public.record_case_clinical_findings(
+      '50000000-0000-4000-8000-000000000001', null, 'physio-kb-1',
+      jsonb_set(v_findings, '{exam,tests,k_lachman}', '"negative"')
+    );
+    raise exception 'FAIL: stale findings save created a second root';
+  exception when check_violation then null;
+  end;
+
+  begin
+    perform public.record_case_clinical_findings(
+      '50000000-0000-4000-8000-000000000001', v_first, 'physio-kb-1', v_findings
+    );
+    raise exception 'FAIL: unchanged findings created a new version';
+  exception when invalid_parameter_value then null;
+  end;
+
+  begin
+    perform public.record_case_clinical_findings(
+      '50000000-0000-4000-8000-000000000001', v_first, 'physio-kb-1',
+      jsonb_set(v_findings, '{intake,answers,k_twisting}', '"maybe"')
+    );
+    raise exception 'FAIL: invalid findings answer was accepted';
+  exception when invalid_parameter_value then null;
+  end;
+  begin
+    perform public.record_case_clinical_findings(
+      '50000000-0000-4000-8000-000000000001', v_first, 'physio-kb-1',
+      v_findings || '{"diagnosis": "definitive"}'::jsonb
+    );
+    raise exception 'FAIL: findings with an unexpected key were accepted';
+  exception when invalid_parameter_value then null;
+  end;
+  begin
+    perform public.record_case_clinical_findings(
+      '50000000-0000-4000-8000-000000000001', v_first, 'physio-kb-1',
+      jsonb_set(v_findings, '{exam,notes,rom}', to_jsonb(repeat('x', 2001)))
+    );
+    raise exception 'FAIL: oversized findings note was accepted';
+  exception when invalid_parameter_value then null;
+  end;
+  begin
+    perform public.record_case_clinical_findings(
+      '50000000-0000-4000-8000-000000000001', v_first, 'physio-kb-1',
+      v_findings #- '{intake,irritability}'
+    );
+    raise exception 'FAIL: findings without irritability were accepted';
+  exception when invalid_parameter_value then null;
+  end;
+
+  select findings_version_id, findings_version into v_second, v_version
+  from public.record_case_clinical_findings(
+    '50000000-0000-4000-8000-000000000001', v_first, 'physio-kb-1',
+    jsonb_set(v_findings, '{exam,tests,k_lachman}', '"negative"')
+  );
+  if v_version <> 2
+     or not exists (
+       select 1 from public.case_clinical_findings findings
+       where findings.id = v_second and findings.supersedes_id = v_first
+     )
+     or (select count(*) from public.case_clinical_findings) <> 2 then
+    raise exception 'FAIL: findings revision was not appended to the chain';
+  end if;
+  perform set_config('physioai_ci.findings_current_id', v_second::text, true);
+
+  begin
+    update public.case_clinical_findings
+    set findings = v_findings where id = v_second;
+    raise exception 'FAIL: clinical findings history was mutable';
+  exception when insufficient_privilege then null;
+  end;
+  begin
+    delete from public.case_clinical_findings where id = v_first;
+    raise exception 'FAIL: clinical findings history was deletable';
+  exception when insufficient_privilege then null;
+  end;
+  begin
+    insert into public.case_clinical_findings (
+      case_id, clinic_id, patient_id, episode_id, version, region,
+      knowledge_version, findings, authored_by, supersedes_id
+    ) values (
+      '50000000-0000-4000-8000-000000000001',
+      '20000000-0000-4000-8000-000000000001',
+      '30000000-0000-4000-8000-000000000001',
+      '40000000-0000-4000-8000-000000000001',
+      3, 'knee', 'physio-kb-1', v_findings,
+      '10000000-0000-4000-8000-000000000001', v_second
+    );
+    raise exception 'FAIL: direct findings insert bypassed attribution';
+  exception when insufficient_privilege then null;
+  end;
+end $$;
+reset role;
+
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"10000000-0000-4000-8000-000000000001","role":"authenticated"}', true);
+do $$
+begin
+  if (select count(*) from public.case_clinical_findings) <> 2 then
+    raise exception 'FAIL: clinic owner cannot read clinical findings';
+  end if;
+end $$;
+reset role;
+
+do $$
+declare
+  v_claims text;
+  v_findings jsonb := '{
+    "intake": {"answers": {}, "irritability": null},
+    "exam": {"tests": {"k_lachman": "positive"}, "notes": {}}
+  }'::jsonb;
+begin
+  foreach v_claims in array array[
+    '10000000-0000-4000-8000-000000000004', -- unassigned therapist
+    '10000000-0000-4000-8000-000000000005', -- clinic staff
+    '10000000-0000-4000-8000-000000000006', -- linked patient
+    '10000000-0000-4000-8000-000000000007', -- other clinic owner
+    '10000000-0000-4000-8000-000000000002'  -- platform admin
+  ] loop
+    perform set_config(
+      'request.jwt.claims',
+      json_build_object('sub', v_claims, 'role', 'authenticated')::text,
+      true
+    );
+    set local role authenticated;
+    if exists (select 1 from public.case_clinical_findings) then
+      raise exception 'FAIL: % read clinical findings', v_claims;
+    end if;
+    begin
+      perform public.record_case_clinical_findings(
+        '50000000-0000-4000-8000-000000000001',
+        current_setting('physioai_ci.findings_current_id')::uuid,
+        'physio-kb-1', v_findings
+      );
+      raise exception 'FAIL: % recorded clinical findings', v_claims;
+    exception when insufficient_privilege then null;
+    end;
+    reset role;
+  end loop;
+end $$;
+
+do $$
+begin
+  if (select count(*) from public.case_clinical_findings) <> 2
+     or not exists (
+       select 1 from public.audit_log audit
+       where audit.table_name = 'case_clinical_findings'
+         and audit.row_id = current_setting('physioai_ci.findings_current_id')
+         and audit.action = 'INSERT'
+     ) then
+    raise exception 'FAIL: findings history or append audit is incomplete';
+  end if;
+  begin
+    update public.case_clinical_findings set region = 'hip';
+    raise exception 'FAIL: trusted SQL rewrote findings history';
+  exception when object_not_in_prerequisite_state then null;
+  end;
+  begin
+    insert into public.case_clinical_findings (
+      case_id, clinic_id, patient_id, episode_id, version, region,
+      knowledge_version, findings, authored_by, supersedes_id
+    ) values (
+      '50000000-0000-4000-8000-000000000001',
+      '20000000-0000-4000-8000-000000000002',
+      '30000000-0000-4000-8000-000000000001',
+      '40000000-0000-4000-8000-000000000001',
+      3, 'knee', 'physio-kb-1',
+      '{"intake":{"answers":{},"irritability":null},"exam":{"tests":{},"notes":{}}}',
+      '10000000-0000-4000-8000-000000000003',
+      current_setting('physioai_ci.findings_current_id')::uuid
+    );
+    raise exception 'FAIL: cross-tenant findings row was accepted';
+  exception when check_violation then null;
+  end;
+  if has_table_privilege(
+       'authenticated', 'public.case_clinical_findings',
+       'INSERT,UPDATE,DELETE,TRUNCATE'
+     )
+     or has_table_privilege(
+       'service_role', 'public.case_clinical_findings',
+       'SELECT,INSERT,UPDATE,DELETE,TRUNCATE'
+     ) then
+    raise exception 'FAIL: clinical findings retained direct table privileges';
+  end if;
+end $$;
+
 -- Owner A cannot forge an episode from Clinic B into a Clinic A case.
 set local role authenticated;
 select set_config('request.jwt.claims', '{"sub":"10000000-0000-4000-8000-000000000001","role":"authenticated"}', true);

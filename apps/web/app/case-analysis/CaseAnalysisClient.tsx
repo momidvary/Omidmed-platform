@@ -13,6 +13,8 @@ import { Button, ButtonLink } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Form";
 import { Icon } from "@/components/ui/Icon";
 import { CaseAssessmentHistory } from "@/components/clinical/CaseAssessmentHistory";
+import { StructuredFindingsPanel } from "@/components/clinical/StructuredFindingsPanel";
+import { getRegionKnowledge } from "@/lib/clinical/reasoning/knowledge";
 import {
   BulletList,
   Disclaimer,
@@ -95,7 +97,7 @@ export function CaseAnalysisClient() {
     <div className="space-y-6">
       <PageIntro
         title="Case Analysis"
-        description="Deterministic intake template — possible hypotheses to verify independently, not a diagnosis or validated AI analysis."
+        description="Structured findings rank provisional hypotheses transparently — decision support to verify independently, not a diagnosis or validated AI analysis."
         action={
           cases.length > 0 ? (
             <Select
@@ -192,6 +194,11 @@ export function CaseAnalysisClient() {
             onSnapshotApplied={applyAssessmentSnapshot}
           />
 
+          <StructuredFindingsPanel
+            key={`${currentCase.id}:${currentCase.region ?? ""}`}
+            patientCase={currentCase}
+          />
+
           {loading && (
             <Card>
               <Spinner label="Organising clinical reasoning…" />
@@ -204,13 +211,15 @@ export function CaseAnalysisClient() {
                 <>
                   <ReasonCard title="Subjective Findings" icon="user" items={reasoning.data.subjective} />
                   <ReasonCard title="Objective Findings (to examine)" icon="analysis" items={reasoning.data.objective} />
-                  <ReasonCard
-                    title="Possible Clinical Hypotheses"
-                    icon="sparkle"
-                    items={reasoning.data.hypotheses}
-                    tone="primary"
-                    footer="Template hypotheses only, not a diagnosis — confirm independently with examination."
-                  />
+                  {!getRegionKnowledge(currentCase.region) && (
+                    <ReasonCard
+                      title="Possible Clinical Hypotheses"
+                      icon="sparkle"
+                      items={reasoning.data.hypotheses}
+                      tone="primary"
+                      footer="Template hypotheses only, not a diagnosis — confirm independently with examination."
+                    />
+                  )}
                   <ReasonCard title="Differential Diagnosis Ideas" icon="analysis" items={reasoning.data.differentials} />
                   <ReasonCard title="Yellow Flags (psychosocial)" icon="flag" items={reasoning.data.yellowFlags} tone="warn" />
                 </>

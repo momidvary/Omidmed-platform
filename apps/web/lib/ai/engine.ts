@@ -619,6 +619,7 @@ export const patientSuggestedPrompts = [
 ];
 
 export const suggestedPrompts = [
+  "Rank the differential for this case from the recorded structured findings, explain what supports or argues against each hypothesis, and which tests would best discriminate them.",
   "What tests should I do for this patient?",
   "Give me a treatment plan for knee osteoarthritis.",
   "What exercises are safe after TKA?",

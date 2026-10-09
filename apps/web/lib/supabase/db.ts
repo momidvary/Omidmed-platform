@@ -32,6 +32,11 @@ import {
   TreatmentPlanSchema,
 } from "@/lib/clinical/treatmentPlanSchema";
 import { localDateValue } from "@/lib/utils";
+import {
+  ClinicalFindingsSchema,
+  type CaseFindingsVersion,
+  type ClinicalFindings,
+} from "@/lib/clinical/reasoning/findings";
 
 /*
  * Data-access layer for the authenticated schema (see database/migrations).
@@ -1705,6 +1710,114 @@ export async function reviseCaseAssessment(
   } catch {
     report("save_failed");
     return null;
+  }
+}
+
+/* ── Structured clinical findings (migration 029) ──────────────── */
+
+/**
+ * Latest saved findings for a case: a version, null when none were recorded
+ * yet, or undefined when the read failed (never shown as "no findings").
+ */
+export async function fetchCaseFindings(
+  caseId: string
+): Promise<CaseFindingsVersion | null | undefined> {
+  const supabase = getSupabase();
+  if (!supabase || !caseId) return undefined;
+  try {
+    const result = await withTimeout(
+      supabase
+        .from("case_clinical_findings")
+        .select(
+          "id, case_id, version, region, knowledge_version, findings, authored_by, created_at"
+        )
+        .eq("case_id", caseId)
+        .order("version", { ascending: false })
+        .limit(1)
+    );
+    if (!result || result.error || !result.data) return undefined;
+    const row = result.data[0] as Record<string, unknown> | undefined;
+    if (!row) {
+      report("connected");
+      return null;
+    }
+    const findings = ClinicalFindingsSchema.safeParse(row.findings);
+    if (!findings.success) return undefined;
+    report("connected");
+    return {
+      id: row.id as string,
+      caseId: row.case_id as string,
+      version: Number(row.version),
+      region: row.region as CaseFindingsVersion["region"],
+      knowledgeVersion: row.knowledge_version as string,
+      findings: findings.data,
+      authoredBy: (row.authored_by as string | null) ?? null,
+      createdAt: row.created_at as string,
+    };
+  } catch {
+    report("offline");
+    return undefined;
+  }
+}
+
+export type RecordFindingsFailure =
+  | "stale"
+  | "unchanged"
+  | "not_permitted"
+  | "invalid"
+  | "failed";
+
+export async function recordCaseFindings(input: {
+  caseId: string;
+  supersedesId: string | null;
+  knowledgeVersion: string;
+  findings: ClinicalFindings;
+}): Promise<
+  | { ok: true; id: string; version: number; createdAt: string }
+  | { ok: false; reason: RecordFindingsFailure }
+> {
+  const parsed = ClinicalFindingsSchema.safeParse(input.findings);
+  if (!parsed.success || !input.caseId) {
+    report("save_failed");
+    return { ok: false, reason: "invalid" };
+  }
+  const supabase = getSupabase();
+  if (!supabase) return { ok: false, reason: "failed" };
+  report("saving");
+  try {
+    const { data, error } = await supabase.rpc("record_case_clinical_findings", {
+      p_case_id: input.caseId,
+      p_supersedes_id: input.supersedesId,
+      p_knowledge_version: input.knowledgeVersion,
+      p_findings: parsed.data,
+    });
+    const row = (Array.isArray(data) ? data[0] : data) as
+      | Record<string, unknown>
+      | null;
+    if (error || !row || typeof row.findings_version_id !== "string") {
+      report("save_failed");
+      const reason: RecordFindingsFailure =
+        error?.code === "23514"
+          ? "stale"
+          : error?.code === "42501"
+            ? "not_permitted"
+            : error?.code === "22023"
+              ? /unchanged/i.test(error.message ?? "")
+                ? "unchanged"
+                : "invalid"
+              : "failed";
+      return { ok: false, reason };
+    }
+    report("saved");
+    return {
+      ok: true,
+      id: row.findings_version_id,
+      version: Number(row.findings_version),
+      createdAt: String(row.created_at),
+    };
+  } catch {
+    report("save_failed");
+    return { ok: false, reason: "failed" };
   }
 }
 

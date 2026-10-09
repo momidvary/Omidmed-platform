@@ -3,9 +3,13 @@ export function cn(...classes: (string | false | null | undefined)[]): string {
   return classes.filter(Boolean).join(" ");
 }
 
-/** Format an ISO date string as a short, human-readable date. */
-export function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("en-US", {
+/**
+ * Format an ISO date string as a short, human-readable date. Persian uses
+ * the Iranian (Solar Hijri) calendar via fa-IR.
+ */
+export function formatDate(iso: string, locale: "en" | "fa" | "ar" = "en"): string {
+  const tag = locale === "fa" ? "fa-IR" : locale === "ar" ? "ar" : "en-US";
+  return new Date(iso).toLocaleDateString(tag, {
     month: "short",
     day: "numeric",
     year: "numeric",
@@ -34,4 +38,12 @@ export function uuid(): string {
     const r = (Math.random() * 16) | 0;
     return (c === "x" ? r : (r & 0x3) | 0x8).toString(16);
   });
+}
+
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** True for a canonical UUID, e.g. a record id taken from the URL. */
+export function isUuid(value: string | null | undefined): value is string {
+  return typeof value === "string" && UUID_PATTERN.test(value);
 }

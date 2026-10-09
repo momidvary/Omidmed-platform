@@ -16,6 +16,9 @@ import {
 } from "@/lib/supabase/db";
 import type { ClinicalAlert, ClinicalAlertStatus } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { useLocale } from "@/lib/store/LocaleContext";
+import { intlLocale, useText } from "@/lib/i18n/text";
+import { alertsText, type AlertsText } from "./text";
 
 const POLL_INTERVAL_MS = 30_000;
 
@@ -46,43 +49,34 @@ const statusTone: Record<
   resolved: "success",
 };
 
-function formatDateTime(value: string | number | null): string {
-  if (value === null) return "Not recorded";
+function formatDateTime(value: string | number | null, locale: string, t: AlertsText): string {
+  if (value === null) return t.notRecorded;
   const date = new Date(value);
   return Number.isNaN(date.getTime())
-    ? "Unknown time"
-    : date.toLocaleString("en-GB", {
+    ? t.unknownTime
+    : date.toLocaleString(locale, {
         dateStyle: "medium",
         timeStyle: "short",
       });
 }
 
-function alertSummary(alert: ClinicalAlert): string {
-  if (alert.alertType === "ticket-emergency") {
-    return "Emergency language in patient ticket";
-  }
-  if (alert.alertType === "ticket-urgent") {
-    return "Urgent language in patient ticket";
-  }
-  return `High pain reported${
-    alert.metricValue === null ? "" : `: ${alert.metricValue}/10`
-  }`;
+function alertSummary(alert: ClinicalAlert, t: AlertsText): string {
+  if (alert.alertType === "ticket-emergency") return t.summaryEmergency;
+  if (alert.alertType === "ticket-urgent") return t.summaryUrgent;
+  return t.summaryPain(alert.metricValue);
 }
 
-function alertDetail(alert: ClinicalAlert): string {
-  if (alert.alertType === "ticket-emergency") {
-    return "The patient ticket was classified as emergency. Contact the patient now and follow the clinic emergency pathway; never wait for an inbox response.";
-  }
-  if (alert.alertType === "ticket-urgent") {
-    return "The patient ticket was classified as urgent. Review it now and document same-day contact and escalation.";
-  }
-  return `Patient reported high pain${
-    alert.metricValue === null ? "" : ` (${alert.metricValue}/10)`
-  }. The linked prescription was paused by the same database transaction.`;
+function alertDetail(alert: ClinicalAlert, t: AlertsText): string {
+  if (alert.alertType === "ticket-emergency") return t.detailEmergency;
+  if (alert.alertType === "ticket-urgent") return t.detailUrgent;
+  return t.detailPain(alert.metricValue);
 }
 
 export default function ClinicalAlertsPage() {
   const { profile, activeClinicId } = useAuth();
+  const t = useText(alertsText);
+  const { locale } = useLocale();
+  const fmt = (value: string | number | null) => formatDateTime(value, intlLocale(locale), t);
   const canAccess =
     profile?.role === "clinic_owner" || profile?.role === "therapist";
   const [queue, setQueue] = useState<QueueState>(emptyQueue);
@@ -116,8 +110,7 @@ export default function ClinicalAlertsPage() {
           clinicId,
           alerts: previous.clinicId === clinicId ? previous.alerts : [],
           loading: false,
-          error:
-            "Alert refresh failed. Visible data may be stale; retry before making a safety decision.",
+          error: "refresh_failed",
           updatedAt: previous.clinicId === clinicId ? previous.updatedAt : null,
         }));
         return;
@@ -192,7 +185,7 @@ export default function ClinicalAlertsPage() {
     if (
       (resolutionNote.trim().length > 0 || resumePrescription) &&
       !window.confirm(
-        "Switch alerts and discard the unsaved resolution note on this screen?"
+        t.switchConfirm
       )
     ) {
       return;
@@ -212,7 +205,7 @@ export default function ClinicalAlertsPage() {
     setSubmitting(null);
     if (activeClinicRef.current !== clinicId) return;
     if (!ok) {
-      setFeedback("Acknowledgement was not saved. Check assignment and retry.");
+      setFeedback(t.ackFailed);
       return;
     }
     setQueue((previous) => ({
@@ -221,7 +214,7 @@ export default function ClinicalAlertsPage() {
         item.id === alert.id ? { ...item, status: "acknowledged" } : item
       ),
     }));
-    setFeedback("Alert acknowledged with your authenticated identity.");
+    setFeedback(t.ackSaved);
   }
 
   async function resolve(alert: ClinicalAlert) {
@@ -246,8 +239,8 @@ export default function ClinicalAlertsPage() {
     if (!ok) {
       setFeedback(
         resumePrescription
-          ? "Resume was rejected. Record a newer clear safety screen and verify the current plan, dates, and other open alerts."
-          : "Resolution was not saved. Check assignment and connection, then retry."
+          ? t.resumeRejected
+          : t.resolveFailed
       );
       return;
     }
@@ -267,8 +260,8 @@ export default function ClinicalAlertsPage() {
     setResumePrescription(false);
     setFeedback(
       resumePrescription
-        ? "Alert resolved and the reviewed prescription resumed."
-        : "Alert resolved; any suspended prescription remains paused."
+        ? t.resolvedResumed
+        : t.resolvedPaused
     );
   }
 
@@ -276,13 +269,13 @@ export default function ClinicalAlertsPage() {
     return (
       <div className="space-y-6">
         <PageIntro
-          title="Clinical Alerts"
-          description="Operational alerts are disabled in mock mode. No real clinician notification is sent."
+          title={t.title}
+          description={t.demoIntro}
         />
         <EmptyState
           icon="alert"
-          title="Demo mode has no safety queue"
-          description="Connect Supabase and apply migration 014 to test attributed acknowledgement and reviewed resume."
+          title={t.demoTitle}
+          description={t.demoBody}
         />
       </div>
     );
@@ -292,8 +285,8 @@ export default function ClinicalAlertsPage() {
     return (
       <EmptyState
         icon="shield"
-        title="Clinical alert access required"
-        description="Only clinic owners and assigned therapists can load this queue."
+        title={t.accessTitle}
+        description={t.accessBody}
       />
     );
   }
@@ -301,32 +294,32 @@ export default function ClinicalAlertsPage() {
   return (
     <div className="space-y-6">
       <PageIntro
-        title="Clinical Alerts"
-        description="Oldest unresolved safety events are shown first. Acknowledgement is not resolution, and a paused prescription resumes only after a newer clear screen."
+        title={t.title}
+        description={t.intro}
         action={
           <Button variant="secondary" size="sm" onClick={refresh}>
             <Icon name="clock" width={15} height={15} />
-            Refresh
+            {t.refresh}
           </Button>
         }
       />
 
       <div className="grid gap-3 sm:grid-cols-3">
-        <Card><CardBody><p className="text-2xl font-bold text-[var(--color-danger)]">{unresolvedCount}</p><p className="text-xs text-[var(--color-ink-faint)]">Unresolved</p></CardBody></Card>
-        <Card><CardBody><p className="text-2xl font-bold text-[var(--color-warn)]">{ordered.filter((item) => item.status === "acknowledged").length}</p><p className="text-xs text-[var(--color-ink-faint)]">Acknowledged</p></CardBody></Card>
-        <Card><CardBody><p className="text-sm font-semibold text-[var(--color-ink)]">{formatDateTime(scopedQueue.updatedAt)}</p><p className="text-xs text-[var(--color-ink-faint)]">Last refresh</p></CardBody></Card>
+        <Card><CardBody><p className="text-2xl font-bold text-[var(--color-danger)]">{unresolvedCount}</p><p className="text-xs text-[var(--color-ink-faint)]">{t.unresolved}</p></CardBody></Card>
+        <Card><CardBody><p className="text-2xl font-bold text-[var(--color-warn)]">{ordered.filter((item) => item.status === "acknowledged").length}</p><p className="text-xs text-[var(--color-ink-faint)]">{t.acknowledged}</p></CardBody></Card>
+        <Card><CardBody><p className="text-sm font-semibold text-[var(--color-ink)]">{fmt(scopedQueue.updatedAt)}</p><p className="text-xs text-[var(--color-ink-faint)]">{t.lastRefresh}</p></CardBody></Card>
       </div>
 
       {scopedQueue.error && (
         <div role="alert" className="rounded-xl border border-[var(--color-danger)]/40 bg-[var(--color-danger-soft)] px-4 py-3 text-sm text-[var(--color-danger)]">
-          {scopedQueue.error}
+          {t.refreshFailed}
         </div>
       )}
 
       <div className="flex flex-wrap gap-2">
         {(["unresolved", "open", "acknowledged", "resolved", "all"] as AlertFilter[]).map((value) => (
           <Button key={value} size="sm" variant={filter === value ? "primary" : "secondary"} onClick={() => setFilter(value)}>
-            {value}
+            {t.filters[value]}
           </Button>
         ))}
       </div>
@@ -334,7 +327,7 @@ export default function ClinicalAlertsPage() {
       {scopedQueue.loading && ordered.length === 0 ? (
         <div className="grid min-h-48 place-items-center"><Spinner /></div>
       ) : visible.length === 0 ? (
-        <EmptyState icon="shield" title="No alerts in this view" description="The database has no matching clinician-visible safety events." />
+        <EmptyState icon="shield" title={t.emptyTitle} description={t.emptyBody} />
       ) : (
         <div className="grid gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
           <div className="space-y-2">
@@ -354,11 +347,11 @@ export default function ClinicalAlertsPage() {
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="font-semibold text-[var(--color-ink)]">{alert.patientName}</p>
-                    <p className="mt-1 text-xs text-[var(--color-ink-soft)]">{alertSummary(alert)}</p>
+                    <p className="mt-1 text-xs text-[var(--color-ink-soft)]">{alertSummary(alert, t)}</p>
                   </div>
-                  <Badge tone={statusTone[alert.status]}>{alert.status}</Badge>
+                  <Badge tone={statusTone[alert.status]}>{t.statuses[alert.status]}</Badge>
                 </div>
-                <p className="mt-3 text-[11px] text-[var(--color-ink-faint)]">Created {formatDateTime(alert.createdAt)}</p>
+                <p className="mt-3 text-[11px] text-[var(--color-ink-faint)]">{t.created(fmt(alert.createdAt))}</p>
               </button>
             ))}
           </div>
@@ -369,33 +362,33 @@ export default function ClinicalAlertsPage() {
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <h2 className="text-lg font-bold text-[var(--color-ink)]">{selected.patientName}</h2>
-                    <p className="mt-1 text-sm text-[var(--color-ink-soft)]">{alertDetail(selected)}</p>
+                    <p className="mt-1 text-sm text-[var(--color-ink-soft)]">{alertDetail(selected, t)}</p>
                   </div>
-                  <Badge tone={statusTone[selected.status]}>{selected.status}</Badge>
+                  <Badge tone={statusTone[selected.status]}>{t.statuses[selected.status]}</Badge>
                 </div>
 
                 <dl className="grid gap-3 text-sm sm:grid-cols-2">
-                  <div><dt className="text-xs text-[var(--color-ink-faint)]">Patient report date</dt><dd>{formatDateTime(selected.sourceRecordedAt)}</dd></div>
-                  <div><dt className="text-xs text-[var(--color-ink-faint)]">Queue created</dt><dd>{formatDateTime(selected.createdAt)}</dd></div>
-                  <div><dt className="text-xs text-[var(--color-ink-faint)]">Acknowledged</dt><dd>{formatDateTime(selected.acknowledgedAt)}</dd></div>
-                  <div><dt className="text-xs text-[var(--color-ink-faint)]">Resolved</dt><dd>{formatDateTime(selected.resolvedAt)}</dd></div>
+                  <div><dt className="text-xs text-[var(--color-ink-faint)]">{t.reportDate}</dt><dd>{fmt(selected.sourceRecordedAt)}</dd></div>
+                  <div><dt className="text-xs text-[var(--color-ink-faint)]">{t.queueCreated}</dt><dd>{fmt(selected.createdAt)}</dd></div>
+                  <div><dt className="text-xs text-[var(--color-ink-faint)]">{t.acknowledgedAt}</dt><dd>{fmt(selected.acknowledgedAt)}</dd></div>
+                  <div><dt className="text-xs text-[var(--color-ink-faint)]">{t.resolvedAt}</dt><dd>{fmt(selected.resolvedAt)}</dd></div>
                 </dl>
 
                 {selected.status === "open" && (
                   <Button onClick={() => acknowledge(selected)} disabled={submitting === selected.id}>
-                    Acknowledge alert
+                    {t.acknowledge}
                   </Button>
                 )}
 
                 {selected.status !== "resolved" ? (
                   <div className="space-y-3 border-t border-[var(--color-border)] pt-4">
-                    <Field label="Resolution note">
+                    <Field label={t.resolutionNote}>
                       <Textarea
                         value={resolutionNote}
                         onChange={(event) => setResolution({ alertId: selected.id, note: event.target.value })}
                         maxLength={2000}
                         rows={4}
-                        placeholder="Assessment, contact, advice and follow-up completed"
+                        placeholder={t.resolutionPlaceholder}
                       />
                     </Field>
                     <label className="flex items-start gap-2 text-sm text-[var(--color-ink-soft)]">
@@ -406,19 +399,19 @@ export default function ClinicalAlertsPage() {
                         onChange={(event) => setResumePrescription(event.target.checked)}
                         className="mt-1"
                       />
-                      <span>Resume the paused prescription. The database will reject this unless a newer clear safety screen, current approved plan and valid dates all exist.</span>
+                      <span>{t.resumeLabel}</span>
                     </label>
                     <Button
                       variant="secondary"
                       onClick={() => resolve(selected)}
                       disabled={submitting === selected.id || resolutionNote.trim().length < 3}
                     >
-                      {resumePrescription ? "Resolve and resume" : "Resolve; keep program paused"}
+                      {resumePrescription ? t.resolveResume : t.resolveKeep}
                     </Button>
                   </div>
                 ) : (
                   <div className="rounded-xl bg-[var(--color-success-soft)] px-4 py-3 text-sm text-[var(--color-ink-soft)]">
-                    {selected.resolutionNote ?? "Resolved without a visible note."}
+                    {selected.resolutionNote ?? t.noNote}
                   </div>
                 )}
 
@@ -432,7 +425,7 @@ export default function ClinicalAlertsPage() {
       )}
 
       <div className="rounded-xl border border-[var(--color-warn)]/40 bg-[var(--color-warn-soft)] px-4 py-3 text-xs leading-relaxed text-[var(--color-ink-soft)]">
-        This in-app queue polls every 30 seconds while open. Production rollout still requires an external delivery channel, retry/dead-letter handling and an on-call escalation policy.
+        {t.pollNotice}
       </div>
     </div>
   );

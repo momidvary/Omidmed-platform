@@ -10,6 +10,9 @@ import { EmptyState, PageIntro, Spinner } from "@/components/ui/Misc";
 import { detectSafetySignals } from "@/lib/clinical/safety";
 import { isMockMode } from "@/lib/config";
 import { useAuth } from "@/lib/store/AuthContext";
+import { useLocale } from "@/lib/store/LocaleContext";
+import { intlLocale, useText } from "@/lib/i18n/text";
+import type { Locale } from "@/lib/i18n/translations";
 import {
   acknowledgeClinicianTicket,
   closeClinicianTicket,
@@ -18,6 +21,9 @@ import {
 } from "@/lib/supabase/db";
 import type { ClinicianTicket, TicketReply } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { ticketsText } from "./text";
+
+type TicketsText = typeof ticketsText.en;
 
 const POLL_INTERVAL_MS = 30_000;
 const SLA_WARNING_HOURS = 4;
@@ -68,18 +74,22 @@ function ageInMs(iso: string, now: number): number {
   return Number.isFinite(created) ? Math.max(0, now - created) : 0;
 }
 
-function formatAge(ms: number): string {
+function formatAge(ms: number, t: TicketsText): string {
   const minutes = Math.max(0, Math.floor(ms / 60_000));
-  if (minutes < 60) return `${Math.max(1, minutes)} min`;
+  if (minutes < 60) return t.minutes(Math.max(1, minutes));
   const hours = Math.floor(minutes / 60);
-  if (hours < 48) return `${hours}h ${minutes % 60}m`;
-  return `${Math.floor(hours / 24)}d ${hours % 24}h`;
+  if (hours < 48) return t.hoursMinutes(hours, minutes % 60);
+  return t.daysHours(Math.floor(hours / 24), hours % 24);
 }
 
-function formatDateTime(value: string | number): string {
+function formatDateTime(
+  value: string | number,
+  locale: Locale,
+  t: TicketsText
+): string {
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "Unknown time";
-  return date.toLocaleString("en-GB", {
+  if (Number.isNaN(date.getTime())) return t.unknownTime;
+  return date.toLocaleString(intlLocale(locale), {
     dateStyle: "medium",
     timeStyle: "short",
   });
@@ -88,31 +98,34 @@ function formatDateTime(value: string | number): string {
 function describeSla(
   ticket: ClinicianTicket,
   ageMs: number,
-  emergency: boolean
+  emergency: boolean,
+  t: TicketsText
 ): TicketView["sla"] {
-  if (emergency) return { label: "Escalate now", tone: "danger" };
+  if (emergency) return { label: t.slaEscalate, tone: "danger" };
   if (!ticket.unread && ticket.status === "answered") {
-    return { label: "Answered", tone: "neutral" };
+    return { label: t.slaAnswered, tone: "neutral" };
   }
 
   const hours = ageMs / 3_600_000;
   if (hours < SLA_WARNING_HOURS) {
-    return { label: "Within 4h target", tone: "success" };
+    return { label: t.slaWithin, tone: "success" };
   }
   if (hours < SLA_OVERDUE_HOURS) {
-    return { label: "Review due", tone: "warn" };
+    return { label: t.slaDue, tone: "warn" };
   }
-  return { label: "Overdue >24h", tone: "danger" };
+  return { label: t.slaOverdue, tone: "danger" };
 }
 
-function senderLabel(reply: TicketReply): string {
-  if (reply.from === "therapist") return "Clinician";
-  if (reply.from === "patient") return "Patient";
-  return "AI acknowledgement";
+function senderLabel(reply: TicketReply, t: TicketsText): string {
+  if (reply.from === "therapist") return t.senderClinician;
+  if (reply.from === "patient") return t.senderPatient;
+  return t.senderAi;
 }
 
 export default function ClinicianTicketInboxPage() {
   const { profile, activeClinicId } = useAuth();
+  const { locale } = useLocale();
+  const t = useText(ticketsText);
   const [inbox, setInbox] = useState<InboxState>(emptyInbox);
   const [filter, setFilter] = useState<InboxFilter>("all");
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
@@ -166,8 +179,7 @@ export default function ClinicianTicketInboxPage() {
           tickets:
             previous.clinicId === clinicId ? previous.tickets : [],
           loading: false,
-          error:
-            "Ticket refresh failed. Check the connection and try again; any visible rows may be stale.",
+          error: "refresh_failed",
           updatedAt:
             previous.clinicId === clinicId ? previous.updatedAt : null,
         }));
@@ -224,7 +236,7 @@ export default function ClinicianTicketInboxPage() {
           emergency,
           urgent,
           ageMs,
-          sla: describeSla(ticket, ageMs, emergency),
+          sla: describeSla(ticket, ageMs, emergency, t),
         };
       })
       .sort((a, b) => {
@@ -241,7 +253,7 @@ export default function ClinicianTicketInboxPage() {
           a.ticket.lastPatientActivityAt
         );
       });
-  }, [scopedInbox.tickets, now]);
+  }, [scopedInbox.tickets, now, t]);
 
   const visibleTickets = ticketViews.filter(({ ticket }) => {
     if (filter === "open") {
@@ -332,8 +344,7 @@ export default function ClinicianTicketInboxPage() {
       setFeedback({
         ticketId,
         tone: "error",
-        message:
-          "Reply was not saved. Your text is still here; check assignment and connection, then retry.",
+        message: t.replyFailed,
       });
       return;
     }
@@ -369,7 +380,7 @@ export default function ClinicianTicketInboxPage() {
     setFeedback({
       ticketId,
       tone: "success",
-      message: "Reply saved and ticket marked answered.",
+      message: t.replySaved,
     });
 
     const refreshed = await fetchClinicianTickets(clinicId);
@@ -406,7 +417,7 @@ export default function ClinicianTicketInboxPage() {
       setFeedback({
         ticketId,
         tone: "error",
-        message: "Acknowledgement was not saved. Check access and retry.",
+        message: t.ackFailed,
       });
       return;
     }
@@ -428,7 +439,7 @@ export default function ClinicianTicketInboxPage() {
     setFeedback({
       ticketId,
       tone: "success",
-      message: "Ticket acknowledged with your authenticated identity.",
+      message: t.ackSaved,
     });
   }
 
@@ -457,8 +468,7 @@ export default function ClinicianTicketInboxPage() {
       setFeedback({
         ticketId,
         tone: "error",
-        message:
-          "Ticket was not closed. Resolve any linked clinical alert first, then retry; your note is still here.",
+        message: t.closeFailed,
       });
       return;
     }
@@ -482,7 +492,7 @@ export default function ClinicianTicketInboxPage() {
     setFeedback({
       ticketId,
       tone: "success",
-      message: "Ticket closed with an attributed closure note.",
+      message: t.closeSaved,
     });
   }
 
@@ -490,13 +500,13 @@ export default function ClinicianTicketInboxPage() {
     return (
       <div className="space-y-6">
         <PageIntro
-          title="Clinical Ticket Inbox"
-          description="Patient messages that need clinician review and a documented response."
+          title={t.title}
+          description={t.shortIntro}
         />
         <EmptyState
           icon="chat"
-          title="Demo inbox is empty"
-          description="Mock mode does not load or fabricate patient messages. Connect an authenticated clinic database to use the inbox."
+          title={t.demoTitle}
+          description={t.demoBody}
         />
       </div>
     );
@@ -506,8 +516,8 @@ export default function ClinicianTicketInboxPage() {
     return (
       <div className="space-y-6">
         <PageIntro
-          title="Clinical Ticket Inbox"
-          description="Patient messages that need clinician review and a documented response."
+          title={t.title}
+          description={t.shortIntro}
         />
         <Card>
           <CardBody>
@@ -515,11 +525,10 @@ export default function ClinicianTicketInboxPage() {
               <Icon name="shield" className="mt-0.5 text-[var(--color-danger)]" />
               <div>
                 <h2 className="text-sm font-semibold text-[var(--color-ink)]">
-                  Clinical access required
+                  {t.accessTitle}
                 </h2>
                 <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
-                  Ticket PHI is available only to clinic owners and therapists.
-                  Clinic staff and other roles cannot open this inbox.
+                  {t.accessBody}
                 </p>
               </div>
             </div>
@@ -533,13 +542,13 @@ export default function ClinicianTicketInboxPage() {
     return (
       <div className="space-y-6">
         <PageIntro
-          title="Clinical Ticket Inbox"
-          description="Patient messages that need clinician review and a documented response."
+          title={t.title}
+          description={t.shortIntro}
         />
         <EmptyState
           icon="search"
-          title="Select an active clinic"
-          description="Choose a clinic from the top bar. Tickets are loaded only for that active tenant."
+          title={t.noClinicTitle}
+          description={t.noClinicBody}
         />
       </div>
     );
@@ -548,8 +557,8 @@ export default function ClinicianTicketInboxPage() {
   return (
     <div className="space-y-6">
       <PageIntro
-        title="Clinical Ticket Inbox"
-        description="Review patient messages, triage time-sensitive language and keep replies in the clinical thread."
+        title={t.title}
+        description={t.intro}
         action={
           <Button
             variant="secondary"
@@ -558,7 +567,7 @@ export default function ClinicianTicketInboxPage() {
             disabled={scopedInbox.loading}
           >
             <Icon name="clock" width={14} height={14} />
-            Refresh
+            {t.refresh}
           </Button>
         }
       />
@@ -566,33 +575,30 @@ export default function ClinicianTicketInboxPage() {
       <div className="flex items-start gap-3 rounded-2xl border border-[var(--color-danger)]/30 bg-[var(--color-danger-soft)] px-4 py-3 text-sm text-[var(--color-danger)]">
         <Icon name="alert" className="mt-0.5 shrink-0" width={18} height={18} />
         <p>
-          <strong>Safety triage support only.</strong> Automated text detection
-          can miss or misclassify symptoms. This inbox is not an emergency
-          service; follow the clinic&apos;s direct-contact and emergency escalation
-          protocol whenever serious symptoms are suspected.
+          <strong>{t.safetyStrong}</strong> {t.safetyBody}
         </p>
       </div>
 
       {scopedInbox.loading && scopedInbox.tickets.length === 0 ? (
         <Card>
-          <Spinner label="Loading clinic tickets…" />
+          <Spinner label={t.loading} />
         </Card>
       ) : scopedInbox.error && scopedInbox.tickets.length === 0 ? (
         <Card>
           <CardBody className="text-center">
             <p role="alert" className="text-sm text-[var(--color-danger)]">
-              {scopedInbox.error}
+              {t.refreshFailed}
             </p>
             <Button className="mt-4" variant="secondary" onClick={retry}>
-              Try again
+              {t.tryAgain}
             </Button>
           </CardBody>
         </Card>
       ) : scopedInbox.tickets.length === 0 ? (
         <EmptyState
           icon="chat"
-          title="No tickets for this clinic"
-          description="New patient messages will appear here and refresh automatically every 30 seconds."
+          title={t.emptyTitle}
+          description={t.emptyBody}
         />
       ) : (
         <>
@@ -601,23 +607,23 @@ export default function ClinicianTicketInboxPage() {
               role="alert"
               className="rounded-xl bg-[var(--color-warn-soft)] px-4 py-3 text-sm text-[var(--color-warn)]"
             >
-              {scopedInbox.error}
+              {t.refreshFailed}
             </p>
           )}
 
-          <section aria-label="Inbox summary" className="grid grid-cols-3 gap-3">
-            <SummaryCard label="Open" value={openCount} tone="neutral" />
-            <SummaryCard label="Unread / needs response" value={unreadCount} tone="warn" />
-            <SummaryCard label="Overdue >24h" value={overdueCount} tone="danger" />
+          <section aria-label={t.summaryAria} className="grid grid-cols-3 gap-3">
+            <SummaryCard label={t.open} value={openCount} tone="neutral" />
+            <SummaryCard label={t.unreadNeeds} value={unreadCount} tone="warn" />
+            <SummaryCard label={t.overdue} value={overdueCount} tone="danger" />
           </section>
 
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex rounded-xl bg-[var(--color-surface-muted)] p-1">
               {(
                 [
-                  ["all", "All"],
-                  ["open", "Active"],
-                  ["unread", "Unread"],
+                  ["all", t.filterAll],
+                  ["open", t.filterActive],
+                  ["unread", t.filterUnread],
                 ] as const
               ).map(([value, label]) => (
                 <button
@@ -638,8 +644,7 @@ export default function ClinicianTicketInboxPage() {
             </div>
             {scopedInbox.updatedAt && (
               <p aria-live="polite" className="text-xs text-[var(--color-ink-soft)]">
-                Updated {formatDateTime(scopedInbox.updatedAt)} · polling every
-                30s
+                {t.updated(formatDateTime(scopedInbox.updatedAt, locale, t))}
               </p>
             )}
           </div>
@@ -647,13 +652,13 @@ export default function ClinicianTicketInboxPage() {
           {visibleTickets.length === 0 ? (
             <EmptyState
               icon="search"
-              title={`No ${filter} tickets`}
-              description="Choose another filter to see the remaining clinic tickets."
+              title={t.noFilteredTitle(filter)}
+              description={t.noFilteredBody}
             />
           ) : (
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-5">
               <section
-                aria-label="Ticket list"
+                aria-label={t.listAria}
                 className="space-y-2 lg:col-span-2"
               >
                 {visibleTickets.map((view) => {
@@ -683,18 +688,18 @@ export default function ClinicianTicketInboxPage() {
                           </h2>
                         </div>
                         <span className="shrink-0 text-[11px] text-[var(--color-ink-soft)]">
-                          {formatAge(view.ageMs)}
+                          {formatAge(view.ageMs, t)}
                         </span>
                       </div>
                       <p className="mt-2 line-clamp-2 text-xs leading-relaxed text-[var(--color-ink-soft)]">
                         {ticket.message}
                       </p>
                       <div className="mt-3 flex flex-wrap gap-1.5">
-                        {view.emergency && <Badge tone="danger">Emergency text</Badge>}
+                        {view.emergency && <Badge tone="danger">{t.emergencyBadge}</Badge>}
                         {!view.emergency && view.urgent && (
-                          <Badge tone="warn">Urgent text</Badge>
+                          <Badge tone="warn">{t.urgentBadge}</Badge>
                         )}
-                        {ticket.unread && <Badge tone="accent">Unread</Badge>}
+                        {ticket.unread && <Badge tone="accent">{t.unread}</Badge>}
                         <Badge
                           tone={
                             ticket.status === "open" ||
@@ -703,7 +708,7 @@ export default function ClinicianTicketInboxPage() {
                               : "success"
                           }
                         >
-                          {ticket.status}
+                          {t.status[ticket.status] ?? ticket.status}
                         </Badge>
                         <Badge tone={view.sla.tone}>{view.sla.label}</Badge>
                       </div>
@@ -799,6 +804,8 @@ function TicketDetail({
   onAcknowledge: () => void;
   onClose: () => void;
 }) {
+  const { locale } = useLocale();
+  const t = useText(ticketsText);
   const { ticket } = view;
   const needsReply =
     ticket.status === "open" ||
@@ -817,11 +824,14 @@ function TicketDetail({
               {ticket.subject}
             </h2>
             <p className="mt-1 text-xs text-[var(--color-ink-soft)]">
-              Opened {formatDateTime(ticket.createdAt)} · latest patient activity {formatAge(view.ageMs)} ago
+              {t.opened(
+                formatDateTime(ticket.createdAt, locale, t),
+                formatAge(view.ageMs, t)
+              )}
             </p>
           </div>
           <div className="flex flex-wrap gap-1.5">
-            {ticket.unread && <Badge tone="accent">Unread</Badge>}
+            {ticket.unread && <Badge tone="accent">{t.unread}</Badge>}
             <Badge
               tone={
                 ticket.status === "open" || ticket.status === "acknowledged"
@@ -829,7 +839,7 @@ function TicketDetail({
                   : "success"
               }
             >
-              {ticket.status}
+              {t.status[ticket.status] ?? ticket.status}
             </Badge>
             <Badge tone={view.sla.tone}>{view.sla.label}</Badge>
           </div>
@@ -840,10 +850,7 @@ function TicketDetail({
             role="alert"
             className="rounded-xl border border-[var(--color-danger)] bg-[var(--color-danger-soft)] px-4 py-3 text-sm leading-relaxed text-[var(--color-danger)]"
           >
-            <strong>Emergency language detected.</strong> This inbox is not an
-            emergency service — این صندوق جای اورژانس نیست. Contact the patient
-            immediately and follow the clinic&apos;s emergency protocol; do not
-            wait for an inbox reply.
+            <strong>{t.emergencyStrong}</strong> {t.emergencyBody}
           </div>
         )}
         {!view.emergency && view.urgent && (
@@ -851,8 +858,7 @@ function TicketDetail({
             role="alert"
             className="rounded-xl border border-[var(--color-warn)]/40 bg-[var(--color-warn-soft)] px-4 py-3 text-sm leading-relaxed text-[var(--color-warn)]"
           >
-            <strong>Urgent language detected.</strong> Review now, contact the
-            patient and follow the clinic&apos;s same-day escalation pathway.
+            <strong>{t.urgentStrong}</strong> {t.urgentBody}
           </div>
         )}
 
@@ -861,7 +867,7 @@ function TicketDetail({
             id={`ticket-message-${ticket.id}`}
             className="text-xs font-semibold uppercase tracking-wide text-[var(--color-ink-soft)]"
           >
-            Patient message
+            {t.patientMessage}
           </h3>
           <p className="mt-2 whitespace-pre-wrap break-words rounded-xl bg-[var(--color-surface-muted)] px-4 py-3 text-sm leading-relaxed text-[var(--color-ink)]">
             {ticket.message}
@@ -873,11 +879,11 @@ function TicketDetail({
             id={`ticket-thread-${ticket.id}`}
             className="text-xs font-semibold uppercase tracking-wide text-[var(--color-ink-soft)]"
           >
-            Reply thread
+            {t.thread}
           </h3>
           {ticket.replies.length === 0 ? (
             <p className="mt-2 text-sm text-[var(--color-ink-soft)]">
-              No replies yet.
+              {t.noReplies}
             </p>
           ) : (
             <ol className="mt-2 space-y-2">
@@ -894,9 +900,9 @@ function TicketDetail({
                   )}
                 >
                   <div className="flex items-center justify-between gap-3 text-[11px] text-[var(--color-ink-soft)]">
-                    <span className="font-semibold">{senderLabel(reply)}</span>
+                    <span className="font-semibold">{senderLabel(reply, t)}</span>
                     <time dateTime={reply.createdAt}>
-                      {formatDateTime(reply.createdAt)}
+                      {formatDateTime(reply.createdAt, locale, t)}
                     </time>
                   </div>
                   <p className="mt-1 whitespace-pre-wrap break-words text-sm leading-relaxed text-[var(--color-ink)]">
@@ -930,7 +936,7 @@ function TicketDetail({
             disabled={submitting}
           >
             <Icon name="check" width={15} height={15} />
-            {submitting ? "Saving…" : "Acknowledge review"}
+            {submitting ? t.saving : t.acknowledge}
           </Button>
         )}
 
@@ -940,7 +946,7 @@ function TicketDetail({
               htmlFor={`ticket-reply-${ticket.id}`}
               className="block text-sm font-semibold text-[var(--color-ink)]"
             >
-              Reply as clinician
+              {t.replyLabel}
             </label>
             <Textarea
               id={`ticket-reply-${ticket.id}`}
@@ -948,26 +954,25 @@ function TicketDetail({
               onChange={(event) => onReplyChange(event.target.value)}
               maxLength={4000}
               required
-              placeholder="Write a clear, patient-safe response and document the next action…"
+              placeholder={t.replyPlaceholder}
               className="min-h-32"
             />
             <div className="flex flex-wrap items-center justify-between gap-3">
               <span className="text-xs text-[var(--color-ink-soft)]">
-                {replyText.length.toLocaleString("en-US")} / 4,000
+                {replyText.length.toLocaleString(intlLocale(locale))} / {(4000).toLocaleString(intlLocale(locale))}
               </span>
               <Button
                 type="submit"
                 disabled={submitting || !replyText.trim()}
               >
                 <Icon name="send" width={15} height={15} />
-                {submitting ? "Saving reply…" : "Send reply & mark answered"}
+                {submitting ? t.savingReply : t.sendReply}
               </Button>
             </div>
           </form>
         ) : needsReply ? (
           <p className="rounded-xl bg-[var(--color-warn-soft)] px-4 py-3 text-sm text-[var(--color-warn)]">
-            Only the assigned therapist or clinic owner can reply to this
-            patient. Ask the owner to update the assignment when needed.
+            {t.notAssigned}
           </p>
         ) : ticket.status === "answered" && canReply ? (
           <form
@@ -981,7 +986,7 @@ function TicketDetail({
               htmlFor={`ticket-close-${ticket.id}`}
               className="block text-sm font-semibold text-[var(--color-ink)]"
             >
-              Closure note
+              {t.closureLabel}
             </label>
             <Textarea
               id={`ticket-close-${ticket.id}`}
@@ -990,7 +995,7 @@ function TicketDetail({
               minLength={3}
               maxLength={2000}
               required
-              placeholder="Document contact, outcome and follow-up before closing…"
+              placeholder={t.closurePlaceholder}
             />
             <Button
               type="submit"
@@ -998,17 +1003,17 @@ function TicketDetail({
               disabled={submitting || closureText.trim().length < 3}
             >
               <Icon name="check" width={15} height={15} />
-              {submitting ? "Closing…" : "Close ticket"}
+              {submitting ? t.closing : t.closeTicket}
             </Button>
           </form>
         ) : ticket.status === "closed" ? (
           <p className="rounded-xl bg-[var(--color-surface-muted)] px-4 py-3 text-sm text-[var(--color-ink-soft)]">
-            Closed {formatDateTime(ticket.closedAt ?? "")}.
+            {t.closedAt(formatDateTime(ticket.closedAt ?? "", locale, t))}
             {ticket.closureNote ? ` ${ticket.closureNote}` : ""}
           </p>
         ) : (
           <p className="rounded-xl bg-[var(--color-success-soft)] px-4 py-3 text-sm text-[var(--color-success)]">
-            This ticket has a clinician response and is marked answered.
+            {t.answeredNote}
           </p>
         )}
       </CardBody>

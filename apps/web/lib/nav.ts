@@ -5,11 +5,20 @@ export interface NavItem {
   /** i18n key: label = `nav.${key}`, description = `nav.${key}.desc` */
   key: string;
   icon: IconName;
+  /** Other routes that belong to this section (e.g. a patient workspace). */
+  matches?: string[];
+}
+
+export function isNavActive(item: NavItem, pathname: string): boolean {
+  if (item.href === "/") return pathname === "/";
+  return [item.href, ...(item.matches ?? [])].some((prefix) =>
+    pathname.startsWith(prefix)
+  );
 }
 
 export const navItems: NavItem[] = [
   { href: "/", key: "dashboard", icon: "dashboard" },
-  { href: "/patients", key: "patients", icon: "user" },
+  { href: "/patients", key: "patients", icon: "user", matches: ["/workspace"] },
   { href: "/clinical-records", key: "clinical-records", icon: "new-case" },
   { href: "/alerts", key: "alerts", icon: "alert" },
   { href: "/tickets", key: "tickets", icon: "chat" },

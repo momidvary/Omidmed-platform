@@ -82,6 +82,12 @@ const en: Dict = {
   "status.saved": "Saved",
   "status.offline": "Offline",
   "status.save_failed": "Save failed",
+  "shell.menu": "Navigation menu",
+  "shell.openMenu": "Open menu",
+  "shell.closeMenu": "Close menu",
+  "shell.language": "Language",
+  "shell.activeClinic": "Active clinic",
+  "shell.selectClinic": "Select clinic",
   "auth.signout": "Sign out",
 };
 
@@ -147,6 +153,12 @@ const fa: Dict = {
   "status.saved": "ذخیره شد",
   "status.offline": "آفلاین",
   "status.save_failed": "ذخیره ناموفق",
+  "shell.menu": "منوی ناوبری",
+  "shell.openMenu": "باز کردن منو",
+  "shell.closeMenu": "بستن منو",
+  "shell.language": "زبان",
+  "shell.activeClinic": "کلینیک فعال",
+  "shell.selectClinic": "انتخاب کلینیک",
   "auth.signout": "خروج",
 };
 
@@ -212,6 +224,12 @@ const ar: Dict = {
   "status.saved": "تم الحفظ",
   "status.offline": "غير متصل",
   "status.save_failed": "فشل الحفظ",
+  "shell.menu": "قائمة التنقل",
+  "shell.openMenu": "فتح القائمة",
+  "shell.closeMenu": "إغلاق القائمة",
+  "shell.language": "اللغة",
+  "shell.activeClinic": "العيادة النشطة",
+  "shell.selectClinic": "اختر العيادة",
   "auth.signout": "تسجيل الخروج",
 };
 

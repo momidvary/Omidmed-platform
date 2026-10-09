@@ -5,7 +5,12 @@ import { useSearchParams } from "next/navigation";
 import { useCases } from "@/lib/store/CaseContext";
 import { buildReasoning, delay } from "@/lib/ai/engine";
 import { hasClinicalSafetyClearance } from "@/lib/clinical/safety";
-import { bodyRegions, getRegion } from "@/lib/data/bodyRegions";
+import { getRegion } from "@/lib/data/bodyRegions";
+import { localizeRegion, localizedRegions, regionLabel } from "@/lib/data/bodyRegionsFa";
+import { buildReasoningFa } from "@/lib/ai/reasoningFa";
+import { useLocale } from "@/lib/store/LocaleContext";
+import { useText } from "@/lib/i18n/text";
+import { caseAnalysisText } from "./text";
 import type { BodyRegionId, ClinicalReasoning } from "@/lib/types";
 import { Card, CardBody, CardHeader } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
@@ -34,16 +39,20 @@ export function CaseAnalysisClient() {
     applyAssessmentSnapshot,
   } = useCases();
   const searchParams = useSearchParams();
+  const { locale } = useLocale();
+  const t = useText(caseAnalysisText);
   const regionParam = searchParams.get("region") as BodyRegionId | null;
 
   // Reasoning is tagged with the case id it was generated for, so
   // "loading" is derived state rather than set synchronously in the effect.
   const [reasoning, setReasoning] = useState<{
     caseId: string;
+    locale: string;
     data: ClinicalReasoning;
   } | null>(null);
   const loading =
-    !!currentCase && reasoning?.caseId !== currentCase.id;
+    !!currentCase &&
+    (reasoning?.caseId !== currentCase.id || reasoning.locale !== locale);
   const safetyCleared = hasClinicalSafetyClearance(
     currentCase?.safetyScreen
   );
@@ -61,32 +70,38 @@ export function CaseAnalysisClient() {
     if (!currentCase) return;
     let cancelled = false;
     const caseId = currentCase.id;
-    // 🔌 REAL AI API INTEGRATION POINT — replace buildReasoning + delay
-    // with an async call to your AI provider (see lib/ai/engine.ts).
-    delay(buildReasoning(currentCase)).then((data) => {
-      if (!cancelled) setReasoning({ caseId, data });
+    const reasoningLocale = locale;
+    // Deterministic template (not AI); the audited AI draft lives in the
+    // AI Assistant and in the structured findings panel.
+    const data =
+      locale === "fa" ? buildReasoningFa(currentCase) : buildReasoning(currentCase);
+    delay(data, 300).then((result) => {
+      if (!cancelled) setReasoning({ caseId, locale: reasoningLocale, data: result });
     });
     return () => {
       cancelled = true;
     };
-  }, [currentCase]);
+  }, [currentCase, locale]);
 
   const regionModule = useMemo(
-    () => (browseRegion ? getRegion(browseRegion) : undefined),
-    [browseRegion]
+    () => {
+      const regionModuleSource = browseRegion ? getRegion(browseRegion) : undefined;
+      return regionModuleSource ? localizeRegion(regionModuleSource, locale) : undefined;
+    },
+    [browseRegion, locale]
   );
 
-  if (!hydrated) return <Spinner label="Loading cases…" />;
+  if (!hydrated) return <Spinner label={t.loadingCases} />;
 
   if (loadError) {
     return (
       <EmptyState
         icon="alert"
-        title="Cases could not be verified"
-        description="The clinical case list failed to load. No empty-state or assessment actions are shown until the authenticated database request succeeds."
+        title={t.loadFailedTitle}
+        description={t.loadFailedBody}
         action={
           <Button type="button" onClick={reloadCases}>
-            Retry cases
+            {t.retry}
           </Button>
         }
       />
@@ -96,20 +111,20 @@ export function CaseAnalysisClient() {
   return (
     <div className="space-y-6">
       <PageIntro
-        title="Case Analysis"
-        description="Structured findings rank provisional hypotheses transparently — decision support to verify independently, not a diagnosis or validated AI analysis."
+        title={t.title}
+        description={t.intro}
         action={
           cases.length > 0 ? (
             <Select
-              aria-label="Patient case"
+              aria-label={t.caseLabel}
               value={currentCase?.id ?? ""}
               onChange={(e) => setCurrentCase(e.target.value || null)}
               className="w-64"
             >
-              <option value="">Select a case…</option>
+              <option value="">{t.selectCase}</option>
               {cases.map((c) => (
                 <option key={c.id} value={c.id}>
-                  {c.name || "Unnamed"} — {c.mainComplaint.slice(0, 40)}
+                  {c.name || t.unnamed} — {c.mainComplaint.slice(0, 40)}
                 </option>
               ))}
             </Select>
@@ -120,9 +135,9 @@ export function CaseAnalysisClient() {
       {!currentCase && (
         <EmptyState
           icon="analysis"
-          title="No case selected"
-          description="Create a new patient case or pick a recent one to generate a clinical reasoning summary."
-          action={<ButtonLink href="/new-case">New Patient Case</ButtonLink>}
+          title={t.noCaseTitle}
+          description={t.noCaseBody}
+          action={<ButtonLink href="/new-case">{t.newCase}</ButtonLink>}
         />
       )}
 
@@ -137,8 +152,12 @@ export function CaseAnalysisClient() {
             }
           >
             {safetyCleared
-              ? "Structured safety screen is clear. Continue to monitor and verify throughout examination."
-              : `Safety clearance is absent (${currentCase.safetyScreen?.disposition ?? "not-screened"}). Resolve the documented pathway before treatment advice or patient education.`}
+              ? t.safetyClear
+              : t.safetyAbsent(
+                  t.dispositions[currentCase.safetyScreen?.disposition ?? "not-screened"] ??
+                    currentCase.safetyScreen?.disposition ??
+                    ""
+                )}
           </div>
 
           {/* Case summary strip */}
@@ -160,12 +179,12 @@ export function CaseAnalysisClient() {
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 <Badge tone={currentCase.painIntensity >= 7 ? "danger" : currentCase.painIntensity >= 4 ? "warn" : "success"}>
-                  Pain {currentCase.painIntensity}/10
+                  {t.pain(currentCase.painIntensity)}
                 </Badge>
                 {currentCase.duration && <Badge>{currentCase.duration}</Badge>}
                 {currentCase.region && (
                   <Badge tone="primary">
-                    {getRegion(currentCase.region)?.label}
+                    {regionLabel(currentCase.region, locale)}
                   </Badge>
                 )}
               </div>
@@ -173,15 +192,15 @@ export function CaseAnalysisClient() {
                 {safetyCleared ? (
                   <>
                     <ButtonLink href="/treatment-planner" variant="secondary" size="sm">
-                      Plan treatment
+                      {t.planTreatment}
                     </ButtonLink>
                     <ButtonLink href="/patient-education" variant="secondary" size="sm">
-                      Patient handout
+                      {t.handout}
                     </ButtonLink>
                   </>
                 ) : (
                   <span className="rounded-xl bg-[var(--color-danger-soft)] px-3 py-2 text-xs font-medium text-[var(--color-danger)]">
-                    Advice locked pending safety clearance
+                    {t.locked}
                   </span>
                 )}
               </div>
@@ -201,7 +220,7 @@ export function CaseAnalysisClient() {
 
           {loading && (
             <Card>
-              <Spinner label="Organising clinical reasoning…" />
+              <Spinner label={t.organising} />
             </Card>
           )}
 
@@ -209,28 +228,28 @@ export function CaseAnalysisClient() {
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
               {safetyCleared && (
                 <>
-                  <ReasonCard title="Subjective Findings" icon="user" items={reasoning.data.subjective} />
-                  <ReasonCard title="Objective Findings (to examine)" icon="analysis" items={reasoning.data.objective} />
+                  <ReasonCard title={t.subjective} icon="user" items={reasoning.data.subjective} />
+                  <ReasonCard title={t.objective} icon="analysis" items={reasoning.data.objective} />
                   {!getRegionKnowledge(currentCase.region) && (
                     <ReasonCard
-                      title="Possible Clinical Hypotheses"
+                      title={t.hypotheses}
                       icon="sparkle"
                       items={reasoning.data.hypotheses}
                       tone="primary"
-                      footer="Template hypotheses only, not a diagnosis — confirm independently with examination."
+                      footer={t.hypothesesFooter}
                     />
                   )}
-                  <ReasonCard title="Differential Diagnosis Ideas" icon="analysis" items={reasoning.data.differentials} />
-                  <ReasonCard title="Yellow Flags (psychosocial)" icon="flag" items={reasoning.data.yellowFlags} tone="warn" />
+                  <ReasonCard title={t.differentials} icon="analysis" items={reasoning.data.differentials} />
+                  <ReasonCard title={t.yellowFlags} icon="flag" items={reasoning.data.yellowFlags} tone="warn" />
                 </>
               )}
-              <ReasonCard title="Red Flags (safety)" icon="alert" items={reasoning.data.redFlags} tone="danger" footer="Refer to physician / emergency care if clinically indicated." />
-              <ReasonCard title="Missing Information to Ask" icon="search" items={reasoning.data.missingInfo} />
+              <ReasonCard title={t.redFlags} icon="alert" items={reasoning.data.redFlags} tone="danger" footer={t.redFlagsFooter} />
+              <ReasonCard title={t.missing} icon="search" items={reasoning.data.missingInfo} />
               {safetyCleared && (
                 <>
-                  <ReasonCard title="Suggested Physical Tests" icon="check" items={reasoning.data.suggestedTests} tone="primary" />
+                  <ReasonCard title={t.tests} icon="check" items={reasoning.data.suggestedTests} tone="primary" />
                   <div className="lg:col-span-2">
-                    <ReasonCard title="Suggested Outcome Measures" icon="clock" items={reasoning.data.outcomeMeasures} />
+                    <ReasonCard title={t.outcomes} icon="clock" items={reasoning.data.outcomeMeasures} />
                   </div>
                 </>
               )}
@@ -242,8 +261,8 @@ export function CaseAnalysisClient() {
       {/* Body region reference browser */}
       <Card>
         <CardHeader
-          title="Body Region Modules"
-          subtitle="Reference: conditions, tests, treatment ideas and education per region"
+          title={t.modules}
+          subtitle={t.modulesHint}
           icon={<Icon name="analysis" width={18} height={18} />}
           action={
             <Select
@@ -251,8 +270,8 @@ export function CaseAnalysisClient() {
               onChange={(e) => setBrowseRegion(e.target.value as BodyRegionId | "")}
               className="w-52"
             >
-              <option value="">Browse a region…</option>
-              {bodyRegions.map((r) => (
+              <option value="">{t.browse}</option>
+              {localizedRegions(locale).map((r) => (
                 <option key={r.id} value={r.id}>
                   {r.label}
                 </option>
@@ -262,20 +281,20 @@ export function CaseAnalysisClient() {
         />
         {regionModule ? (
           <CardBody className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
-            <ModuleList label="Common conditions" items={regionModule.commonConditions} />
-            <ModuleList label="Assessment questions" items={regionModule.assessmentQuestions} />
-            <ModuleList label="Special tests" items={regionModule.specialTests} />
-            <ModuleList label="Functional tests" items={regionModule.functionalTests} />
-            <ModuleList label="Treatment ideas" items={regionModule.treatmentIdeas} />
-            <ModuleList label="Exercise suggestions" items={regionModule.exerciseSuggestions} />
+            <ModuleList label={t.conditions} items={regionModule.commonConditions} />
+            <ModuleList label={t.questions} items={regionModule.assessmentQuestions} />
+            <ModuleList label={t.specialTests} items={regionModule.specialTests} />
+            <ModuleList label={t.functionalTests} items={regionModule.functionalTests} />
+            <ModuleList label={t.treatmentIdeas} items={regionModule.treatmentIdeas} />
+            <ModuleList label={t.exercises} items={regionModule.exerciseSuggestions} />
             <div className="md:col-span-2 lg:col-span-3">
-              <ModuleList label="Patient education points" items={regionModule.educationPoints} />
+              <ModuleList label={t.education} items={regionModule.educationPoints} />
             </div>
           </CardBody>
         ) : (
           <CardBody>
             <p className="text-sm text-[var(--color-ink-faint)]">
-              Select a region above to view its assessment and treatment reference.
+              {t.selectRegion}
             </p>
           </CardBody>
         )}

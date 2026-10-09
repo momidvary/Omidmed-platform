@@ -1,5 +1,8 @@
+"use client";
+
 import { Icon, type IconName } from "./Icon";
 import { cn } from "@/lib/utils";
+import { useLocale } from "@/lib/store/LocaleContext";
 
 export function PageIntro({
   title,
@@ -50,11 +53,14 @@ export function EmptyState({
 
 export function Disclaimer({
   className,
-  fa = false,
+  fa,
 }: {
   className?: string;
+  /** Force Persian (patient portal); otherwise follows the interface locale. */
   fa?: boolean;
 }) {
+  const { locale } = useLocale();
+  const language = fa ? "fa-patient" : locale;
   return (
     <div
       className={cn(
@@ -65,12 +71,26 @@ export function Disclaimer({
       <span className="mt-0.5 shrink-0">
         <Icon name="shield" width={16} height={16} />
       </span>
-      {fa ? (
+      {language === "fa" ? (
+        <p>
+          <strong className="font-semibold">هشدار ایمنی بالینی.</strong> PhysioAI
+          فقط پشتیبان تصمیم‌گیری است و تشخیص قطعی پزشکی نمی‌دهد. همه فرضیه‌ها
+          باید با معاینه بالینی حضوری تأیید شوند. در صورت لزوم بالینی، بیمار را به
+          پزشک یا اورژانس ارجاع دهید.
+        </p>
+      ) : language === "fa-patient" ? (
         <p>
           <strong className="font-semibold">یادآوری ایمنی.</strong> این برنامه
           فقط جنبه راهنمایی و آموزشی دارد و جایگزین نظر فیزیوتراپیست یا پزشک
           نیست. در صورت درد شدید، ورم ناگهانی، تب یا علائم نگران‌کننده، با
           پزشک تماس بگیرید یا به اورژانس مراجعه کنید.
+        </p>
+      ) : language === "ar" ? (
+        <p>
+          <strong className="font-semibold">تنبيه السلامة السريرية.</strong>{" "}
+          يقدّم PhysioAI دعماً للقرار فقط ولا يعطي تشخيصاً طبياً نهائياً. يجب
+          تأكيد كل الفرضيات بالفحص السريري المباشر. أحِل المريض إلى طبيب أو
+          إلى الطوارئ عند الحاجة السريرية.
         </p>
       ) : (
         <p>

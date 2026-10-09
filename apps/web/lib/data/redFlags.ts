@@ -33,3 +33,51 @@ export const redFlags: RedFlagItem[] = [
 export const redFlagCategories = Array.from(
   new Set(redFlags.map((r) => r.category))
 );
+
+/* ── Persian clinician text ───────────────────────────────────────── */
+
+export const redFlagCategoryFa: Record<string, string> = {
+  Cancer: "بدخیمی",
+  Fracture: "شکستگی",
+  Infection: "عفونت",
+  "Cauda Equina": "سندرم دم اسب",
+  Neurological: "عصبی",
+  DVT: "ترومبوز ورید عمقی (DVT)",
+  Cardiac: "قلبی",
+  General: "عمومی",
+};
+
+export const redFlagFa: Record<string, { label: string; detail: string }> = {
+  rf_cancer: { label: "سابقه سرطان", detail: "سابقه بدخیمی همراه درد جدید بی‌دلیل" },
+  rf_weightloss: { label: "کاهش وزن بی‌دلیل", detail: "کاهش وزن قابل توجه بدون رژیم" },
+  rf_nightpain: { label: "درد شبانه مداوم و بی‌وقفه", detail: "غیرمکانیکی؛ با تغییر وضعیت کم نمی‌شود" },
+  rf_fracture_trauma: { label: "ضربه قابل توجه اخیر", detail: "زمین خوردن، تصادف، ضربه مستقیم" },
+  rf_fracture_osteo: { label: "پوکی استخوان + ضربه خفیف", detail: "خطر شکستگی شکنندگی" },
+  rf_steroids: { label: "مصرف طولانی کورتیکواستروئید", detail: "افزایش خطر شکستگی" },
+  rf_fever: { label: "تب / لرز", detail: "علائم سیستمیک عفونت" },
+  rf_ivdu: { label: "عفونت اخیر یا مصرف تزریقی مواد", detail: "خطر عفونت ستون فقرات/مفصل" },
+  rf_immuno: { label: "سرکوب ایمنی", detail: "استعداد بیشتر به عفونت" },
+  rf_ce_saddle: { label: "بی‌حسی زینی", detail: "بی‌حسی اطراف پرینه/داخل ران‌ها" },
+  rf_ce_bladder: { label: "اختلال مثانه / روده", detail: "احتباس، بی‌اختیاری، از دست دادن کنترل" },
+  rf_ce_sexual: { label: "اختلال جنسی (جدید)", detail: "کاهش جدید حس ناحیه تناسلی" },
+  rf_neuro_progressive: { label: "نقص عصبی پیشرونده", detail: "ضعف / بی‌حسی رو به افزایش" },
+  rf_neuro_bilateral: { label: "علائم دوطرفه اندام‌ها", detail: "بی‌حسی یا ضعف در هر دو اندام" },
+  rf_dvt_calf: { label: "درد / تورم یک‌طرفه ساق", detail: "ساق گرم، حساس و متورم" },
+  rf_dvt_risk: { label: "بی‌حرکتی / جراحی اخیر", detail: "افزایش خطر ترومبوز" },
+  rf_cardiac_chest: { label: "درد / فشار قفسه سینه", detail: "به‌ویژه هنگام فعالیت" },
+  rf_cardiac_breath: { label: "تنگی نفس", detail: "تنگی نفس یا تپش قلب بی‌دلیل" },
+  rf_severe_pain: { label: "درد شدید بی‌دلیل", detail: "نامتناسب با یافته‌ها" },
+};
+
+export function localizedRedFlag(
+  flag: RedFlagItem,
+  locale: "en" | "fa" | "ar"
+): RedFlagItem {
+  if (locale !== "fa") return flag;
+  const fa = redFlagFa[flag.id];
+  return fa ? { ...flag, ...fa } : flag;
+}
+
+export function redFlagCategoryLabel(category: string, locale: "en" | "fa" | "ar"): string {
+  return locale === "fa" ? (redFlagCategoryFa[category] ?? category) : category;
+}

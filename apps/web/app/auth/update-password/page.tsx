@@ -7,9 +7,54 @@ import { Card, CardBody } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Field, Input } from "@/components/ui/Form";
 import { Icon } from "@/components/ui/Icon";
+import { useText, type PageText } from "@/lib/i18n/text";
+
+const en = {
+  tooShort: "Use at least 12 characters.",
+  mismatch: "Passwords do not match.",
+  title: "Choose a new password",
+  verifying: "Verifying reset link…",
+  expired: "The reset session is missing or expired.",
+  requestAnother: "Request another link",
+  updated: "Password updated successfully.",
+  continue: "Continue to PhysioAI",
+  newPassword: "New password",
+  hint: "At least 12 characters",
+  confirm: "Confirm password",
+  updating: "Updating…",
+  update: "Update password",
+};
+
+const text: PageText<typeof en> = {
+  en,
+  fa: {
+    tooShort: "حداقل ۱۲ نویسه وارد کنید.",
+    mismatch: "رمزهای عبور یکسان نیستند.",
+    title: "انتخاب رمز عبور جدید",
+    verifying: "در حال بررسی لینک بازیابی…",
+    expired: "جلسه بازیابی وجود ندارد یا منقضی شده است.",
+    requestAnother: "درخواست لینک جدید",
+    updated: "رمز عبور با موفقیت تغییر کرد.",
+    continue: "ادامه به PhysioAI",
+    newPassword: "رمز عبور جدید",
+    hint: "حداقل ۱۲ نویسه",
+    confirm: "تکرار رمز عبور",
+    updating: "در حال به‌روزرسانی…",
+    update: "تغییر رمز عبور",
+  },
+  ar: {
+    tooShort: "استخدم 12 حرفاً على الأقل.",
+    mismatch: "كلمتا المرور غير متطابقتين.",
+    title: "اختر كلمة مرور جديدة",
+    newPassword: "كلمة المرور الجديدة",
+    confirm: "تأكيد كلمة المرور",
+    update: "تحديث كلمة المرور",
+  },
+};
 
 export default function UpdatePasswordPage() {
   const { session, loading, updatePassword } = useAuth();
+  const t = useText(text);
   const [password, setPassword] = useState("");
   const [confirmation, setConfirmation] = useState("");
   const [busy, setBusy] = useState(false);
@@ -20,11 +65,11 @@ export default function UpdatePasswordPage() {
     event.preventDefault();
     if (busy) return;
     if (password.length < 12) {
-      setError("Use at least 12 characters.");
+      setError(t.tooShort);
       return;
     }
     if (password !== confirmation) {
-      setError("Passwords do not match.");
+      setError(t.mismatch);
       return;
     }
     setBusy(true);
@@ -45,32 +90,32 @@ export default function UpdatePasswordPage() {
           <Icon name="shield" width={24} height={24} />
         </span>
         <h1 className="mt-3 text-lg font-bold text-[var(--color-ink)]">
-          Choose a new password
+          {t.title}
         </h1>
       </div>
       <Card>
         <CardBody>
           {loading ? (
             <p role="status" className="text-sm text-[var(--color-ink-soft)]">
-              Verifying reset link…
+              {t.verifying}
             </p>
           ) : !session ? (
             <div role="alert" className="space-y-4 text-sm text-[var(--color-danger)]">
-              <p>The reset session is missing or expired.</p>
+              <p>{t.expired}</p>
               <Link href="/auth/forgot-password" className="underline">
-                Request another link
+                {t.requestAnother}
               </Link>
             </div>
           ) : done ? (
             <div role="status" className="space-y-4 text-sm text-[var(--color-success)]">
-              <p>Password updated successfully.</p>
+              <p>{t.updated}</p>
               <Link href="/" className="underline">
-                Continue to PhysioAI
+                {t.continue}
               </Link>
             </div>
           ) : (
             <form onSubmit={submit} className="space-y-4">
-              <Field label="New password" required hint="At least 12 characters">
+              <Field label={t.newPassword} required hint={t.hint}>
                 <Input
                   type="password"
                   autoComplete="new-password"
@@ -79,7 +124,7 @@ export default function UpdatePasswordPage() {
                   onChange={(event) => setPassword(event.target.value)}
                 />
               </Field>
-              <Field label="Confirm password" required error={error ?? undefined}>
+              <Field label={t.confirm} required error={error ?? undefined}>
                 <Input
                   type="password"
                   autoComplete="new-password"
@@ -89,7 +134,7 @@ export default function UpdatePasswordPage() {
                 />
               </Field>
               <Button type="submit" className="w-full" disabled={busy}>
-                {busy ? "Updating…" : "Update password"}
+                {busy ? t.updating : t.update}
               </Button>
             </form>
           )}

@@ -3,7 +3,11 @@
 import { useEffect, useRef, useState } from "react";
 import { useCases } from "@/lib/store/CaseContext";
 import { buildTreatmentPlan, delay } from "@/lib/ai/engine";
-import { bodyRegions, getRegion } from "@/lib/data/bodyRegions";
+import { localizedRegions, regionLabel } from "@/lib/data/bodyRegionsFa";
+import { buildTreatmentPlanFa } from "@/lib/ai/treatmentPlanFa";
+import { useLocale } from "@/lib/store/LocaleContext";
+import { intlLocale, useText } from "@/lib/i18n/text";
+import { plannerText } from "./text";
 import { hasClinicalSafetyClearance } from "@/lib/clinical/safety";
 import type {
   BodyRegionId,
@@ -33,35 +37,30 @@ import {
   TreatmentPlanSchema,
 } from "@/lib/clinical/treatmentPlanSchema";
 
-const stages: { value: Stage; label: string }[] = [
-  { value: "acute", label: "Acute" },
-  { value: "subacute", label: "Subacute" },
-  { value: "chronic", label: "Chronic" },
-  { value: "post-op", label: "Post-operative" },
-  { value: "return-to-sport", label: "Return to sport" },
-];
+const stages: Stage[] = ["acute", "subacute", "chronic", "post-op", "return-to-sport"];
 
 type PlanListKey = Exclude<keyof TreatmentPlan, "frequency">;
 
-const editablePlanSections: { key: PlanListKey; label: string }[] = [
-  { key: "manualTherapy", label: "Manual therapy" },
-  { key: "exerciseTherapy", label: "Exercise therapy" },
-  { key: "mobility", label: "Mobility" },
-  { key: "strengthening", label: "Strengthening" },
-  { key: "motorControl", label: "Motor control" },
-  { key: "balance", label: "Balance and proprioception" },
-  { key: "education", label: "Education" },
-  { key: "homeProgram", label: "Home exercise program" },
-  { key: "progression", label: "Progression rules" },
+const editablePlanSections: PlanListKey[] = [
+  "manualTherapy",
+  "exerciseTherapy",
+  "mobility",
+  "strengthening",
+  "motorControl",
+  "balance",
+  "education",
+  "homeProgram",
+  "progression",
 ];
 
 export default function TreatmentPlannerPage() {
   const { currentCase, hydrated } = useCases();
+  const t = useText(plannerText);
 
   // The form captures its initial values from the active case, so it must
   // not mount until cases have hydrated from localStorage. Keying by case
   // id re-seeds the form if the active case changes.
-  if (!hydrated) return <Spinner label="Loading…" />;
+  if (!hydrated) return <Spinner label={t.loading} />;
   return (
     <PlannerForm key={currentCase?.id ?? "no-case"} />
   );
@@ -75,6 +74,9 @@ function PlannerForm() {
     loadError,
     reloadCases,
   } = useCases();
+  const { locale } = useLocale();
+  const t = useText(plannerText);
+  const when = (value: string) => new Date(value).toLocaleString(intlLocale(locale));
 
   const [region, setRegion] = useState<BodyRegionId | "">(
     currentCase?.region ?? ""
@@ -141,7 +143,7 @@ function PlannerForm() {
     if (
       hasUnsavedPlannerWork &&
       !window.confirm(
-        "Switch patient cases and discard the unsaved treatment-plan work on this screen?"
+        t.switchConfirm
       )
     ) {
       return;
@@ -162,7 +164,7 @@ function PlannerForm() {
         plans: records ?? [],
         error:
           records === null
-            ? "Saved plan history could not be loaded. Check the connection and retry."
+            ? "load_failed"
             : null,
       });
     }
@@ -211,21 +213,17 @@ function PlannerForm() {
 
   async function generate() {
     if (!currentCase) {
-      setError(
-        "Select a patient case with a completed structured safety screen before planning treatment."
-      );
+      setError(t.needCase);
       setPlan(null);
       return;
     }
     if (!safetyCleared) {
-      setError(
-        "Treatment planning is blocked until the active case has a completed, clear safety screen and all concerns are resolved."
-      );
+      setError(t.blocked);
       setPlan(null);
       return;
     }
     if (!region) {
-      setError("Select a body region first.");
+      setError(t.needRegion);
       setPlan(null);
       return;
     }
@@ -237,21 +235,17 @@ function PlannerForm() {
         !precautions.trim() ||
         !weightBearingStatus.trim()
       ) {
-        setError(
-          "For post-operative planning, enter the procedure, surgery date, precautions and weight-bearing status. Use an explicit value such as “none documented” rather than leaving a field blank."
-        );
+        setError(t.postOpMissing);
         setPlan(null);
         return;
       }
       if (surgeryDate > localDateValue()) {
-        setError("Surgery date cannot be in the future.");
+        setError(t.futureSurgery);
         setPlan(null);
         return;
       }
       if (!protocolConfirmed) {
-        setError(
-          "Confirm that the operating team's protocol and restrictions were reviewed."
-        );
+        setError(t.confirmProtocol);
         setPlan(null);
         return;
       }
@@ -270,14 +264,16 @@ function PlannerForm() {
     const input = plannerInput();
     if (!input) {
       setLoading(false);
-      setError("The plan parameters are incomplete.");
+      setError(t.incomplete);
       return;
     }
 
     try {
       // 🔌 REAL AI API INTEGRATION POINT — replace with an authenticated,
       // server-side call that preserves the same safety gate.
-      const result = await delay(buildTreatmentPlan(input));
+      const result = await delay(
+        locale === "fa" ? buildTreatmentPlanFa(input) : buildTreatmentPlan(input)
+      );
       if (requestToken === generationToken.current) {
         setPlan(result);
         setPlanEdited(false);
@@ -288,7 +284,7 @@ function PlannerForm() {
         setError(
           cause instanceof Error
             ? cause.message
-            : "The treatment plan could not be generated safely."
+            : t.generateFailed
         );
       }
     } finally {
@@ -329,9 +325,7 @@ function PlannerForm() {
       !generatedInput ||
       !safetyCleared
     ) {
-      setWorkflowError(
-        "A linked case, editable unsaved draft, and current clear safety screen are required before saving."
-      );
+      setWorkflowError(t.saveRequirements);
       return;
     }
 
@@ -339,9 +333,7 @@ function PlannerForm() {
       normalizeTreatmentPlan(plan)
     );
     if (!parsedPlan.success) {
-      setWorkflowError(
-        "Complete every required plan section, keep one item per line and remove blank or oversized items before saving."
-      );
+      setWorkflowError(t.sectionsInvalid);
       return;
     }
 
@@ -355,9 +347,7 @@ function PlannerForm() {
     });
     setWorkflowBusy(false);
     if (!saved) {
-      setWorkflowError(
-        "The draft was not saved. Re-check assignment, safety status and connection; the generated text remains on this screen."
-      );
+      setWorkflowError(t.saveFailed);
       return;
     }
     setPlan(parsedPlan.data);
@@ -372,7 +362,7 @@ function PlannerForm() {
     if (
       hasUnsavedPlannerWork &&
       !window.confirm(
-        "Discard the unsaved treatment-plan work on this screen and open the saved draft?"
+        t.openConfirm
       )
     ) {
       return;
@@ -397,15 +387,11 @@ function PlannerForm() {
   async function reviewDraft(decision: "approved" | "rejected") {
     if (workflowBusy || !storedPlan || storedPlan.status !== "draft") return;
     if (decision === "approved" && !reviewConfirmed) {
-      setWorkflowError(
-        "Confirm that you reviewed the original case, current safety screen and every plan item before signing."
-      );
+      setWorkflowError(t.confirmReview);
       return;
     }
     if (decision === "approved" && !safetyCleared) {
-      setWorkflowError(
-        "Approval is blocked because the current case safety screen is no longer clear."
-      );
+      setWorkflowError(t.approvalBlocked);
       return;
     }
 
@@ -418,9 +404,7 @@ function PlannerForm() {
     });
     setWorkflowBusy(false);
     if (!reviewed) {
-      setWorkflowError(
-        "The review decision was not stored. The draft remains unsigned. Refresh the case safety status and retry."
-      );
+      setWorkflowError(t.reviewFailed);
       return;
     }
     setStoredPlan(reviewed);
@@ -430,20 +414,20 @@ function PlannerForm() {
   return (
     <div className="space-y-6">
       <PageIntro
-        title="Treatment Plan Builder"
-        description="Generate a draft only after the active case has a completed, clear safety screen. Every input change invalidates the previous draft."
+        title={t.title}
+        description={t.intro}
         action={
           cases.length > 0 ? (
             <Select
-              aria-label="Patient case for treatment planning"
+              aria-label={t.caseAria}
               value={currentCase?.id ?? ""}
               onChange={(event) => changeCase(event.target.value)}
               className="w-64"
             >
-              <option value="">Select a case…</option>
+              <option value="">{t.selectCase}</option>
               {cases.map((patientCase) => (
                 <option key={patientCase.id} value={patientCase.id}>
-                  {patientCase.name || "Unnamed"}
+                  {patientCase.name || t.unnamed}
                 </option>
               ))}
             </Select>
@@ -457,8 +441,7 @@ function PlannerForm() {
           className="rounded-2xl border border-[var(--color-danger)]/40 bg-[var(--color-danger-soft)] px-5 py-4 text-sm text-[var(--color-danger)]"
         >
           <p>
-            Patient cases could not be loaded securely. Treatment planning is
-            locked; this is not an empty case list.
+            {t.loadError}
           </p>
           <Button
             type="button"
@@ -467,7 +450,7 @@ function PlannerForm() {
             className="mt-3"
             onClick={reloadCases}
           >
-            Retry case list
+            {t.retryCases}
           </Button>
         </div>
       )}
@@ -488,32 +471,36 @@ function PlannerForm() {
           }
         >
           {safetyCleared
-            ? "Safety gate passed for this case"
-            : "Treatment planning locked"}
+            ? t.gatePassed
+            : t.gateLocked}
         </p>
         <p className="mt-1 text-xs leading-relaxed text-[var(--color-ink-soft)]">
           {safetyCleared
-            ? `Structured screen completed ${currentCase?.safetyScreen?.screenedAt ? new Date(currentCase.safetyScreen.screenedAt).toLocaleString() : ""}. Continue clinical monitoring; this is not a diagnosis or blanket clearance.`
+            ? t.screenCompleted(
+                currentCase?.safetyScreen?.screenedAt
+                  ? when(currentCase.safetyScreen.screenedAt)
+                  : ""
+              )
             : loadError
-              ? "Case and safety status are unavailable. Retry the case list before planning treatment."
+              ? t.statusUnavailable
             : currentCase
-              ? `Current safety disposition: ${safetyDisposition}. Resolve and document the appropriate escalation before generating advice.`
-              : "Select or create a case and complete its structured red-flag screen first. Manual planning without a case is disabled."}
+              ? t.currentDisposition(t.dispositions[safetyDisposition] ?? safetyDisposition)
+              : t.selectOrCreate}
         </p>
       </div>
 
       <Card>
         <CardHeader
-          title="Plan Parameters"
+          title={t.parameters}
           subtitle={
             currentCase
-              ? `Pre-filled from case: ${currentCase.name}`
-              : "No active case — treatment planning is disabled"
+              ? t.prefilled(currentCase.name)
+              : t.noCase
           }
           icon={<Icon name="treatment" width={18} height={18} />}
         />
         <CardBody className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <Field label="Body region" required>
+          <Field label={t.region} required>
             <Select
               value={region}
               disabled={loading}
@@ -522,15 +509,15 @@ function PlannerForm() {
                 invalidatePlan();
               }}
             >
-              <option value="">Select…</option>
-              {bodyRegions.map((r) => (
+              <option value="">{t.select}</option>
+              {localizedRegions(locale).map((r) => (
                 <option key={r.id} value={r.id}>
                   {r.label}
                 </option>
               ))}
             </Select>
           </Field>
-          <Field label="Stage">
+          <Field label={t.stage}>
             <Select
               value={stage}
               disabled={loading}
@@ -540,13 +527,13 @@ function PlannerForm() {
               }}
             >
               {stages.map((s) => (
-                <option key={s.value} value={s.value}>
-                  {s.label}
+                <option key={s} value={s}>
+                  {t.stages[s]}
                 </option>
               ))}
             </Select>
           </Field>
-          <Field label="Irritability">
+          <Field label={t.irritability}>
             <Select
               value={irritability}
               disabled={loading}
@@ -555,12 +542,12 @@ function PlannerForm() {
                 invalidatePlan();
               }}
             >
-              <option value="low">Low</option>
-              <option value="moderate">Moderate</option>
-              <option value="high">High</option>
+              <option value="low">{t.low}</option>
+              <option value="moderate">{t.moderate}</option>
+              <option value="high">{t.high}</option>
             </Select>
           </Field>
-          <Field label={`Pain severity — ${painSeverity}/10`}>
+          <Field label={t.painSeverity(painSeverity)}>
             <input
               type="range"
               min={0}
@@ -574,7 +561,7 @@ function PlannerForm() {
               className="mt-3 h-2 w-full cursor-pointer appearance-none rounded-full bg-gradient-to-r from-[var(--color-success)] via-[var(--color-warn)] to-[var(--color-danger)]"
             />
           </Field>
-          <Field label="Main impairment">
+          <Field label={t.impairment}>
             <Input
               value={mainImpairment}
               disabled={loading}
@@ -582,10 +569,10 @@ function PlannerForm() {
                 setMainImpairment(e.target.value);
                 invalidatePlan();
               }}
-              placeholder="e.g. Hip abductor weakness"
+              placeholder={t.impairmentPlaceholder}
             />
           </Field>
-          <Field label="Patient goal">
+          <Field label={t.goal}>
             <Input
               value={patientGoal}
               disabled={loading}
@@ -593,7 +580,7 @@ function PlannerForm() {
                 setPatientGoal(e.target.value);
                 invalidatePlan();
               }}
-              placeholder="e.g. Return to running 5km"
+              placeholder={t.goalPlaceholder}
             />
           </Field>
 
@@ -601,14 +588,13 @@ function PlannerForm() {
             <div className="grid grid-cols-1 gap-4 rounded-xl border border-[var(--color-warn)]/30 bg-[var(--color-warn-soft)]/40 p-4 sm:col-span-2 sm:grid-cols-2 lg:col-span-3">
               <div className="sm:col-span-2">
                 <p className="text-sm font-semibold text-[var(--color-warn)]">
-                  Required post-operative protocol details
+                  {t.postOpTitle}
                 </p>
                 <p className="mt-1 text-xs text-[var(--color-ink-soft)]">
-                  The planner cannot infer restrictions from the operation name.
-                  Enter the operating team&apos;s documented instructions.
+                  {t.postOpBody}
                 </p>
               </div>
-              <Field label="Procedure" required>
+              <Field label={t.procedure} required>
                 <Input
                   value={procedure}
                   disabled={loading}
@@ -616,10 +602,10 @@ function PlannerForm() {
                     setProcedure(event.target.value);
                     invalidatePlan();
                   }}
-                  placeholder="e.g. Right rotator-cuff repair"
+                  placeholder={t.procedurePlaceholder}
                 />
               </Field>
-              <Field label="Surgery date" required>
+              <Field label={t.surgeryDate} required>
                 <Input
                   type="date"
                   max={localDateValue()}
@@ -631,7 +617,7 @@ function PlannerForm() {
                   }}
                 />
               </Field>
-              <Field label="Weight-bearing / loading status" required>
+              <Field label={t.weightBearing} required>
                 <Input
                   value={weightBearingStatus}
                   disabled={loading}
@@ -639,13 +625,13 @@ function PlannerForm() {
                     setWeightBearingStatus(event.target.value);
                     invalidatePlan();
                   }}
-                  placeholder="e.g. NWB, WBAT, or upper-limb loading restriction"
+                  placeholder={t.weightBearingPlaceholder}
                 />
               </Field>
               <Field
-                label="Precautions and prohibited movements"
+                label={t.precautions}
                 required
-                hint="Enter “none documented” only after checking the protocol."
+                hint={t.precautionsHint}
               >
                 <Textarea
                   value={precautions}
@@ -655,7 +641,7 @@ function PlannerForm() {
                     invalidatePlan();
                   }}
                   className="min-h-20"
-                  placeholder="Document range, load, wound or tissue-healing restrictions"
+                  placeholder={t.precautionsPlaceholder}
                 />
               </Field>
               <label className="flex items-start gap-3 rounded-xl border border-[var(--color-border)] bg-white p-3 text-sm text-[var(--color-ink-soft)] sm:col-span-2">
@@ -670,8 +656,7 @@ function PlannerForm() {
                   }}
                 />
                 <span>
-                  I reviewed the current operating-team protocol, precautions
-                  and loading status for this patient.
+                  {t.protocolAttest}
                 </span>
               </label>
             </div>
@@ -685,14 +670,14 @@ function PlannerForm() {
           )}
           <Button onClick={generate} disabled={loading || !safetyCleared}>
             <Icon name="sparkle" width={16} height={16} />
-            {loading ? "Generating…" : "Generate treatment plan"}
+            {loading ? t.generating : t.generate}
           </Button>
         </div>
       </Card>
 
       {loading && (
         <Card>
-          <Spinner label="Building a stage-appropriate plan…" />
+          <Spinner label={t.building} />
         </Card>
       )}
 
@@ -700,31 +685,29 @@ function PlannerForm() {
         <>
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-sm font-semibold text-[var(--color-ink)]">
-              Plan for {region ? getRegion(region)?.label : ""} —{" "}
-              {stages.find((s) => s.value === stage)?.label}
+              {t.planFor(region ? regionLabel(region, locale) : "", t.stages[stage])}
             </span>
             <span className="rounded-full bg-[var(--color-primary-tint)] px-3 py-1 text-xs font-medium text-[var(--color-primary-strong)]">
               {plan.frequency}
             </span>
             {planEdited && !storedPlan && (
-              <Badge tone="warn">Clinician-edited draft</Badge>
+              <Badge tone="warn">{t.edited}</Badge>
             )}
           </div>
 
           <Card>
             <CardHeader
-              title="Edit clinical draft"
-              subtitle="Review and edit the generated template before saving. Use one item per line; the exact edited structure is stored in the new version."
+              title={t.editTitle}
+              subtitle={t.editSubtitle}
               icon={<Icon name="edit" width={18} height={18} />}
             />
             <CardBody className="space-y-4">
               {storedPlan && (
                 <p className="rounded-xl bg-[var(--color-surface-muted)] px-4 py-3 text-sm text-[var(--color-ink-soft)]">
-                  This saved version is immutable. Generate again to create and
-                  edit a new version instead of rewriting the audit trail.
+                  {t.immutable}
                 </p>
               )}
-              <Field label="Recommended frequency" required>
+              <Field label={t.frequency} required>
                 <Input
                   value={plan.frequency}
                   maxLength={500}
@@ -735,22 +718,22 @@ function PlannerForm() {
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 {editablePlanSections.map((section) => (
                   <Field
-                    key={section.key}
-                    label={section.label}
+                    key={section}
+                    label={t.sections[section]}
                     required={
-                      section.key === "exerciseTherapy" ||
-                      section.key === "education" ||
-                      section.key === "homeProgram" ||
-                      section.key === "progression"
+                      section === "exerciseTherapy" ||
+                      section === "education" ||
+                      section === "homeProgram" ||
+                      section === "progression"
                     }
-                    hint="One item per line; maximum 12 items."
+                    hint={t.sectionHint}
                   >
                     <Textarea
-                      value={plan[section.key].join("\n")}
+                      value={plan[section].join("\n")}
                       maxLength={12_000}
                       disabled={workflowBusy || Boolean(storedPlan)}
                       onChange={(event) =>
-                        updatePlanSection(section.key, event.target.value)
+                        updatePlanSection(section, event.target.value)
                       }
                       className="min-h-32"
                     />
@@ -761,31 +744,30 @@ function PlannerForm() {
           </Card>
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-            <PlanCard title="Manual Therapy" items={plan.manualTherapy} />
-            <PlanCard title="Exercise Therapy" items={plan.exerciseTherapy} />
-            <PlanCard title="Mobility" items={plan.mobility} />
-            <PlanCard title="Strengthening" items={plan.strengthening} />
-            <PlanCard title="Motor Control" items={plan.motorControl} />
-            <PlanCard title="Balance & Proprioception" items={plan.balance} />
-            <PlanCard title="Education" items={plan.education} />
-            <PlanCard title="Home Exercise Program" items={plan.homeProgram} />
-            <PlanCard title="Progression Rules" items={plan.progression} highlight />
+            {editablePlanSections.map((section) => (
+              <PlanCard
+                key={section}
+                title={t.sections[section]}
+                items={plan[section]}
+                highlight={section === "progression"}
+              />
+            ))}
           </div>
 
           <Card>
             <CardHeader
-              title="Clinical record and sign-off"
-              subtitle="Generation never publishes a plan. Save a versioned draft, re-check the source record, then explicitly approve or reject it."
+              title={t.recordTitle}
+              subtitle={t.recordSubtitle}
               icon={<Icon name="shield" width={18} height={18} />}
             />
             <CardBody className="space-y-4">
               {isMockMode ? (
                 <p className="rounded-xl bg-[var(--color-warn-soft)] px-4 py-3 text-sm text-[var(--color-warn)]">
-                  Demo mode: this sample is not a clinical record and cannot be signed or published.
+                  {t.demo}
                 </p>
               ) : !currentCase?.patientId || !currentCase.episodeId ? (
                 <p role="alert" className="rounded-xl bg-[var(--color-danger-soft)] px-4 py-3 text-sm text-[var(--color-danger)]">
-                  This legacy case is not linked to a patient and care episode. Link or archive it before saving a plan.
+                  {t.legacy}
                 </p>
               ) : (
                 <>
@@ -802,12 +784,12 @@ function PlannerForm() {
                       }
                     >
                       {storedPlan
-                        ? `Version ${storedPlan.version} · ${storedPlan.status}`
-                        : "Unsaved generated draft"}
+                        ? t.versionStatus(storedPlan.version, t.statuses[storedPlan.status] ?? storedPlan.status)
+                        : t.unsaved}
                     </Badge>
                     {storedPlan && (
                       <span className="text-xs text-[var(--color-ink-faint)]">
-                        Server timestamp: {new Date(storedPlan.timestamp).toLocaleString()}
+                        {t.serverTime(when(storedPlan.timestamp))}
                       </span>
                     )}
                   </div>
@@ -817,13 +799,13 @@ function PlannerForm() {
                       onClick={saveDraft}
                       disabled={workflowBusy || !generatedInput}
                     >
-                      {workflowBusy ? "Saving…" : "Save versioned draft"}
+                      {workflowBusy ? t.saving : t.saveDraft}
                     </Button>
                   ) : storedPlan.status === "draft" ? (
                     <div className="space-y-4">
                       <Field
-                        label="Review note"
-                        hint="Optional for approval; record the reason when rejecting or changing clinical direction."
+                        label={t.reviewNote}
+                        hint={t.reviewNoteHint}
                       >
                         <Textarea
                           value={reviewNote}
@@ -845,10 +827,7 @@ function PlannerForm() {
                           }}
                         />
                         <span>
-                          I reviewed the original patient record, current safety
-                          screen, missing information, precautions and every item
-                          in this draft. I take clinical responsibility for this
-                          sign-off.
+                          {t.reviewAttest}
                         </span>
                       </label>
                       <div className="flex flex-wrap gap-3">
@@ -856,14 +835,14 @@ function PlannerForm() {
                           onClick={() => reviewDraft("approved")}
                           disabled={workflowBusy || !reviewConfirmed}
                         >
-                          {workflowBusy ? "Saving decision…" : "Approve and sign"}
+                          {workflowBusy ? t.savingDecision : t.approve}
                         </Button>
                         <Button
                           variant="secondary"
                           onClick={() => reviewDraft("rejected")}
                           disabled={workflowBusy}
                         >
-                          Reject draft
+                          {t.reject}
                         </Button>
                       </div>
                     </div>
@@ -876,9 +855,7 @@ function PlannerForm() {
                           : "rounded-xl bg-[var(--color-surface-muted)] px-4 py-3 text-sm text-[var(--color-ink-soft)]"
                       }
                     >
-                      This version is {storedPlan.status}. A new generation must
-                      be saved as a new version; signed records are never edited
-                      in place.
+                      {t.finalStatus(t.statuses[storedPlan.status] ?? storedPlan.status)}
                     </p>
                   )}
                 </>
@@ -897,27 +874,27 @@ function PlannerForm() {
       {!isMockMode && currentCase && (
         <Card>
           <CardHeader
-            title="Plan version history"
-            subtitle="Append-only drafts and clinician review decisions for the active case."
+            title={t.historyTitle}
+            subtitle={t.historySubtitle}
             icon={<Icon name="clock" width={18} height={18} />}
           />
           <CardBody>
             {historyLoading ? (
-              <Spinner label="Loading saved plans…" />
+              <Spinner label={t.loadingPlans} />
             ) : historyForCurrentCase.error ? (
               <div role="alert" className="space-y-3 text-sm text-[var(--color-danger)]">
-                <p>{historyForCurrentCase.error}</p>
+                <p>{t.historyFailed}</p>
                 <Button
                   size="sm"
                   variant="secondary"
                   onClick={() => setHistoryRetry((value) => value + 1)}
                 >
-                  Retry
+                  {t.retry}
                 </Button>
               </div>
             ) : historyForCurrentCase.plans.length === 0 ? (
               <p className="text-sm text-[var(--color-ink-faint)]">
-                No saved treatment-plan versions for this case.
+                {t.noPlans}
               </p>
             ) : (
               <ul className="divide-y divide-[var(--color-border)]">
@@ -927,7 +904,7 @@ function PlannerForm() {
                     className="flex flex-wrap items-center gap-3 py-3 text-sm"
                   >
                     <span className="font-medium text-[var(--color-ink)]">
-                      Version {record.version}
+                      {t.version(record.version)}
                     </span>
                     <Badge
                       tone={
@@ -940,10 +917,10 @@ function PlannerForm() {
                               : "neutral"
                       }
                     >
-                      {record.status}
+                      {t.statuses[record.status] ?? record.status}
                     </Badge>
                     <span className="ms-auto text-xs text-[var(--color-ink-faint)]">
-                      {new Date(record.createdAt).toLocaleString()}
+                      {when(record.createdAt)}
                     </span>
                     {record.status === "draft" &&
                       storedPlan?.id !== record.id && (
@@ -953,7 +930,7 @@ function PlannerForm() {
                           disabled={workflowBusy || !safetyCleared}
                           onClick={() => openSavedDraft(record)}
                         >
-                          Open for review
+                          {t.openForReview}
                         </Button>
                       )}
                   </li>

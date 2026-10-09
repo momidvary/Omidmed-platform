@@ -21,6 +21,10 @@ import { Card, CardBody, CardHeader } from "@/components/ui/Card";
 import { Field, Input, Select, Textarea } from "@/components/ui/Form";
 import { Icon } from "@/components/ui/Icon";
 import { Spinner } from "@/components/ui/Misc";
+import { useLocale } from "@/lib/store/LocaleContext";
+import { intlLocale, useText } from "@/lib/i18n/text";
+import { localizedRegions, regionLabel } from "@/lib/data/bodyRegionsFa";
+import { caseAssessmentText, type CaseAssessmentText } from "./caseAssessmentText";
 
 type RevisionType = Exclude<CaseAssessmentChangeType, "initial">;
 
@@ -78,14 +82,17 @@ function assessmentPayload(
   };
 }
 
-function labelForChange(changeType: CaseAssessmentChangeType): string {
-  if (changeType === "initial") return "Initial intake";
-  if (changeType === "correction") return "Correction";
-  return "Reassessment";
+function labelForChange(changeType: CaseAssessmentChangeType, t: CaseAssessmentText): string {
+  if (changeType === "initial") return t.initial;
+  if (changeType === "correction") return t.correction;
+  return t.reassessment;
 }
 
-function display(value: string | number | null | undefined): string {
-  if (value === null || value === undefined || value === "") return "Not recorded";
+function display(value: string | number | null | undefined, t: CaseAssessmentText): string {
+  if (value === null || value === undefined || value === "") return t.notRecorded;
+  if (value === "female") return t.female;
+  if (value === "male") return t.male;
+  if (value === "other") return t.other;
   return String(value);
 }
 
@@ -99,6 +106,9 @@ export function CaseAssessmentHistory({
     assessment: CaseAssessmentPayload
   ) => void;
 }) {
+  const t = useText(caseAssessmentText);
+  const { locale } = useLocale();
+  const when = (value: string) => new Date(value).toLocaleString(intlLocale(locale));
   const [retryToken, setRetryToken] = useState(0);
   const [historyState, setHistoryState] = useState<HistoryState>({
     requestKey: "",
@@ -131,14 +141,13 @@ export function CaseAssessmentHistory({
     return (
       <Card>
         <CardHeader
-          title="Signed assessment history"
-          subtitle="Available for authenticated clinical records"
+          title={t.title}
+          subtitle={t.demoSubtitle}
           icon={<Icon name="clock" width={18} height={18} />}
         />
         <CardBody>
           <p className="text-sm text-[var(--color-ink-soft)]">
-            This is a local demo case. It does not create signed clinical
-            assessment versions, and corrections are intentionally disabled.
+            {t.demoBody}
           </p>
         </CardBody>
       </Card>
@@ -186,7 +195,7 @@ export function CaseAssessmentHistory({
     const reason = draft.changeReason.trim();
     const age = draft.assessment.age;
     if (reason.length < 3 || reason.length > 1000) {
-      setFormError("Document a reason between 3 and 1,000 characters.");
+      setFormError(t.reasonLength);
       return;
     }
     if (
@@ -198,7 +207,7 @@ export function CaseAssessmentHistory({
       draft.assessment.painIntensity < 0 ||
       draft.assessment.painIntensity > 10
     ) {
-      setFormError("Review the required fields, age, region, and pain score.");
+      setFormError(t.reviewFields);
       return;
     }
     if (
@@ -206,7 +215,7 @@ export function CaseAssessmentHistory({
       JSON.stringify(draft.assessment) ===
         JSON.stringify(assessmentPayload(current))
     ) {
-      setFormError("A correction must change at least one assessment field.");
+      setFormError(t.mustChange);
       return;
     }
 
@@ -215,7 +224,7 @@ export function CaseAssessmentHistory({
       draft.changeType === "reassessment" &&
       Number.isNaN(reassessmentDate.getTime())
     ) {
-      setFormError("Enter a valid reassessment date and time.");
+      setFormError(t.invalidTime);
       return;
     }
     const assessedAt =
@@ -239,22 +248,22 @@ export function CaseAssessmentHistory({
     setSaving(false);
     if (!receipt) {
       setFormError(
-        "The revision was not stored. Refresh the history before retrying; another clinician may have created a newer version."
+        t.notStored
       );
       return;
     }
 
     onSnapshotApplied(patientCase.id, normalizedAssessment);
     setDraft(null);
-    setSuccess(`Assessment version ${receipt.version} was signed and stored.`);
+    setSuccess(t.signed(receipt.version));
     setRetryToken((value) => value + 1);
   }
 
   return (
     <Card>
       <CardHeader
-        title="Signed assessment history"
-        subtitle="Append-only intake snapshots; corrections never overwrite the original"
+        title={t.title}
+        subtitle={t.subtitle}
         icon={<Icon name="clock" width={18} height={18} />}
         action={
           current && !draft ? (
@@ -265,21 +274,21 @@ export function CaseAssessmentHistory({
                 variant="secondary"
                 onClick={() => beginRevision("correction")}
               >
-                Correct record
+                {t.correctRecord}
               </Button>
               <Button
                 type="button"
                 size="sm"
                 onClick={() => beginRevision("reassessment")}
               >
-                New reassessment
+                {t.newReassessment}
               </Button>
             </div>
           ) : undefined
         }
       />
 
-      {loading && <Spinner label="Loading signed assessment history…" />}
+      {loading && <Spinner label={t.loading} />}
 
       {!loading && historyState.failed && (
         <CardBody>
@@ -287,8 +296,7 @@ export function CaseAssessmentHistory({
             role="alert"
             className="rounded-xl bg-[var(--color-danger-soft)] px-4 py-3 text-sm text-[var(--color-danger)]"
           >
-            Assessment history could not be verified. Editing is locked until
-            the complete signed history loads.
+            {t.unverified}
           </div>
           <Button
             type="button"
@@ -296,7 +304,7 @@ export function CaseAssessmentHistory({
             className="mt-3"
             onClick={() => setRetryToken((value) => value + 1)}
           >
-            Retry history
+            {t.retry}
           </Button>
         </CardBody>
       )}
@@ -304,8 +312,7 @@ export function CaseAssessmentHistory({
       {!loading && !historyState.failed && history.length === 0 && (
         <CardBody>
           <p role="alert" className="text-sm text-[var(--color-danger)]">
-            No signed assessment version was found. Editing is locked; ask an
-            administrator to verify migration 020 and the case backfill.
+            {t.noVersion}
           </p>
         </CardBody>
       )}
@@ -325,27 +332,23 @@ export function CaseAssessmentHistory({
             <fieldset className="space-y-4">
               <legend className="text-sm font-semibold text-[var(--color-ink)]">
                 {draft.changeType === "correction"
-                  ? `Correct version ${current.version}`
-                  : `Reassess from version ${current.version}`}
+                  ? t.correctVersion(current.version)
+                  : t.reassessFrom(current.version)}
               </legend>
               <p className="text-xs text-[var(--color-ink-soft)]">
-                The existing version remains immutable. Saving creates version
-                {` ${current.version + 1}`} and records your authenticated user ID.
+                {t.immutable(current.version + 1)}
               </p>
               {(!isBodyRegionId(current.region) || !isGender(current.gender)) && (
                 <p
                   role="alert"
                   className="rounded-xl bg-[var(--color-warn-soft)] px-4 py-3 text-xs leading-relaxed text-[var(--color-warn)]"
                 >
-                  This legacy snapshot contains a body-region or gender value
-                  outside the current controlled list. Review those fields
-                  explicitly before signing the new version; the original
-                  snapshot remains unchanged.
+                  {t.legacy}
                 </p>
               )}
 
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <Field label="Change type" required>
+                <Field label={t.changeType} required>
                   <Select
                     value={draft.changeType}
                     onChange={(event) => {
@@ -366,17 +369,17 @@ export function CaseAssessmentHistory({
                       );
                     }}
                   >
-                    <option value="correction">Correction to documentation</option>
-                    <option value="reassessment">New clinical reassessment</option>
+                    <option value="correction">{t.correctionOption}</option>
+                    <option value="reassessment">{t.reassessmentOption}</option>
                   </Select>
                 </Field>
                 <Field
-                  label="Assessment time"
+                  label={t.assessmentTime}
                   required
                   hint={
                     draft.changeType === "correction"
-                      ? "Corrections retain the original clinical assessment time."
-                      : "Use the time the reassessment occurred."
+                      ? t.correctionTimeHint
+                      : t.reassessmentTimeHint
                   }
                 >
                   <Input
@@ -395,9 +398,9 @@ export function CaseAssessmentHistory({
               </div>
 
               <Field
-                label="Reason for this version"
+                label={t.reason}
                 required
-                hint="Describe what was corrected or what prompted reassessment."
+                hint={t.reasonHint}
               >
                 <Textarea
                   value={draft.changeReason}
@@ -414,14 +417,14 @@ export function CaseAssessmentHistory({
               </Field>
 
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <Field label="Patient name snapshot" required>
+                <Field label={t.nameSnapshot} required>
                   <Input
                     value={draft.assessment.name}
                     maxLength={200}
                     onChange={(event) => setAssessment("name", event.target.value)}
                   />
                 </Field>
-                <Field label="Age at assessment">
+                <Field label={t.ageAtAssessment}>
                   <Input
                     type="number"
                     min={0}
@@ -436,7 +439,7 @@ export function CaseAssessmentHistory({
                     }
                   />
                 </Field>
-                <Field label="Gender snapshot">
+                <Field label={t.genderSnapshot}>
                   <Select
                     value={draft.assessment.gender ?? ""}
                     onChange={(event) =>
@@ -446,20 +449,20 @@ export function CaseAssessmentHistory({
                       )
                     }
                   >
-                    <option value="">Not recorded</option>
-                    <option value="female">Female</option>
-                    <option value="male">Male</option>
-                    <option value="other">Other</option>
+                    <option value="">{t.notRecorded}</option>
+                    <option value="female">{t.female}</option>
+                    <option value="male">{t.male}</option>
+                    <option value="other">{t.other}</option>
                   </Select>
                 </Field>
-                <Field label="Body region" required>
+                <Field label={t.region} required>
                   <Select
                     value={draft.assessment.region}
                     onChange={(event) =>
                       setAssessment("region", event.target.value as BodyRegionId)
                     }
                   >
-                    {bodyRegions.map((region) => (
+                    {localizedRegions(locale).map((region) => (
                       <option key={region.id} value={region.id}>
                         {region.label}
                       </option>
@@ -467,7 +470,7 @@ export function CaseAssessmentHistory({
                   </Select>
                 </Field>
                 <div className="md:col-span-2">
-                  <Field label="Main complaint" required>
+                  <Field label={t.mainComplaint} required>
                     <Textarea
                       value={draft.assessment.mainComplaint}
                       maxLength={10000}
@@ -477,7 +480,7 @@ export function CaseAssessmentHistory({
                     />
                   </Field>
                 </div>
-                <Field label="Pain location">
+                <Field label={t.painLocation}>
                   <Input
                     value={draft.assessment.painLocation}
                     maxLength={2000}
@@ -486,7 +489,7 @@ export function CaseAssessmentHistory({
                     }
                   />
                 </Field>
-                <Field label="Pain intensity (0–10)" required>
+                <Field label={t.painIntensity} required>
                   <Input
                     type="number"
                     min={0}
@@ -498,7 +501,7 @@ export function CaseAssessmentHistory({
                     }
                   />
                 </Field>
-                <Field label="Duration">
+                <Field label={t.duration}>
                   <Input
                     value={draft.assessment.duration}
                     maxLength={500}
@@ -507,7 +510,7 @@ export function CaseAssessmentHistory({
                     }
                   />
                 </Field>
-                <Field label="Mechanism / onset">
+                <Field label={t.mechanism}>
                   <Textarea
                     value={draft.assessment.mechanism}
                     maxLength={5000}
@@ -516,7 +519,7 @@ export function CaseAssessmentHistory({
                     }
                   />
                 </Field>
-                <Field label="Aggravating factors">
+                <Field label={t.aggravating}>
                   <Textarea
                     value={draft.assessment.aggravating}
                     maxLength={5000}
@@ -525,7 +528,7 @@ export function CaseAssessmentHistory({
                     }
                   />
                 </Field>
-                <Field label="Easing factors">
+                <Field label={t.easing}>
                   <Textarea
                     value={draft.assessment.easing}
                     maxLength={5000}
@@ -534,7 +537,7 @@ export function CaseAssessmentHistory({
                     }
                   />
                 </Field>
-                <Field label="Functional limitations">
+                <Field label={t.functional}>
                   <Textarea
                     value={draft.assessment.functionalLimitations}
                     maxLength={10000}
@@ -543,7 +546,7 @@ export function CaseAssessmentHistory({
                     }
                   />
                 </Field>
-                <Field label="Patient goal">
+                <Field label={t.goal}>
                   <Textarea
                     value={draft.assessment.patientGoal}
                     maxLength={5000}
@@ -552,7 +555,7 @@ export function CaseAssessmentHistory({
                     }
                   />
                 </Field>
-                <Field label="Medical history">
+                <Field label={t.medicalHistory}>
                   <Textarea
                     value={draft.assessment.medicalHistory}
                     maxLength={20000}
@@ -561,7 +564,7 @@ export function CaseAssessmentHistory({
                     }
                   />
                 </Field>
-                <Field label="Surgical history">
+                <Field label={t.surgicalHistory}>
                   <Textarea
                     value={draft.assessment.surgicalHistory}
                     maxLength={20000}
@@ -570,7 +573,7 @@ export function CaseAssessmentHistory({
                     }
                   />
                 </Field>
-                <Field label="Imaging">
+                <Field label={t.imaging}>
                   <Textarea
                     value={draft.assessment.imaging}
                     maxLength={20000}
@@ -579,7 +582,7 @@ export function CaseAssessmentHistory({
                     }
                   />
                 </Field>
-                <Field label="Medications">
+                <Field label={t.medications}>
                   <Textarea
                     value={draft.assessment.medications}
                     maxLength={10000}
@@ -610,10 +613,10 @@ export function CaseAssessmentHistory({
                   setFormError(null);
                 }}
               >
-                Cancel
+                {t.cancel}
               </Button>
               <Button type="submit" disabled={saving}>
-                {saving ? "Signing version…" : "Sign and append version"}
+                {saving ? t.signing : t.sign}
               </Button>
             </div>
           </form>
@@ -631,54 +634,61 @@ export function CaseAssessmentHistory({
               <summary className="cursor-pointer list-none px-4 py-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]/40">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="text-sm font-semibold text-[var(--color-ink)]">
-                    Version {assessment.version}
+                    {t.version(assessment.version)}
                   </span>
                   <Badge tone={assessment.isCurrent ? "success" : "neutral"}>
-                    {assessment.isCurrent ? "Current" : labelForChange(assessment.changeType)}
+                    {assessment.isCurrent ? t.current : labelForChange(assessment.changeType, t)}
                   </Badge>
                   <span className="text-xs text-[var(--color-ink-faint)]">
-                    Assessed {new Date(assessment.assessedAt).toLocaleString()}
+                    {t.assessed(when(assessment.assessedAt))}
                   </span>
                 </div>
               </summary>
               <div className="border-t border-[var(--color-border)] px-4 py-4">
                 <dl className="grid grid-cols-1 gap-x-5 gap-y-3 text-sm md:grid-cols-2">
-                  <HistoryField label="Patient snapshot" value={assessment.name} />
+                  <HistoryField label={t.patientSnapshot} value={assessment.name} />
                   <HistoryField
-                    label="Age / gender"
-                    value={`${display(assessment.age)} / ${display(assessment.gender)}`}
+                    label={t.ageGender}
+                    value={`${display(assessment.age, t)} / ${display(assessment.gender, t)}`}
                   />
-                  <HistoryField label="Region" value={display(assessment.region)} />
                   <HistoryField
-                    label="Pain"
-                    value={`${assessment.painIntensity}/10 — ${display(assessment.painLocation)}`}
+                    label={t.regionShort}
+                    value={
+                      assessment.region && isBodyRegionId(assessment.region)
+                        ? regionLabel(assessment.region, locale)
+                        : display(assessment.region, t)
+                    }
                   />
-                  <HistoryField label="Main complaint" value={assessment.mainComplaint} wide />
-                  <HistoryField label="Duration" value={display(assessment.duration)} />
-                  <HistoryField label="Mechanism / onset" value={display(assessment.mechanism)} />
-                  <HistoryField label="Aggravating" value={display(assessment.aggravating)} />
-                  <HistoryField label="Easing" value={display(assessment.easing)} />
                   <HistoryField
-                    label="Functional limitations"
-                    value={display(assessment.functionalLimitations)}
+                    label={t.pain}
+                    value={`${assessment.painIntensity}/10 — ${display(assessment.painLocation, t)}`}
                   />
-                  <HistoryField label="Patient goal" value={display(assessment.patientGoal)} />
-                  <HistoryField label="Medical history" value={display(assessment.medicalHistory)} />
-                  <HistoryField label="Surgical history" value={display(assessment.surgicalHistory)} />
-                  <HistoryField label="Imaging" value={display(assessment.imaging)} />
-                  <HistoryField label="Medications" value={display(assessment.medications)} />
+                  <HistoryField label={t.mainComplaint} value={assessment.mainComplaint} wide />
+                  <HistoryField label={t.duration} value={display(assessment.duration, t)} />
+                  <HistoryField label={t.mechanism} value={display(assessment.mechanism, t)} />
+                  <HistoryField label={t.aggravatingShort} value={display(assessment.aggravating, t)} />
+                  <HistoryField label={t.easingShort} value={display(assessment.easing, t)} />
+                  <HistoryField
+                    label={t.functional}
+                    value={display(assessment.functionalLimitations, t)}
+                  />
+                  <HistoryField label={t.goal} value={display(assessment.patientGoal, t)} />
+                  <HistoryField label={t.medicalHistory} value={display(assessment.medicalHistory, t)} />
+                  <HistoryField label={t.surgicalHistory} value={display(assessment.surgicalHistory, t)} />
+                  <HistoryField label={t.imaging} value={display(assessment.imaging, t)} />
+                  <HistoryField label={t.medications} value={display(assessment.medications, t)} />
                 </dl>
                 <div className="mt-4 rounded-lg bg-[var(--color-surface-muted)] px-3 py-2 text-xs text-[var(--color-ink-soft)]">
                   <p>
-                    {labelForChange(assessment.changeType)} recorded {new Date(assessment.createdAt).toLocaleString()}.
+                    {t.recorded(labelForChange(assessment.changeType, t), when(assessment.createdAt))}
                   </p>
                   <p className="mt-1 break-all">
                     {assessment.authoredBy
-                      ? `Authenticated clinician: ${assessment.authoredBy}`
-                      : "Legacy import: original actor was not available."}
+                      ? t.author(assessment.authoredBy)
+                      : t.legacyAuthor}
                   </p>
                   {assessment.changeReason && (
-                    <p className="mt-1">Reason: {assessment.changeReason}</p>
+                    <p className="mt-1">{t.reasonLabel(assessment.changeReason)}</p>
                   )}
                 </div>
               </div>

@@ -11,6 +11,7 @@ import { useText } from "@/lib/i18n/text";
 import { useLocale } from "@/lib/store/LocaleContext";
 import { EXERCISE_CATEGORIES } from "@/lib/types";
 import type { BodyRegionId, Difficulty, Exercise, ExerciseCategory, Stage } from "@/lib/types";
+import { ExerciseAnimation } from "@/components/clinical/ExerciseAnimation";
 import { Card, CardBody } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -209,6 +210,12 @@ function ExerciseCard({
                 {t.pendingNote}
               </p>
             )}
+            <ExerciseAnimation
+              exerciseId={ex.id}
+              name={ex.name}
+              lang={locale === "fa" ? "fa" : "en"}
+              holdSeconds={ex.defaultDosage.holdSeconds}
+            />
             <Section label={t.howTo}>
               <ol className="list-decimal space-y-1.5 ps-5 text-sm text-[var(--color-ink-soft)]">
                 {ex.howTo.map((step, i) => (

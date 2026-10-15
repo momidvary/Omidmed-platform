@@ -9,6 +9,7 @@ import { Icon } from "@/components/ui/Icon";
 import { Spinner } from "@/components/ui/Misc";
 import { exerciseFa } from "@/lib/data/exerciseFa";
 import { exercises } from "@/lib/data/exercises";
+import { withExercise, withPatch } from "@/lib/clinical/exercisePrefill";
 import {
   fetchPrescriptionHistory,
   publishPrescription,
@@ -69,7 +70,8 @@ export function PrescriptionBuilder({
   const patientReadyExercises = useMemo(
     () =>
       exercises
-        .filter((exercise) => Boolean(exerciseFa[exercise.id]))
+        // Only reviewed exercises with an active catalog row can be prescribed.
+        .filter((exercise) => exercise.review === "approved" && Boolean(exerciseFa[exercise.id]))
         .sort((a, b) => {
           const aRegion = a.region === region ? 0 : 1;
           const bRegion = b.region === region ? 0 : 1;
@@ -137,7 +139,7 @@ export function PrescriptionBuilder({
 
   function updateItem(rowId: string, patch: Partial<DraftItem>) {
     setItems((previous) =>
-      previous.map((item) => (item.rowId === rowId ? { ...item, ...patch } : item))
+      previous.map((item) => (item.rowId === rowId ? withPatch(item, patch) : item))
     );
     invalidateStored();
   }
@@ -382,9 +384,13 @@ export function PrescriptionBuilder({
                 <Select
                   value={item.exerciseId}
                   disabled={busy}
-                  onChange={(event) =>
-                    updateItem(item.rowId, { exerciseId: event.target.value })
-                  }
+                  onChange={(event) => {
+                    const exercise = patientReadyExercises.find((candidate) => candidate.id === event.target.value);
+                    setItems((previous) =>
+                      previous.map((row) => (row.rowId === item.rowId ? withExercise(row, exercise) : row))
+                    );
+                    invalidateStored();
+                  }}
                 >
                   <option value="">{t.select}</option>
                   {patientReadyExercises.map((exercise) => (

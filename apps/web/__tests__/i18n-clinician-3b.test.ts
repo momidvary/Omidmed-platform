@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { exercises, exerciseGoals } from "@/lib/data/exercises";
-import { exerciseGoalFa, exerciseLibraryFa, localizeExercise } from "@/lib/data/exerciseLibraryFa";
+import { exercises } from "@/lib/data/exercises";
+import { exerciseLibraryFa, localizeExercise } from "@/lib/data/exerciseLibraryFa";
 import { exerciseFa } from "@/lib/data/exerciseFa";
 import { buildTreatmentPlan, buildEducation } from "@/lib/ai/engine";
 import { buildTreatmentPlanFa } from "@/lib/ai/treatmentPlanFa";
@@ -22,7 +22,9 @@ describe("Persian exercise library", () => {
       expect(local.howTo.length).toBeGreaterThan(0);
       expect(localizeExercise(exercise, "en")).toBe(exercise);
     }
-    for (const goal of exerciseGoals) expect(exerciseGoalFa[goal]).toMatch(persian);
+    for (const exercise of exercises) {
+      expect(localizeExercise(exercise, "fa").goal, exercise.id).toMatch(persian);
+    }
     // Patient-facing content (and so the prescription allow-list) is unchanged.
     expect(Object.keys(exerciseFa)).toHaveLength(8);
   });

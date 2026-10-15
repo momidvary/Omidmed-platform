@@ -126,3 +126,23 @@ test("assessment is split into steps and still requires the safety screen", asyn
   await form.getByRole("button", { name: "Save and continue to examination" }).click();
   await expect(page).toHaveURL(/\/case-analysis/);
 });
+
+test("expanded library marks unreviewed exercises and links progression ladders", async ({
+  page,
+}) => {
+  await page.goto("/exercise-library");
+  await page.getByRole("combobox", { name: "Reviewed and pending" }).selectOption("pending");
+  const slr = page.locator("#exercise-ex_slr");
+  await expect(slr.getByText("Awaiting clinical review", { exact: true })).toBeVisible();
+
+  await slr.getByRole("button", { name: /Straight Leg Raise/ }).click();
+  await expect(slr.getByText(/cannot be added to a home program/)).toBeVisible();
+  await expect(slr.getByText("3 sets × 10 reps")).toBeVisible();
+  await expect(slr.locator('[aria-current="step"]')).toContainText("Straight Leg Raise");
+
+  // A reviewed step is filtered out by "pending"; the ladder still opens it.
+  await slr.getByRole("button", { name: /Quad Sets/ }).click();
+  const quadSets = page.locator("#exercise-ex_quad_sets");
+  await expect(quadSets.locator("button[aria-expanded]")).toHaveAttribute("aria-expanded", "true");
+  await expect(quadSets.getByText("Awaiting clinical review", { exact: true })).toHaveCount(0);
+});

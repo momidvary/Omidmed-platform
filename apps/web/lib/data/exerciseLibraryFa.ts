@@ -1,5 +1,7 @@
 import type { Exercise } from "@/lib/types";
 import type { Locale } from "@/lib/i18n/translations";
+import { describeDosage } from "@/lib/clinical/dosage";
+import { catalogEntry } from "@/lib/data/exerciseCatalog";
 import { exerciseFa, type ExerciseFa } from "@/lib/data/exerciseFa";
 
 /*
@@ -231,7 +233,23 @@ const libraryOnly: Record<string, ExerciseFa> = {
   },
 };
 
+/**
+ * Persian patient-facing text of an original library exercise, whether it is
+ * already prescribable (exerciseFa) or still awaiting review.
+ */
+export function legacyPatientContentFa(id: string): ExerciseFa | undefined {
+  return exerciseFa[id] ?? libraryOnly[id];
+}
+
 export function exerciseLibraryFa(id: string): ExerciseLibraryFa | undefined {
+  const entry = catalogEntry(id);
+  if (entry) {
+    return {
+      ...entry.fa,
+      equipment: entry.equipment.fa,
+      setsReps: describeDosage(entry.defaultDosage, "fa").join("، "),
+    };
+  }
   const base = exerciseFa[id] ?? libraryOnly[id];
   const extra = extras[id];
   return base && extra ? { ...base, ...extra } : undefined;
@@ -246,7 +264,7 @@ export function localizeExercise(ex: Exercise, locale: Locale): Exercise {
     ...ex,
     name: fa.name,
     purpose: fa.purpose,
-    goal: exerciseGoalFa[ex.goal] ?? ex.goal,
+    goal: catalogEntry(ex.id)?.goal.fa ?? exerciseGoalFa[ex.goal] ?? ex.goal,
     equipment: fa.equipment,
     howTo: fa.howTo,
     setsReps: fa.setsReps,
@@ -254,5 +272,6 @@ export function localizeExercise(ex: Exercise, locale: Locale): Exercise {
     whenToStop: fa.whenToStop,
     progression: fa.progression,
     regression: fa.regression,
+    precautions: catalogEntry(ex.id)?.precautions?.fa ?? ex.precautions,
   };
 }

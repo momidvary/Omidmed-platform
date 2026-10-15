@@ -1,0 +1,3310 @@
+{
+  "ladders": [
+    {
+      "id": "knee_quadriceps",
+      "label": {
+        "en": "Knee: quadriceps loading",
+        "fa": "زانو: بارگذاری چهارسر"
+      },
+      "steps": [
+        "ex_quad_sets",
+        "ex_slr",
+        "ex_short_arc_quad",
+        "ex_terminal_knee_ext",
+        "ex_wall_sit",
+        "ex_sit_to_stand",
+        "ex_step_up",
+        "ex_step_down",
+        "ex_split_squat",
+        "ex_single_leg_squat"
+      ]
+    },
+    {
+      "id": "knee_tendon",
+      "label": {
+        "en": "Knee: patellar tendon loading",
+        "fa": "زانو: بارگذاری تاندون کشکک"
+      },
+      "steps": [
+        "ex_wall_sit",
+        "ex_spanish_squat",
+        "ex_split_squat",
+        "ex_hop_progression"
+      ]
+    },
+    {
+      "id": "knee_postop_rom",
+      "label": {
+        "en": "Post-op knee: range of motion",
+        "fa": "زانو پس از جراحی: دامنه حرکتی"
+      },
+      "steps": [
+        "ex_ankle_pumps",
+        "ex_gluteal_sets",
+        "ex_heel_prop",
+        "ex_heel_slides",
+        "ex_seated_knee_flexion"
+      ]
+    },
+    {
+      "id": "hip_abductors",
+      "label": {
+        "en": "Hip: abductors",
+        "fa": "لگن: دورکننده‌ها"
+      },
+      "steps": [
+        "ex_glute_med_bridge",
+        "ex_glute_med_sidelying",
+        "ex_side_plank_knees",
+        "ex_monster_walk"
+      ]
+    },
+    {
+      "id": "posterior_chain",
+      "label": {
+        "en": "Posterior chain",
+        "fa": "زنجیره پشتی"
+      },
+      "steps": [
+        "ex_glute_bridge",
+        "ex_single_leg_bridge",
+        "ex_hip_hinge"
+      ]
+    },
+    {
+      "id": "trunk_control",
+      "label": {
+        "en": "Trunk control",
+        "fa": "کنترل تنه"
+      },
+      "steps": [
+        "ex_pelvic_tilt",
+        "ex_curl_up",
+        "ex_dead_bug",
+        "ex_bird_dog",
+        "ex_side_plank_knees",
+        "ex_side_plank"
+      ]
+    },
+    {
+      "id": "neck_flexors",
+      "label": {
+        "en": "Neck: deep flexors",
+        "fa": "گردن: عضلات عمقی جلو"
+      },
+      "steps": [
+        "ex_neck_isometrics",
+        "ex_dnf",
+        "ex_dnf_head_lift"
+      ]
+    },
+    {
+      "id": "scapular",
+      "label": {
+        "en": "Scapular control",
+        "fa": "کنترل کتف"
+      },
+      "steps": [
+        "ex_scap_retraction",
+        "ex_scap_control",
+        "ex_wall_pushup_plus",
+        "ex_row_band",
+        "ex_prone_t"
+      ]
+    },
+    {
+      "id": "rotator_cuff",
+      "label": {
+        "en": "Shoulder: rotator cuff",
+        "fa": "شانه: روتاتور کاف"
+      },
+      "steps": [
+        "ex_pendulum",
+        "ex_shoulder_flexion_aaro",
+        "ex_ext_rotation",
+        "ex_er_band",
+        "ex_sidelying_er"
+      ]
+    },
+    {
+      "id": "ankle_strength",
+      "label": {
+        "en": "Ankle and calf strength",
+        "fa": "تقویت مچ پا و ساق"
+      },
+      "steps": [
+        "ex_ankle_alphabet",
+        "ex_ankle_band_4way",
+        "ex_calf_raise",
+        "ex_soleus_raise",
+        "ex_eccentric_heel_drop"
+      ]
+    },
+    {
+      "id": "balance",
+      "label": {
+        "en": "Balance and return to sport",
+        "fa": "تعادل و بازگشت به ورزش"
+      },
+      "steps": [
+        "ex_ankle_balance",
+        "ex_balance_reach",
+        "ex_hop_progression"
+      ]
+    }
+  ],
+  "legacy": {
+    "ex_curl_up": {
+      "category": "strength",
+      "defaultDosage": {
+        "targetSets": 3,
+        "targetReps": 8,
+        "holdSeconds": 8,
+        "restSeconds": 30
+      }
+    },
+    "ex_bird_dog": {
+      "category": "motor_control",
+      "defaultDosage": {
+        "targetSets": 3,
+        "targetReps": 8,
+        "side": "alternating"
+      }
+    },
+    "ex_glute_bridge": {
+      "category": "strength",
+      "defaultDosage": {
+        "targetSets": 3,
+        "targetReps": 12,
+        "holdSeconds": 2,
+        "restSeconds": 45
+      }
+    },
+    "ex_glute_med_sidelying": {
+      "category": "strength",
+      "defaultDosage": {
+        "targetSets": 3,
+        "targetReps": 12,
+        "restSeconds": 45,
+        "side": "both"
+      }
+    },
+    "ex_glute_med_bridge": {
+      "category": "strength",
+      "defaultDosage": {
+        "targetSets": 3,
+        "targetReps": 15,
+        "restSeconds": 45,
+        "loadType": "band",
+        "side": "both"
+      }
+    },
+    "ex_quad_sets": {
+      "category": "isometric",
+      "defaultDosage": {
+        "targetSets": 3,
+        "targetReps": 10,
+        "holdSeconds": 5,
+        "timesPerDay": 3
+      }
+    },
+    "ex_ankle_pumps": {
+      "category": "mobility",
+      "defaultDosage": {
+        "targetSets": 1,
+        "targetReps": 20,
+        "timesPerDay": 8
+      }
+    },
+    "ex_heel_slides": {
+      "category": "mobility",
+      "defaultDosage": {
+        "targetSets": 2,
+        "targetReps": 10,
+        "holdSeconds": 3
+      }
+    },
+    "ex_step_down": {
+      "category": "strength",
+      "defaultDosage": {
+        "targetSets": 3,
+        "targetReps": 10,
+        "restSeconds": 60,
+        "painLimit": 3,
+        "tempo": "3-0-1",
+        "side": "both"
+      }
+    },
+    "ex_wall_sit": {
+      "category": "isometric",
+      "defaultDosage": {
+        "targetSets": 3,
+        "targetReps": 1,
+        "holdSeconds": 30,
+        "restSeconds": 60,
+        "painLimit": 3
+      }
+    },
+    "ex_dnf": {
+      "category": "motor_control",
+      "defaultDosage": {
+        "targetSets": 3,
+        "targetReps": 10,
+        "holdSeconds": 10
+      }
+    },
+    "ex_scap_control": {
+      "category": "motor_control",
+      "defaultDosage": {
+        "targetSets": 3,
+        "targetReps": 10
+      }
+    },
+    "ex_ext_rotation": {
+      "category": "isometric",
+      "defaultDosage": {
+        "targetSets": 5,
+        "targetReps": 1,
+        "holdSeconds": 30,
+        "restSeconds": 60,
+        "painLimit": 3
+      }
+    },
+    "ex_ankle_balance": {
+      "category": "balance",
+      "defaultDosage": {
+        "targetSets": 3,
+        "targetReps": 1,
+        "holdSeconds": 30,
+        "side": "both"
+      }
+    },
+    "ex_calf_raise": {
+      "category": "strength",
+      "defaultDosage": {
+        "targetSets": 3,
+        "targetReps": 15,
+        "restSeconds": 60,
+        "tempo": "2-1-2"
+      }
+    },
+    "ex_hip_mobility": {
+      "category": "stretch",
+      "defaultDosage": {
+        "targetSets": 3,
+        "targetReps": 1,
+        "holdSeconds": 30,
+        "side": "both"
+      }
+    }
+  },
+  "exercises": [
+    {
+      "id": "ex_slr",
+      "review": "pending",
+      "region": "knee",
+      "category": "strength",
+      "difficulty": "beginner",
+      "stage": [
+        "subacute",
+        "post-op"
+      ],
+      "equipment": {
+        "en": "None",
+        "fa": "بدون وسیله"
+      },
+      "goal": {
+        "en": "Quadriceps strengthening",
+        "fa": "تقویت چهارسر"
+      },
+      "defaultDosage": {
+        "targetSets": 3,
+        "targetReps": 10,
+        "holdSeconds": 3,
+        "restSeconds": 60,
+        "painLimit": 3
+      },
+      "precautions": {
+        "en": "Only when the patient can fully tighten the quadriceps without a knee extension lag; follow the surgical protocol after surgery.",
+        "fa": "فقط وقتی بیمار بتواند چهارسر را کامل منقبض کند و زانو هنگام بالا آوردن خم نشود؛ بعد از جراحی طبق پروتکل جراح."
+      },
+      "en": {
+        "name": "Straight Leg Raise",
+        "purpose": "Strengthen the quadriceps and hip flexors with the knee locked straight.",
+        "howTo": [
+          "Lie on your back with the other knee bent and that foot flat.",
+          "Tighten the thigh of the straight leg so the knee is fully straight.",
+          "Lift the leg to the height of the other knee.",
+          "Hold, then lower slowly with the knee still straight."
+        ],
+        "commonMistakes": [
+          "Knee bending during the lift",
+          "Arching the low back",
+          "Dropping the leg quickly"
+        ],
+        "whenToStop": "Stop with sharp knee or groin pain, or if the knee cannot stay straight.",
+        "progression": "Add a light ankle weight.",
+        "regression": "Do quad sets until the knee stays straight."
+      },
+      "fa": {
+        "name": "بالا آوردن پای صاف",
+        "purpose": "تقویت عضله جلوی ران و خم‌کننده‌های لگن با زانوی کاملاً صاف.",
+        "howTo": [
+          "به پشت دراز بکشید؛ زانوی پای دیگر خم و کف آن روی زمین باشد.",
+          "عضله جلوی ران پای صاف را سفت کنید تا زانو کاملاً صاف شود.",
+          "پا را تا ارتفاع زانوی دیگر بالا بیاورید.",
+          "نگه دارید و با زانوی صاف آرام پایین بیاورید."
+        ],
+        "commonMistakes": [
+          "خم شدن زانو هنگام بالا بردن",
+          "قوس دادن کمر",
+          "رها کردن سریع پا"
+        ],
+        "whenToStop": "با درد تیز زانو یا کشاله ران، یا اگر زانو صاف نمی‌ماند، توقف کنید.",
+        "progression": "افزودن وزنه سبک به مچ پا.",
+        "regression": "تمرین انقباض چهارسر تا وقتی زانو صاف بماند."
+      }
+    },
+    {
+      "id": "ex_short_arc_quad",
+      "review": "pending",
+      "region": "knee",
+      "category": "strength",
+      "difficulty": "beginner",
+      "stage": [
+        "acute",
+        "subacute",
+        "post-op"
+      ],
+      "equipment": {
+        "en": "Towel roll",
+        "fa": "حوله لوله‌شده"
+      },
+      "goal": {
+        "en": "Quadriceps activation",
+        "fa": "فعال‌سازی چهارسر"
+      },
+      "defaultDosage": {
+        "targetSets": 3,
+        "targetReps": 10,
+        "holdSeconds": 5,
+        "painLimit": 3
+      },
+      "en": {
+        "name": "Short Arc Quad",
+        "purpose": "Train the last degrees of knee extension with low joint load.",
+        "howTo": [
+          "Lie on your back with a rolled towel under the knee.",
+          "Lift the heel until the knee is fully straight, keeping the back of the knee on the towel.",
+          "Hold at full straightening.",
+          "Lower slowly."
+        ],
+        "commonMistakes": [
+          "Lifting the thigh off the towel",
+          "Not reaching full straightening",
+          "Rushing the lowering"
+        ],
+        "whenToStop": "Stop with sharp pain or a sudden increase in swelling.",
+        "progression": "Add an ankle weight or progress to straight leg raises.",
+        "regression": "Smaller towel roll, shorter holds."
+      },
+      "fa": {
+        "name": "صاف کردن زانو روی حوله",
+        "purpose": "تمرین چند درجه آخر صاف شدن زانو با فشار کم روی مفصل.",
+        "howTo": [
+          "به پشت دراز بکشید و حوله لوله‌شده را زیر زانو بگذارید.",
+          "پاشنه را بالا بیاورید تا زانو کاملاً صاف شود؛ پشت زانو روی حوله بماند.",
+          "در حالت صاف نگه دارید.",
+          "آرام پایین بیاورید."
+        ],
+        "commonMistakes": [
+          "جدا شدن ران از روی حوله",
+          "صاف نکردن کامل زانو",
+          "پایین آوردن سریع"
+        ],
+        "whenToStop": "با درد تیز یا افزایش ناگهانی تورم توقف کنید.",
+        "progression": "افزودن وزنه به مچ یا رفتن به بالا آوردن پای صاف.",
+        "regression": "حوله کوچک‌تر و نگه‌داشتن کوتاه‌تر."
+      }
+    },
+    {
+      "id": "ex_sit_to_stand",
+      "review": "pending",
+      "region": "knee",
+      "category": "strength",
+      "difficulty": "beginner",
+      "stage": [
+        "subacute",
+        "chronic",
+        "post-op"
+      ],
+      "equipment": {
+        "en": "Chair",
+        "fa": "صندلی"
+      },
+      "goal": {
+        "en": "Functional strength",
+        "fa": "قدرت عملکردی"
+      },
+      "defaultDosage": {
+        "targetSets": 3,
+        "targetReps": 10,
+        "restSeconds": 60,
+        "targetRpe": 6,
+        "painLimit": 3
+      },
+      "en": {
+        "name": "Sit to Stand",
+        "purpose": "Build leg strength for a daily task: getting up from a chair.",
+        "howTo": [
+          "Sit near the front of a firm chair, feet hip-width apart.",
+          "Lean forward with the chest over the knees.",
+          "Push through both feet to stand fully upright.",
+          "Sit back down slowly and with control."
+        ],
+        "commonMistakes": [
+          "Using the hands to push up",
+          "Knees collapsing inward",
+          "Dropping into the chair"
+        ],
+        "whenToStop": "Stop with sharp knee or hip pain, or dizziness.",
+        "progression": "Lower chair, slower lowering, or hold a weight at the chest.",
+        "regression": "Higher chair or light hand support."
+      },
+      "fa": {
+        "name": "نشستن و برخاستن از صندلی",
+        "purpose": "تقویت پاها برای یک کار روزمره: بلند شدن از صندلی.",
+        "howTo": [
+          "لبه یک صندلی محکم بنشینید؛ پاها به عرض لگن.",
+          "سینه را به جلو و روی زانوها ببرید.",
+          "با فشار هر دو پا کاملاً بایستید.",
+          "آرام و با کنترل بنشینید."
+        ],
+        "commonMistakes": [
+          "کمک گرفتن از دست‌ها",
+          "جمع شدن زانوها به داخل",
+          "رها شدن روی صندلی"
+        ],
+        "whenToStop": "با درد تیز زانو یا لگن، یا سرگیجه توقف کنید.",
+        "progression": "صندلی کوتاه‌تر، نشستن آهسته‌تر یا نگه داشتن وزنه جلوی سینه.",
+        "regression": "صندلی بلندتر یا کمک مختصر با دست."
+      }
+    },
+    {
+      "id": "ex_step_up",
+      "review": "pending",
+      "region": "knee",
+      "category": "strength",
+      "difficulty": "intermediate",
+      "stage": [
+        "chronic",
+        "return-to-sport"
+      ],
+      "equipment": {
+        "en": "Step",
+        "fa": "پله"
+      },
+      "goal": {
+        "en": "Quadriceps and gluteal strength",
+        "fa": "تقویت چهارسر و باسن"
+      },
+      "defaultDosage": {
+        "targetSets": 3,
+        "targetReps": 10,
+        "restSeconds": 60,
+        "targetRpe": 6,
+        "painLimit": 3,
+        "side": "both"
+      },
+      "en": {
+        "name": "Step-Up",
+        "purpose": "Strengthen the leg for stairs with controlled knee alignment.",
+        "howTo": [
+          "Stand facing a low step and place one foot fully on it.",
+          "Push through that foot to step up, bringing the other foot beside it.",
+          "Keep the knee in line with the middle toes.",
+          "Step back down slowly with the same leg leading the lowering."
+        ],
+        "commonMistakes": [
+          "Pushing off the back foot",
+          "Knee collapsing inward",
+          "Leaning the trunk sideways"
+        ],
+        "whenToStop": "Stop with sharp knee pain or loss of control.",
+        "progression": "Higher step or hold weights.",
+        "regression": "Lower step or hand support on a rail."
+      },
+      "fa": {
+        "name": "بالا رفتن از پله",
+        "purpose": "تقویت پا برای بالا رفتن از پله با کنترل راستای زانو.",
+        "howTo": [
+          "رو به یک پله کوتاه بایستید و یک پا را کامل روی آن بگذارید.",
+          "با فشار همان پا بالا بروید و پای دیگر را کنارش بیاورید.",
+          "زانو در راستای انگشتان میانی پا بماند.",
+          "با همان پا آرام پایین بیایید."
+        ],
+        "commonMistakes": [
+          "هل دادن با پای عقب",
+          "جمع شدن زانو به داخل",
+          "خم شدن تنه به یک طرف"
+        ],
+        "whenToStop": "با درد تیز زانو یا از دست دادن کنترل توقف کنید.",
+        "progression": "پله بلندتر یا در دست گرفتن وزنه.",
+        "regression": "پله کوتاه‌تر یا گرفتن نرده."
+      }
+    },
+    {
+      "id": "ex_split_squat",
+      "review": "pending",
+      "region": "knee",
+      "category": "strength",
+      "difficulty": "intermediate",
+      "stage": [
+        "chronic",
+        "return-to-sport"
+      ],
+      "equipment": {
+        "en": "None / dumbbells",
+        "fa": "بدون وسیله / دمبل"
+      },
+      "goal": {
+        "en": "Single-leg strength",
+        "fa": "قدرت تک‌پا"
+      },
+      "defaultDosage": {
+        "targetSets": 3,
+        "targetReps": 8,
+        "restSeconds": 90,
+        "targetRpe": 7,
+        "painLimit": 3,
+        "tempo": "3-0-1",
+        "side": "both"
+      },
+      "en": {
+        "name": "Split Squat",
+        "purpose": "Load each leg separately to build strength and control.",
+        "howTo": [
+          "Stand in a long stride, back heel lifted.",
+          "Lower straight down until the front thigh is near horizontal.",
+          "Keep the front knee over the middle toes and the trunk upright.",
+          "Push through the front foot to return."
+        ],
+        "commonMistakes": [
+          "Front knee collapsing inward",
+          "Leaning forward heavily",
+          "Short stride that overloads the knee"
+        ],
+        "whenToStop": "Stop with sharp knee pain or giving way.",
+        "progression": "Hold dumbbells or elevate the back foot.",
+        "regression": "Reduce depth or hold a support."
+      },
+      "fa": {
+        "name": "اسکوات با پای جلو و عقب (اسپلیت اسکوات)",
+        "purpose": "بارگذاری جداگانه هر پا برای قدرت و کنترل.",
+        "howTo": [
+          "با یک گام بلند بایستید؛ پاشنه پای عقب بالا باشد.",
+          "مستقیم پایین بروید تا ران جلو تقریباً افقی شود.",
+          "زانوی جلو در راستای انگشتان میانی و تنه صاف بماند.",
+          "با فشار پای جلو برگردید."
+        ],
+        "commonMistakes": [
+          "جمع شدن زانوی جلو به داخل",
+          "خم شدن زیاد به جلو",
+          "گام کوتاه که فشار زانو را زیاد می‌کند"
+        ],
+        "whenToStop": "با درد تیز زانو یا خالی کردن پا توقف کنید.",
+        "progression": "در دست گرفتن دمبل یا بالا گذاشتن پای عقب.",
+        "regression": "کم کردن عمق یا گرفتن تکیه‌گاه."
+      }
+    },
+    {
+      "id": "ex_single_leg_squat",
+      "review": "pending",
+      "region": "knee",
+      "category": "strength",
+      "difficulty": "advanced",
+      "stage": [
+        "return-to-sport"
+      ],
+      "equipment": {
+        "en": "Box / chair",
+        "fa": "جعبه / صندلی"
+      },
+      "goal": {
+        "en": "Single-leg control",
+        "fa": "کنترل تک‌پا"
+      },
+      "defaultDosage": {
+        "targetSets": 3,
+        "targetReps": 6,
+        "restSeconds": 90,
+        "targetRpe": 7,
+        "painLimit": 3,
+        "tempo": "3-1-1",
+        "side": "both"
+      },
+      "en": {
+        "name": "Single-Leg Squat to Box",
+        "purpose": "Demanding single-leg strength and knee control before return to sport.",
+        "howTo": [
+          "Stand on one leg in front of a box or chair.",
+          "Sit the hips back and down until you touch the box lightly.",
+          "Keep the knee over the middle toes and the pelvis level.",
+          "Stand back up without pushing off the other foot."
+        ],
+        "commonMistakes": [
+          "Knee collapsing inward",
+          "Pelvis dropping on the other side",
+          "Sitting down fully on the box"
+        ],
+        "whenToStop": "Stop with sharp pain, giving way or loss of alignment.",
+        "progression": "Lower box, then no box.",
+        "regression": "Higher box or split squat."
+      },
+      "fa": {
+        "name": "اسکوات تک‌پا تا روی جعبه",
+        "purpose": "قدرت و کنترل زانو روی یک پا، پیش از بازگشت به ورزش.",
+        "howTo": [
+          "روی یک پا جلوی یک جعبه یا صندلی بایستید.",
+          "باسن را به عقب و پایین ببرید تا آرام جعبه را لمس کنید.",
+          "زانو در راستای انگشتان میانی و لگن صاف بماند.",
+          "بدون کمک پای دیگر برخیزید."
+        ],
+        "commonMistakes": [
+          "جمع شدن زانو به داخل",
+          "افتادن لگن در طرف مقابل",
+          "نشستن کامل روی جعبه"
+        ],
+        "whenToStop": "با درد تیز، خالی کردن پا یا به هم خوردن راستا توقف کنید.",
+        "progression": "جعبه کوتاه‌تر و سپس بدون جعبه.",
+        "regression": "جعبه بلندتر یا اسپلیت اسکوات."
+      }
+    },
+    {
+      "id": "ex_terminal_knee_ext",
+      "review": "pending",
+      "region": "knee",
+      "category": "strength",
+      "difficulty": "beginner",
+      "stage": [
+        "subacute",
+        "post-op",
+        "chronic"
+      ],
+      "equipment": {
+        "en": "Resistance band",
+        "fa": "کش مقاومتی"
+      },
+      "goal": {
+        "en": "Terminal knee extension",
+        "fa": "صاف شدن کامل زانو"
+      },
+      "defaultDosage": {
+        "targetSets": 3,
+        "targetReps": 15,
+        "holdSeconds": 2,
+        "loadType": "band",
+        "painLimit": 3,
+        "side": "both"
+      },
+      "en": {
+        "name": "Terminal Knee Extension (Band)",
+        "purpose": "Strengthen full knee straightening in standing.",
+        "howTo": [
+          "Loop a band behind the knee and anchor it in front of you.",
+          "Stand with the knee slightly bent against the band.",
+          "Straighten the knee fully by tightening the thigh.",
+          "Hold briefly, then let the knee bend slowly."
+        ],
+        "commonMistakes": [
+          "Leaning back instead of straightening the knee",
+          "Locking the knee forcefully",
+          "Lifting the heel"
+        ],
+        "whenToStop": "Stop with sharp pain behind or in front of the knee.",
+        "progression": "Stronger band or single-leg stance.",
+        "regression": "Lighter band."
+      },
+      "fa": {
+        "name": "صاف کردن کامل زانو با کش",
+        "purpose": "تقویت صاف شدن کامل زانو در حالت ایستاده.",
+        "howTo": [
+          "کش را پشت زانو بیندازید و سر دیگر را جلوی خود ثابت کنید.",
+          "بایستید و بگذارید کش زانو را کمی خم کند.",
+          "با سفت کردن ران، زانو را کاملاً صاف کنید.",
+          "کمی نگه دارید و آرام اجازه دهید زانو خم شود."
+        ],
+        "commonMistakes": [
+          "عقب رفتن تنه به جای صاف کردن زانو",
+          "قفل کردن شدید زانو",
+          "بلند شدن پاشنه"
+        ],
+        "whenToStop": "با درد تیز پشت یا جلوی زانو توقف کنید.",
+        "progression": "کش قوی‌تر یا ایستادن روی یک پا.",
+        "regression": "کش سبک‌تر."
+      }
+    },
+    {
+      "id": "ex_spanish_squat",
+      "review": "pending",
+      "region": "knee",
+      "category": "isometric",
+      "difficulty": "intermediate",
+      "stage": [
+        "subacute",
+        "chronic"
+      ],
+      "equipment": {
+        "en": "Strap / band and anchor",
+        "fa": "بند یا کش و تکیه‌گاه ثابت"
+      },
+      "goal": {
+        "en": "Patellar tendon loading",
+        "fa": "بارگذاری تاندون کشکک"
+      },
+      "defaultDosage": {
+        "targetDurationSeconds": 45,
+        "restSeconds": 60,
+        "loadType": "assisted",
+        "painLimit": 3
+      },
+      "precautions": {
+        "en": "Used for patellar tendon pain; isometric holds aim for pain no higher than the agreed limit during and after.",
+        "fa": "برای درد تاندون کشکک؛ در نگه‌داشتن ایزومتریک درد حین و بعد از تمرین نباید از حد توافق‌شده بیشتر شود."
+      },
+      "en": {
+        "name": "Spanish Squat Hold",
+        "purpose": "Isometric quadriceps and patellar tendon loading with the shins held upright.",
+        "howTo": [
+          "Loop a strong strap behind both knees and anchor it in front.",
+          "Lean back into the strap and sit down until the knees bend about 60–90°.",
+          "Keep the shins vertical and weight through the heels.",
+          "Hold steadily, then stand up."
+        ],
+        "commonMistakes": [
+          "Shins tilting forward",
+          "Holding the breath",
+          "Going deeper than comfortable"
+        ],
+        "whenToStop": "Stop if tendon pain rises above the agreed limit or remains worse the next day.",
+        "progression": "Longer holds or deeper angle.",
+        "regression": "Shallower angle, shorter holds."
+      },
+      "fa": {
+        "name": "اسکوات اسپانیایی (نگه‌داشتن)",
+        "purpose": "بارگذاری ایزومتریک چهارسر و تاندون کشکک با ساق‌های عمودی.",
+        "howTo": [
+          "یک بند محکم پشت هر دو زانو بیندازید و سر دیگر را جلو ثابت کنید.",
+          "به بند تکیه دهید و بنشینید تا زانو حدود ۶۰ تا ۹۰ درجه خم شود.",
+          "ساق‌ها عمودی بمانند و وزن روی پاشنه‌ها باشد.",
+          "ثابت نگه دارید و بعد بایستید."
+        ],
+        "commonMistakes": [
+          "جلو رفتن ساق‌ها",
+          "حبس نفس",
+          "پایین رفتن بیش از حد راحتی"
+        ],
+        "whenToStop": "اگر درد تاندون از حد توافق‌شده بیشتر شد یا فردا بدتر ماند، توقف کنید.",
+        "progression": "نگه‌داشتن طولانی‌تر یا زاویه عمیق‌تر.",
+        "regression": "زاویه کم‌عمق‌تر و نگه‌داشتن کوتاه‌تر."
+      }
+    },
+    {
+      "id": "ex_heel_prop",
+      "review": "pending",
+      "region": "post-op",
+      "category": "stretch",
+      "difficulty": "beginner",
+      "stage": [
+        "acute",
+        "post-op"
+      ],
+      "equipment": {
+        "en": "Rolled towel",
+        "fa": "حوله لوله‌شده"
+      },
+      "goal": {
+        "en": "Knee extension range",
+        "fa": "دامنه صاف شدن زانو"
+      },
+      "defaultDosage": {
+        "targetDurationSeconds": 300,
+        "painLimit": 4,
+        "timesPerDay": 3
+      },
+      "precautions": {
+        "en": "Follow the surgical protocol; do not push on the knee if it is acutely swollen.",
+        "fa": "طبق پروتکل جراح؛ در تورم حاد روی زانو فشار وارد نکنید."
+      },
+      "en": {
+        "name": "Heel Prop (Knee Extension)",
+        "purpose": "Regain full knee straightening after knee surgery.",
+        "howTo": [
+          "Sit or lie with the heel resting on a rolled towel and nothing under the knee.",
+          "Let the knee relax straight with gravity.",
+          "Gently tighten the thigh now and then.",
+          "Stay for the prescribed time."
+        ],
+        "commonMistakes": [
+          "Putting a pillow under the knee",
+          "Turning the leg outward",
+          "Stopping too soon"
+        ],
+        "whenToStop": "Stop with sharp pain; a stretching ache that settles is expected.",
+        "progression": "Longer holds.",
+        "regression": "Shorter holds, more often."
+      },
+      "fa": {
+        "name": "قرار دادن پاشنه روی حوله (صاف شدن زانو)",
+        "purpose": "بازگرداندن صاف شدن کامل زانو بعد از جراحی زانو.",
+        "howTo": [
+          "بنشینید یا دراز بکشید؛ پاشنه روی حوله لوله‌شده و زیر زانو خالی باشد.",
+          "بگذارید زانو با وزن خودش صاف شود.",
+          "گاهی عضله جلوی ران را آرام سفت کنید.",
+          "به مدت تعیین‌شده بمانید."
+        ],
+        "commonMistakes": [
+          "گذاشتن بالش زیر زانو",
+          "چرخیدن پا به بیرون",
+          "تمام کردن زودهنگام"
+        ],
+        "whenToStop": "با درد تیز توقف کنید؛ احساس کشش که کم می‌شود طبیعی است.",
+        "progression": "نگه‌داشتن طولانی‌تر.",
+        "regression": "نگه‌داشتن کوتاه‌تر ولی دفعات بیشتر."
+      }
+    },
+    {
+      "id": "ex_seated_knee_flexion",
+      "review": "pending",
+      "region": "post-op",
+      "category": "mobility",
+      "difficulty": "beginner",
+      "stage": [
+        "post-op",
+        "subacute"
+      ],
+      "equipment": {
+        "en": "Chair",
+        "fa": "صندلی"
+      },
+      "goal": {
+        "en": "Knee flexion range",
+        "fa": "دامنه خم شدن زانو"
+      },
+      "defaultDosage": {
+        "targetSets": 2,
+        "targetReps": 10,
+        "holdSeconds": 5,
+        "painLimit": 4,
+        "timesPerDay": 3
+      },
+      "en": {
+        "name": "Seated Knee Bend",
+        "purpose": "Increase knee bending in sitting with control.",
+        "howTo": [
+          "Sit on a chair with the foot flat on the floor.",
+          "Slide the foot back under the chair as far as comfortable.",
+          "Keep the foot still and move the hips forward slightly for extra bend.",
+          "Hold, then slide the foot forward."
+        ],
+        "commonMistakes": [
+          "Lifting the foot off the floor",
+          "Forcing into sharp pain",
+          "Holding the breath"
+        ],
+        "whenToStop": "Stop with sharp pain or a block to movement.",
+        "progression": "Longer holds or more hip shift.",
+        "regression": "Smaller range."
+      },
+      "fa": {
+        "name": "خم کردن زانو در حالت نشسته",
+        "purpose": "افزایش خم شدن زانو در حالت نشسته با کنترل.",
+        "howTo": [
+          "روی صندلی بنشینید؛ کف پا روی زمین.",
+          "پا را تا حدی که راحت است زیر صندلی عقب بکشید.",
+          "پا را ثابت نگه دارید و لگن را کمی جلو ببرید تا زانو بیشتر خم شود.",
+          "نگه دارید و پا را جلو بیاورید."
+        ],
+        "commonMistakes": [
+          "جدا شدن پا از زمین",
+          "فشار تا حد درد تیز",
+          "حبس نفس"
+        ],
+        "whenToStop": "با درد تیز یا حس قفل شدن حرکت توقف کنید.",
+        "progression": "نگه‌داشتن طولانی‌تر یا جلو بردن بیشتر لگن.",
+        "regression": "دامنه کمتر."
+      }
+    },
+    {
+      "id": "ex_gluteal_sets",
+      "review": "pending",
+      "region": "post-op",
+      "category": "isometric",
+      "difficulty": "beginner",
+      "stage": [
+        "acute",
+        "post-op"
+      ],
+      "equipment": {
+        "en": "None",
+        "fa": "بدون وسیله"
+      },
+      "goal": {
+        "en": "Gluteal activation",
+        "fa": "فعال‌سازی باسن"
+      },
+      "defaultDosage": {
+        "targetSets": 3,
+        "targetReps": 10,
+        "holdSeconds": 5,
+        "timesPerDay": 3
+      },
+      "en": {
+        "name": "Gluteal Sets",
+        "purpose": "Early gluteal activation after surgery or during acute pain.",
+        "howTo": [
+          "Lie on your back with legs straight or knees bent.",
+          "Squeeze the buttocks together.",
+          "Hold without holding your breath.",
+          "Relax fully between repetitions."
+        ],
+        "commonMistakes": [
+          "Holding the breath",
+          "Arching the back",
+          "Squeezing the thighs instead"
+        ],
+        "whenToStop": "Stop with sharp hip or back pain.",
+        "progression": "Progress to bridges when allowed.",
+        "regression": "Shorter holds."
+      },
+      "fa": {
+        "name": "انقباض عضلات باسن",
+        "purpose": "فعال‌سازی زودهنگام باسن بعد از جراحی یا در درد حاد.",
+        "howTo": [
+          "به پشت دراز بکشید؛ پاها صاف یا زانوها خم.",
+          "عضلات باسن را به هم فشار دهید.",
+          "بدون حبس نفس نگه دارید.",
+          "بین تکرارها کاملاً شل کنید."
+        ],
+        "commonMistakes": [
+          "حبس نفس",
+          "قوس دادن کمر",
+          "فشار دادن ران‌ها به جای باسن"
+        ],
+        "whenToStop": "با درد تیز لگن یا کمر توقف کنید.",
+        "progression": "وقتی اجازه داده شد، رفتن به پل باسن.",
+        "regression": "نگه‌داشتن کوتاه‌تر."
+      }
+    },
+    {
+      "id": "ex_single_leg_bridge",
+      "review": "pending",
+      "region": "hip",
+      "category": "strength",
+      "difficulty": "intermediate",
+      "stage": [
+        "chronic",
+        "return-to-sport"
+      ],
+      "equipment": {
+        "en": "Mat",
+        "fa": "تشک"
+      },
+      "goal": {
+        "en": "Posterior chain strength",
+        "fa": "تقویت زنجیره پشتی"
+      },
+      "defaultDosage": {
+        "targetSets": 3,
+        "targetReps": 10,
+        "holdSeconds": 2,
+        "restSeconds": 60,
+        "targetRpe": 7,
+        "painLimit": 3,
+        "side": "both"
+      },
+      "en": {
+        "name": "Single-Leg Bridge",
+        "purpose": "Load the gluteals and hamstrings one side at a time.",
+        "howTo": [
+          "Lie on your back, one knee bent with the foot flat, the other leg straight.",
+          "Push through the heel of the bent leg to lift the hips.",
+          "Keep the pelvis level, not dropping on the free side.",
+          "Lower slowly."
+        ],
+        "commonMistakes": [
+          "Pelvis dropping or rotating",
+          "Arching the low back",
+          "Pushing through the toes"
+        ],
+        "whenToStop": "Stop with hamstring cramp, sharp back or hip pain.",
+        "progression": "Foot on a step or longer hold.",
+        "regression": "Double-leg bridge."
+      },
+      "fa": {
+        "name": "پل باسن تک‌پا",
+        "purpose": "بارگذاری باسن و پشت ران هر طرف جداگانه.",
+        "howTo": [
+          "به پشت دراز بکشید؛ یک زانو خم و کف پا روی زمین، پای دیگر صاف.",
+          "با فشار پاشنه پای خم، لگن را بالا بیاورید.",
+          "لگن صاف بماند و طرف آزاد پایین نیفتد.",
+          "آرام پایین بیایید."
+        ],
+        "commonMistakes": [
+          "افتادن یا چرخیدن لگن",
+          "قوس دادن کمر",
+          "فشار دادن با پنجه"
+        ],
+        "whenToStop": "با گرفتگی پشت ران یا درد تیز کمر یا لگن توقف کنید.",
+        "progression": "پا روی پله یا نگه‌داشتن طولانی‌تر.",
+        "regression": "پل باسن دوپا."
+      }
+    },
+    {
+      "id": "ex_side_plank_knees",
+      "review": "pending",
+      "region": "hip",
+      "category": "strength",
+      "difficulty": "beginner",
+      "stage": [
+        "subacute",
+        "chronic"
+      ],
+      "equipment": {
+        "en": "Mat",
+        "fa": "تشک"
+      },
+      "goal": {
+        "en": "Lateral hip and trunk strength",
+        "fa": "تقویت کنار لگن و تنه"
+      },
+      "defaultDosage": {
+        "targetSets": 3,
+        "targetReps": 1,
+        "holdSeconds": 20,
+        "restSeconds": 45,
+        "painLimit": 3,
+        "side": "both"
+      },
+      "en": {
+        "name": "Side Plank from Knees",
+        "purpose": "Build lateral trunk and gluteus medius endurance at low load.",
+        "howTo": [
+          "Lie on your side, elbow under the shoulder, knees bent.",
+          "Lift the hips so the body is straight from head to knees.",
+          "Keep the pelvis facing forward.",
+          "Hold, then lower gently."
+        ],
+        "commonMistakes": [
+          "Hips sagging",
+          "Rolling backward",
+          "Shrugging the shoulder"
+        ],
+        "whenToStop": "Stop with shoulder pain or sharp back pain.",
+        "progression": "Full side plank from the feet.",
+        "regression": "Shorter holds."
+      },
+      "fa": {
+        "name": "پلانک پهلو روی زانو",
+        "purpose": "افزایش استقامت کنار تنه و سرینی میانی با بار کم.",
+        "howTo": [
+          "به پهلو دراز بکشید؛ آرنج زیر شانه و زانوها خم.",
+          "لگن را بالا بیاورید تا بدن از سر تا زانو صاف شود.",
+          "لگن رو به جلو بماند.",
+          "نگه دارید و آرام پایین بیایید."
+        ],
+        "commonMistakes": [
+          "افتادن لگن",
+          "چرخیدن به عقب",
+          "بالا انداختن شانه"
+        ],
+        "whenToStop": "با درد شانه یا درد تیز کمر توقف کنید.",
+        "progression": "پلانک پهلو کامل روی پاها.",
+        "regression": "نگه‌داشتن کوتاه‌تر."
+      }
+    },
+    {
+      "id": "ex_side_plank",
+      "review": "pending",
+      "region": "low-back",
+      "category": "strength",
+      "difficulty": "intermediate",
+      "stage": [
+        "chronic",
+        "return-to-sport"
+      ],
+      "equipment": {
+        "en": "Mat",
+        "fa": "تشک"
+      },
+      "goal": {
+        "en": "Lateral trunk endurance",
+        "fa": "استقامت کنار تنه"
+      },
+      "defaultDosage": {
+        "targetSets": 3,
+        "targetReps": 1,
+        "holdSeconds": 30,
+        "restSeconds": 60,
+        "painLimit": 3,
+        "side": "both"
+      },
+      "en": {
+        "name": "Side Plank",
+        "purpose": "Lateral trunk endurance, one of the 'big three' spine-sparing exercises.",
+        "howTo": [
+          "Lie on your side, elbow under the shoulder, legs straight and stacked.",
+          "Lift the hips so the body forms a straight line.",
+          "Breathe normally.",
+          "Hold, then lower with control."
+        ],
+        "commonMistakes": [
+          "Hips sagging or piking",
+          "Rolling forward or back",
+          "Holding the breath"
+        ],
+        "whenToStop": "Stop with sharp back or shoulder pain.",
+        "progression": "Lift the top leg or add a slow reach.",
+        "regression": "Side plank from the knees."
+      },
+      "fa": {
+        "name": "پلانک پهلو",
+        "purpose": "استقامت کنار تنه؛ یکی از سه تمرین پایه با کمترین فشار بر ستون فقرات.",
+        "howTo": [
+          "به پهلو دراز بکشید؛ آرنج زیر شانه، پاها صاف و روی هم.",
+          "لگن را بالا بیاورید تا بدن یک خط صاف شود.",
+          "عادی نفس بکشید.",
+          "نگه دارید و با کنترل پایین بیایید."
+        ],
+        "commonMistakes": [
+          "افتادن یا بالا رفتن زیاد لگن",
+          "چرخیدن به جلو یا عقب",
+          "حبس نفس"
+        ],
+        "whenToStop": "با درد تیز کمر یا شانه توقف کنید.",
+        "progression": "بالا بردن پای رویی یا حرکت آرام دست.",
+        "regression": "پلانک پهلو روی زانو."
+      }
+    },
+    {
+      "id": "ex_monster_walk",
+      "review": "pending",
+      "region": "hip",
+      "category": "strength",
+      "difficulty": "intermediate",
+      "stage": [
+        "chronic",
+        "return-to-sport"
+      ],
+      "equipment": {
+        "en": "Mini band",
+        "fa": "مینی‌بند"
+      },
+      "goal": {
+        "en": "Gluteus medius strengthening",
+        "fa": "تقویت سرینی میانی"
+      },
+      "defaultDosage": {
+        "targetSets": 3,
+        "targetReps": 12,
+        "restSeconds": 45,
+        "loadType": "band",
+        "targetRpe": 6,
+        "side": "alternating"
+      },
+      "en": {
+        "name": "Lateral Band Walk",
+        "purpose": "Strengthen the hip abductors in a weight-bearing, athletic position.",
+        "howTo": [
+          "Place a mini band above the knees or around the ankles.",
+          "Stand in a half-squat with feet hip-width apart.",
+          "Step sideways, keeping tension on the band.",
+          "Keep the knees over the toes and the trunk upright."
+        ],
+        "commonMistakes": [
+          "Knees collapsing inward",
+          "Bouncing up and down",
+          "Dragging the trailing foot"
+        ],
+        "whenToStop": "Stop with sharp hip, groin or knee pain.",
+        "progression": "Stronger band or band around the feet.",
+        "regression": "Band above the knees, smaller steps."
+      },
+      "fa": {
+        "name": "راه رفتن جانبی با کش",
+        "purpose": "تقویت دورکننده‌های لگن در حالت تحمل وزن و ورزشی.",
+        "howTo": [
+          "مینی‌بند را بالای زانو یا دور مچ پا بیندازید.",
+          "در حالت نیم‌اسکوات بایستید؛ پاها به عرض لگن.",
+          "گام‌های جانبی بردارید و کش کشیده بماند.",
+          "زانوها بالای انگشتان و تنه صاف بماند."
+        ],
+        "commonMistakes": [
+          "جمع شدن زانوها به داخل",
+          "بالا و پایین رفتن بدن",
+          "کشیدن پای عقبی روی زمین"
+        ],
+        "whenToStop": "با درد تیز لگن، کشاله یا زانو توقف کنید.",
+        "progression": "کش قوی‌تر یا کش دور پاها.",
+        "regression": "کش بالای زانو و گام کوتاه‌تر."
+      }
+    },
+    {
+      "id": "ex_hip_hinge",
+      "review": "pending",
+      "region": "hip",
+      "category": "motor_control",
+      "difficulty": "beginner",
+      "stage": [
+        "subacute",
+        "chronic"
+      ],
+      "equipment": {
+        "en": "Dowel / broomstick",
+        "fa": "چوب یا دسته جارو"
+      },
+      "goal": {
+        "en": "Hip hinge pattern",
+        "fa": "الگوی خم شدن از لگن"
+      },
+      "defaultDosage": {
+        "targetSets": 3,
+        "targetReps": 10,
+        "painLimit": 3,
+        "tempo": "3-1-2"
+      },
+      "en": {
+        "name": "Hip Hinge with Dowel",
+        "purpose": "Learn to bend forward from the hips while keeping a neutral spine.",
+        "howTo": [
+          "Hold a dowel along your back touching the head, upper back and tailbone.",
+          "Soften the knees and push the hips backward.",
+          "Keep all three contact points on the dowel as you lean forward.",
+          "Return by driving the hips forward."
+        ],
+        "commonMistakes": [
+          "Rounding the back",
+          "Bending the knees into a squat",
+          "Losing contact at the head or tailbone"
+        ],
+        "whenToStop": "Stop with sharp back pain or leg symptoms.",
+        "progression": "Romanian deadlift with light weights.",
+        "regression": "Smaller range in front of a wall."
+      },
+      "fa": {
+        "name": "خم شدن از لگن با چوب",
+        "purpose": "یادگیری خم شدن به جلو از مفصل لگن با حفظ حالت طبیعی ستون فقرات.",
+        "howTo": [
+          "یک چوب را پشت بدن نگه دارید طوری که سر، بالای پشت و دنبالچه آن را لمس کنند.",
+          "زانوها را کمی شل کنید و لگن را به عقب ببرید.",
+          "هنگام خم شدن، هر سه نقطه تماس با چوب حفظ شود.",
+          "با جلو آوردن لگن برگردید."
+        ],
+        "commonMistakes": [
+          "گرد شدن کمر",
+          "خم کردن زانو و تبدیل به اسکوات",
+          "جدا شدن سر یا دنبالچه از چوب"
+        ],
+        "whenToStop": "با درد تیز کمر یا علائم پا توقف کنید.",
+        "progression": "ددلیفت رومانیایی با وزنه سبک.",
+        "regression": "دامنه کمتر جلوی دیوار."
+      }
+    },
+    {
+      "id": "ex_copenhagen_short",
+      "review": "pending",
+      "region": "hip",
+      "category": "strength",
+      "difficulty": "advanced",
+      "stage": [
+        "return-to-sport"
+      ],
+      "equipment": {
+        "en": "Bench",
+        "fa": "نیمکت"
+      },
+      "goal": {
+        "en": "Adductor strength",
+        "fa": "تقویت نزدیک‌کننده‌ها"
+      },
+      "defaultDosage": {
+        "targetSets": 3,
+        "targetReps": 6,
+        "restSeconds": 90,
+        "targetRpe": 7,
+        "painLimit": 3,
+        "side": "both"
+      },
+      "precautions": {
+        "en": "Start with the short lever (knee on the bench); progress only if groin pain stays within the agreed limit.",
+        "fa": "با اهرم کوتاه (زانو روی نیمکت) شروع کنید؛ فقط اگر درد کشاله در حد توافق ماند پیشرفت دهید."
+      },
+      "en": {
+        "name": "Copenhagen Adduction (Short Lever)",
+        "purpose": "Strengthen the groin muscles; used to reduce groin injury in field sports.",
+        "howTo": [
+          "Lie on your side with the top knee resting on a bench, elbow under the shoulder.",
+          "Lift the hips by pressing the top knee down into the bench.",
+          "Bring the bottom leg up to meet the bench if you can.",
+          "Lower slowly."
+        ],
+        "commonMistakes": [
+          "Hips sagging",
+          "Rolling backward",
+          "Moving fast"
+        ],
+        "whenToStop": "Stop with sharp groin pain.",
+        "progression": "Long lever with the ankle on the bench.",
+        "regression": "Adductor squeeze with a ball."
+      },
+      "fa": {
+        "name": "کپنهاگ (اهرم کوتاه)",
+        "purpose": "تقویت عضلات کشاله ران؛ برای کاهش آسیب کشاله در ورزش‌های میدانی.",
+        "howTo": [
+          "به پهلو دراز بکشید؛ زانوی پای رویی روی نیمکت و آرنج زیر شانه.",
+          "با فشار زانوی رویی به نیمکت، لگن را بالا بیاورید.",
+          "اگر می‌توانید پای زیری را هم بالا بیاورید.",
+          "آرام پایین بیایید."
+        ],
+        "commonMistakes": [
+          "افتادن لگن",
+          "چرخیدن به عقب",
+          "حرکت سریع"
+        ],
+        "whenToStop": "با درد تیز کشاله توقف کنید.",
+        "progression": "اهرم بلند با مچ پا روی نیمکت.",
+        "regression": "فشردن توپ بین زانوها."
+      }
+    },
+    {
+      "id": "ex_hip_90_90",
+      "review": "pending",
+      "region": "hip",
+      "category": "mobility",
+      "difficulty": "beginner",
+      "stage": [
+        "subacute",
+        "chronic"
+      ],
+      "equipment": {
+        "en": "Mat",
+        "fa": "تشک"
+      },
+      "goal": {
+        "en": "Hip rotation mobility",
+        "fa": "تحرک چرخشی لگن"
+      },
+      "defaultDosage": {
+        "targetSets": 2,
+        "targetReps": 8,
+        "painLimit": 3,
+        "side": "alternating"
+      },
+      "en": {
+        "name": "90/90 Hip Switch",
+        "purpose": "Improve internal and external hip rotation.",
+        "howTo": [
+          "Sit with both knees bent to 90°, one leg in front and one to the side.",
+          "Keep the trunk tall, hands behind you if needed.",
+          "Rotate both knees to the other side.",
+          "Move slowly within comfort."
+        ],
+        "commonMistakes": [
+          "Collapsing the trunk",
+          "Forcing the end range",
+          "Lifting the feet off the floor"
+        ],
+        "whenToStop": "Stop with pinching groin pain.",
+        "progression": "Without hand support.",
+        "regression": "Smaller range with hands behind."
+      },
+      "fa": {
+        "name": "چرخش لگن ۹۰/۹۰",
+        "purpose": "بهبود چرخش داخلی و خارجی لگن.",
+        "howTo": [
+          "بنشینید؛ هر دو زانو ۹۰ درجه خم، یک پا جلو و یکی به پهلو.",
+          "تنه صاف بماند؛ در صورت نیاز دست‌ها پشت بدن.",
+          "هر دو زانو را به طرف دیگر بچرخانید.",
+          "آرام و در محدوده راحت حرکت کنید."
+        ],
+        "commonMistakes": [
+          "خم شدن تنه",
+          "فشار به انتهای دامنه",
+          "بلند شدن پاها از زمین"
+        ],
+        "whenToStop": "با درد گیرکننده کشاله توقف کنید.",
+        "progression": "بدون تکیه به دست.",
+        "regression": "دامنه کمتر با تکیه به دست."
+      }
+    },
+    {
+      "id": "ex_cat_camel",
+      "review": "pending",
+      "region": "low-back",
+      "category": "mobility",
+      "difficulty": "beginner",
+      "stage": [
+        "acute",
+        "subacute",
+        "chronic"
+      ],
+      "equipment": {
+        "en": "Mat",
+        "fa": "تشک"
+      },
+      "goal": {
+        "en": "Spinal mobility",
+        "fa": "تحرک ستون فقرات"
+      },
+      "defaultDosage": {
+        "targetSets": 2,
+        "targetReps": 10,
+        "tempo": "2-0-2"
+      },
+      "en": {
+        "name": "Cat–Camel",
+        "purpose": "Gentle spinal motion to reduce stiffness without load.",
+        "howTo": [
+          "Start on hands and knees.",
+          "Slowly round the back up toward the ceiling.",
+          "Then let the back sag gently and lift the chest.",
+          "Move smoothly within comfort."
+        ],
+        "commonMistakes": [
+          "Forcing the end range",
+          "Moving quickly",
+          "Holding the breath"
+        ],
+        "whenToStop": "Stop with sharp pain or increasing leg symptoms.",
+        "progression": "Combine with bird-dog.",
+        "regression": "Smaller range."
+      },
+      "fa": {
+        "name": "گربه و شتر",
+        "purpose": "حرکت ملایم ستون فقرات برای کاهش خشکی بدون بار.",
+        "howTo": [
+          "روی چهار دست و پا قرار بگیرید.",
+          "آرام پشت را به سمت سقف گرد کنید.",
+          "سپس بگذارید کمر کمی پایین برود و سینه بالا بیاید.",
+          "نرم و در محدوده راحت حرکت کنید."
+        ],
+        "commonMistakes": [
+          "فشار به انتهای دامنه",
+          "حرکت سریع",
+          "حبس نفس"
+        ],
+        "whenToStop": "با درد تیز یا افزایش علائم پا توقف کنید.",
+        "progression": "ترکیب با پرنده-سگ.",
+        "regression": "دامنه کمتر."
+      }
+    },
+    {
+      "id": "ex_prone_press_up",
+      "review": "pending",
+      "region": "low-back",
+      "category": "mobility",
+      "difficulty": "beginner",
+      "stage": [
+        "acute",
+        "subacute"
+      ],
+      "equipment": {
+        "en": "Mat",
+        "fa": "تشک"
+      },
+      "goal": {
+        "en": "Lumbar extension",
+        "fa": "باز شدن کمر"
+      },
+      "defaultDosage": {
+        "targetSets": 2,
+        "targetReps": 10,
+        "holdSeconds": 2,
+        "timesPerDay": 3
+      },
+      "precautions": {
+        "en": "Use when extension reduces or centralizes symptoms; stop if leg symptoms spread further down the leg.",
+        "fa": "وقتی کاربرد دارد که باز شدن کمر علائم را کم یا متمرکز کند؛ اگر علائم پا پایین‌تر رفت متوقف کنید."
+      },
+      "en": {
+        "name": "Prone Press-Up",
+        "purpose": "Repeated lumbar extension for patients whose symptoms improve with extension.",
+        "howTo": [
+          "Lie face down with the hands under the shoulders.",
+          "Press the upper body up, keeping the hips on the floor.",
+          "Let the low back relax and sag.",
+          "Lower slowly."
+        ],
+        "commonMistakes": [
+          "Lifting the hips",
+          "Tensing the buttocks",
+          "Forcing through pain"
+        ],
+        "whenToStop": "Stop if pain spreads further into the leg (peripheralizes).",
+        "progression": "Full arm extension, hold at the top.",
+        "regression": "Prone on elbows."
+      },
+      "fa": {
+        "name": "باز کردن کمر به حالت دمر (پرس‌آپ)",
+        "purpose": "باز کردن مکرر کمر برای بیمارانی که علائمشان با این حرکت بهتر می‌شود.",
+        "howTo": [
+          "دمر دراز بکشید؛ دست‌ها زیر شانه‌ها.",
+          "بالاتنه را با دست‌ها بالا ببرید و لگن روی زمین بماند.",
+          "بگذارید کمر شل شود و پایین بیفتد.",
+          "آرام پایین بیایید."
+        ],
+        "commonMistakes": [
+          "بلند شدن لگن",
+          "سفت کردن باسن",
+          "ادامه با وجود درد"
+        ],
+        "whenToStop": "اگر درد به سمت پایین پا پخش شد توقف کنید.",
+        "progression": "صاف کردن کامل دست‌ها و مکث در بالا.",
+        "regression": "دمر روی آرنج‌ها."
+      }
+    },
+    {
+      "id": "ex_knee_to_chest",
+      "review": "pending",
+      "region": "low-back",
+      "category": "stretch",
+      "difficulty": "beginner",
+      "stage": [
+        "acute",
+        "subacute",
+        "chronic"
+      ],
+      "equipment": {
+        "en": "Mat",
+        "fa": "تشک"
+      },
+      "goal": {
+        "en": "Lumbar flexion mobility",
+        "fa": "تحرک خم شدن کمر"
+      },
+      "defaultDosage": {
+        "targetSets": 2,
+        "targetReps": 5,
+        "holdSeconds": 20,
+        "side": "alternating"
+      },
+      "en": {
+        "name": "Single Knee to Chest",
+        "purpose": "Gentle lumbar flexion stretch for stiffness or flexion-preference pain.",
+        "howTo": [
+          "Lie on your back with both knees bent.",
+          "Bring one knee toward the chest with both hands.",
+          "Hold a comfortable stretch.",
+          "Lower and change sides."
+        ],
+        "commonMistakes": [
+          "Lifting the head",
+          "Pulling hard into pain",
+          "Holding the breath"
+        ],
+        "whenToStop": "Stop if leg symptoms increase.",
+        "progression": "Both knees to chest.",
+        "regression": "Smaller range."
+      },
+      "fa": {
+        "name": "آوردن یک زانو به سینه",
+        "purpose": "کشش ملایم خم شدن کمر برای خشکی یا دردی که با خم شدن بهتر می‌شود.",
+        "howTo": [
+          "به پشت دراز بکشید؛ هر دو زانو خم.",
+          "با دو دست یک زانو را به سمت سینه بیاورید.",
+          "کشش راحت را نگه دارید.",
+          "پایین بیاورید و طرف دیگر را انجام دهید."
+        ],
+        "commonMistakes": [
+          "بلند کردن سر",
+          "کشیدن شدید تا حد درد",
+          "حبس نفس"
+        ],
+        "whenToStop": "اگر علائم پا بیشتر شد توقف کنید.",
+        "progression": "هر دو زانو به سینه.",
+        "regression": "دامنه کمتر."
+      }
+    },
+    {
+      "id": "ex_pelvic_tilt",
+      "review": "pending",
+      "region": "low-back",
+      "category": "motor_control",
+      "difficulty": "beginner",
+      "stage": [
+        "acute",
+        "subacute"
+      ],
+      "equipment": {
+        "en": "Mat",
+        "fa": "تشک"
+      },
+      "goal": {
+        "en": "Lumbopelvic control",
+        "fa": "کنترل کمر و لگن"
+      },
+      "defaultDosage": {
+        "targetSets": 2,
+        "targetReps": 10,
+        "holdSeconds": 3
+      },
+      "en": {
+        "name": "Pelvic Tilt",
+        "purpose": "Learn small, controlled lumbopelvic movement when pain is high.",
+        "howTo": [
+          "Lie on your back with knees bent and feet flat.",
+          "Gently flatten the low back toward the floor by tilting the pelvis.",
+          "Then gently arch it slightly.",
+          "Move slowly between the two."
+        ],
+        "commonMistakes": [
+          "Lifting the buttocks",
+          "Pushing with the legs",
+          "Moving too far"
+        ],
+        "whenToStop": "Stop with sharp pain.",
+        "progression": "Bird-dog or dead bug.",
+        "regression": "Smaller range."
+      },
+      "fa": {
+        "name": "تیلت لگن",
+        "purpose": "یادگیری حرکت کوچک و کنترل‌شده کمر و لگن در درد زیاد.",
+        "howTo": [
+          "به پشت دراز بکشید؛ زانوها خم و کف پاها روی زمین.",
+          "با چرخاندن لگن، کمر را آرام به زمین بچسبانید.",
+          "سپس کمی قوس دهید.",
+          "آرام بین این دو حالت حرکت کنید."
+        ],
+        "commonMistakes": [
+          "بلند کردن باسن",
+          "هل دادن با پاها",
+          "حرکت با دامنه زیاد"
+        ],
+        "whenToStop": "با درد تیز توقف کنید.",
+        "progression": "پرنده-سگ یا دد باگ.",
+        "regression": "دامنه کمتر."
+      }
+    },
+    {
+      "id": "ex_dead_bug",
+      "review": "pending",
+      "region": "low-back",
+      "category": "motor_control",
+      "difficulty": "intermediate",
+      "stage": [
+        "subacute",
+        "chronic"
+      ],
+      "equipment": {
+        "en": "Mat",
+        "fa": "تشک"
+      },
+      "goal": {
+        "en": "Anterior core control",
+        "fa": "کنترل عضلات جلوی تنه"
+      },
+      "defaultDosage": {
+        "targetSets": 3,
+        "targetReps": 8,
+        "tempo": "3-1-3",
+        "side": "alternating"
+      },
+      "en": {
+        "name": "Dead Bug",
+        "purpose": "Train trunk control while the arms and legs move.",
+        "howTo": [
+          "Lie on your back, hips and knees at 90°, arms toward the ceiling.",
+          "Keep the low back gently against the floor.",
+          "Slowly lower the opposite arm and leg toward the floor.",
+          "Return and switch sides."
+        ],
+        "commonMistakes": [
+          "Low back arching off the floor",
+          "Moving fast",
+          "Holding the breath"
+        ],
+        "whenToStop": "Stop with sharp back pain.",
+        "progression": "Longer lever or light weights.",
+        "regression": "Move only the legs, heels tapping the floor."
+      },
+      "fa": {
+        "name": "دد باگ",
+        "purpose": "تمرین کنترل تنه هنگام حرکت دست‌ها و پاها.",
+        "howTo": [
+          "به پشت دراز بکشید؛ لگن و زانو ۹۰ درجه، دست‌ها رو به سقف.",
+          "کمر آرام روی زمین بماند.",
+          "دست و پای مخالف را آهسته به سمت زمین پایین ببرید.",
+          "برگردید و طرف دیگر را انجام دهید."
+        ],
+        "commonMistakes": [
+          "جدا شدن کمر از زمین",
+          "حرکت سریع",
+          "حبس نفس"
+        ],
+        "whenToStop": "با درد تیز کمر توقف کنید.",
+        "progression": "اهرم بلندتر یا وزنه سبک.",
+        "regression": "فقط حرکت پاها با لمس پاشنه به زمین."
+      }
+    },
+    {
+      "id": "ex_sciatic_slider",
+      "review": "pending",
+      "region": "low-back",
+      "category": "neural",
+      "difficulty": "beginner",
+      "stage": [
+        "subacute",
+        "chronic"
+      ],
+      "equipment": {
+        "en": "Chair",
+        "fa": "صندلی"
+      },
+      "goal": {
+        "en": "Sciatic nerve mobility",
+        "fa": "تحرک عصب سیاتیک"
+      },
+      "defaultDosage": {
+        "targetSets": 2,
+        "targetReps": 10,
+        "side": "both"
+      },
+      "precautions": {
+        "en": "Gentle, symptom-free or symptom-easing movement only; stop with numbness, worsening weakness or lasting tingling.",
+        "fa": "فقط حرکت ملایم بدون علامت یا با کاهش علامت؛ با بی‌حسی، ضعف رو به افزایش یا گزگز ماندگار متوقف کنید."
+      },
+      "en": {
+        "name": "Sciatic Nerve Slider (Seated)",
+        "purpose": "Glide the sciatic nerve gently without tensioning it.",
+        "howTo": [
+          "Sit upright on a chair.",
+          "Straighten the knee while looking up.",
+          "Bend the knee while looking down.",
+          "Move smoothly; the two ends move in opposite directions."
+        ],
+        "commonMistakes": [
+          "Holding the stretched position",
+          "Moving into strong tingling",
+          "Slumping the back hard"
+        ],
+        "whenToStop": "Stop with increasing tingling, numbness or pain that lingers.",
+        "progression": "Larger range as symptoms settle.",
+        "regression": "Smaller range."
+      },
+      "fa": {
+        "name": "لغزاندن عصب سیاتیک (نشسته)",
+        "purpose": "لغزاندن ملایم عصب سیاتیک بدون کشیدن آن.",
+        "howTo": [
+          "صاف روی صندلی بنشینید.",
+          "زانو را صاف کنید و هم‌زمان به بالا نگاه کنید.",
+          "زانو را خم کنید و هم‌زمان به پایین نگاه کنید.",
+          "نرم حرکت کنید؛ دو انتها در جهت مخالف حرکت می‌کنند."
+        ],
+        "commonMistakes": [
+          "نگه داشتن حالت کشیده",
+          "حرکت تا حد گزگز شدید",
+          "قوز شدید کمر"
+        ],
+        "whenToStop": "با گزگز، بی‌حسی یا دردی که می‌ماند و بیشتر می‌شود توقف کنید.",
+        "progression": "دامنه بیشتر با کاهش علائم.",
+        "regression": "دامنه کمتر."
+      }
+    },
+    {
+      "id": "ex_walking_program",
+      "review": "pending",
+      "region": "low-back",
+      "category": "aerobic",
+      "difficulty": "beginner",
+      "stage": [
+        "subacute",
+        "chronic"
+      ],
+      "equipment": {
+        "en": "None",
+        "fa": "بدون وسیله"
+      },
+      "goal": {
+        "en": "General activity",
+        "fa": "فعالیت عمومی"
+      },
+      "defaultDosage": {
+        "targetDurationSeconds": 900,
+        "targetRpe": 4,
+        "timesPerDay": 1
+      },
+      "en": {
+        "name": "Graded Walking",
+        "purpose": "Build general activity tolerance in persistent pain.",
+        "howTo": [
+          "Walk at a comfortable, steady pace.",
+          "Use the prescribed time even if you feel you could do more.",
+          "Increase time gradually as agreed.",
+          "Note how you feel the next day."
+        ],
+        "commonMistakes": [
+          "Doing much more on good days",
+          "Stopping completely on bad days",
+          "Walking too fast"
+        ],
+        "whenToStop": "Stop with chest pain, breathlessness out of proportion, or new leg symptoms.",
+        "progression": "Add 2–5 minutes per week.",
+        "regression": "Shorter walks more often."
+      },
+      "fa": {
+        "name": "پیاده‌روی تدریجی",
+        "purpose": "افزایش تحمل فعالیت عمومی در درد مزمن.",
+        "howTo": [
+          "با سرعت راحت و یکنواخت راه بروید.",
+          "حتی اگر احساس می‌کنید می‌توانید بیشتر بروید، به زمان تعیین‌شده پایبند باشید.",
+          "طبق توافق، زمان را تدریجی افزایش دهید.",
+          "حال روز بعد خود را یادداشت کنید."
+        ],
+        "commonMistakes": [
+          "زیاده‌روی در روزهای خوب",
+          "کنار گذاشتن کامل در روزهای بد",
+          "راه رفتن خیلی سریع"
+        ],
+        "whenToStop": "با درد قفسه سینه، تنگی نفس نامتناسب یا علائم جدید پا توقف کنید.",
+        "progression": "هر هفته ۲ تا ۵ دقیقه اضافه کنید.",
+        "regression": "پیاده‌روی کوتاه‌تر ولی دفعات بیشتر."
+      }
+    },
+    {
+      "id": "ex_dnf_head_lift",
+      "review": "pending",
+      "region": "neck",
+      "category": "strength",
+      "difficulty": "intermediate",
+      "stage": [
+        "chronic"
+      ],
+      "equipment": {
+        "en": "Mat",
+        "fa": "تشک"
+      },
+      "goal": {
+        "en": "Deep neck flexor endurance",
+        "fa": "استقامت عضلات عمقی جلوی گردن"
+      },
+      "defaultDosage": {
+        "targetSets": 3,
+        "targetReps": 8,
+        "holdSeconds": 5,
+        "restSeconds": 30,
+        "painLimit": 2
+      },
+      "en": {
+        "name": "Chin Tuck with Head Lift",
+        "purpose": "Progress deep neck flexor training against gravity.",
+        "howTo": [
+          "Lie on your back without a pillow, knees bent.",
+          "Gently nod the chin as in a chin tuck.",
+          "Keeping the nod, lift the head about 2 cm off the floor.",
+          "Hold, then lower the head before releasing the nod."
+        ],
+        "commonMistakes": [
+          "Chin poking forward as you lift",
+          "Lifting too high",
+          "Holding the breath"
+        ],
+        "whenToStop": "Stop with headache, dizziness or arm symptoms.",
+        "progression": "Longer holds.",
+        "regression": "Chin tuck lying with the head supported."
+      },
+      "fa": {
+        "name": "چانه به داخل با بلند کردن سر",
+        "purpose": "پیشرفت تمرین عضلات عمقی جلوی گردن در برابر جاذبه.",
+        "howTo": [
+          "بدون بالش به پشت دراز بکشید؛ زانوها خم.",
+          "مثل چانه به داخل، چانه را آرام پایین بیاورید.",
+          "با حفظ این حالت، سر را حدود ۲ سانتی‌متر از زمین بلند کنید.",
+          "نگه دارید؛ ابتدا سر را پایین بگذارید و بعد چانه را رها کنید."
+        ],
+        "commonMistakes": [
+          "جلو رفتن چانه هنگام بلند کردن",
+          "بالا بردن زیاد سر",
+          "حبس نفس"
+        ],
+        "whenToStop": "با سردرد، سرگیجه یا علائم در دست توقف کنید.",
+        "progression": "نگه‌داشتن طولانی‌تر.",
+        "regression": "چانه به داخل با سر روی زمین."
+      }
+    },
+    {
+      "id": "ex_cervical_rotation",
+      "review": "pending",
+      "region": "neck",
+      "category": "mobility",
+      "difficulty": "beginner",
+      "stage": [
+        "acute",
+        "subacute",
+        "chronic"
+      ],
+      "equipment": {
+        "en": "Chair",
+        "fa": "صندلی"
+      },
+      "goal": {
+        "en": "Neck rotation range",
+        "fa": "دامنه چرخش گردن"
+      },
+      "defaultDosage": {
+        "targetSets": 2,
+        "targetReps": 10,
+        "side": "alternating",
+        "timesPerDay": 3
+      },
+      "en": {
+        "name": "Neck Rotation",
+        "purpose": "Maintain comfortable neck rotation.",
+        "howTo": [
+          "Sit tall with the shoulders relaxed.",
+          "Turn the head slowly to one side as far as comfortable.",
+          "Return to the middle.",
+          "Repeat to the other side."
+        ],
+        "commonMistakes": [
+          "Moving fast",
+          "Tilting the head while turning",
+          "Lifting the shoulders"
+        ],
+        "whenToStop": "Stop with dizziness, visual changes or arm symptoms.",
+        "progression": "Add a gentle hand overpressure at the end.",
+        "regression": "Smaller range."
+      },
+      "fa": {
+        "name": "چرخش گردن",
+        "purpose": "حفظ چرخش راحت گردن.",
+        "howTo": [
+          "صاف بنشینید و شانه‌ها شل باشند.",
+          "سر را آرام تا جایی که راحت است به یک طرف بچرخانید.",
+          "به وسط برگردید.",
+          "به طرف دیگر تکرار کنید."
+        ],
+        "commonMistakes": [
+          "حرکت سریع",
+          "کج شدن سر هنگام چرخش",
+          "بالا آمدن شانه‌ها"
+        ],
+        "whenToStop": "با سرگیجه، تغییر دید یا علائم در دست توقف کنید.",
+        "progression": "فشار ملایم دست در انتهای دامنه.",
+        "regression": "دامنه کمتر."
+      }
+    },
+    {
+      "id": "ex_scap_retraction",
+      "review": "pending",
+      "region": "neck",
+      "category": "motor_control",
+      "difficulty": "beginner",
+      "stage": [
+        "subacute",
+        "chronic"
+      ],
+      "equipment": {
+        "en": "None",
+        "fa": "بدون وسیله"
+      },
+      "goal": {
+        "en": "Scapular control and posture",
+        "fa": "کنترل کتف و وضعیت بدن"
+      },
+      "defaultDosage": {
+        "targetSets": 3,
+        "targetReps": 10,
+        "holdSeconds": 5,
+        "timesPerDay": 2
+      },
+      "en": {
+        "name": "Scapular Retraction",
+        "purpose": "Activate the mid-back muscles that support the neck and shoulders.",
+        "howTo": [
+          "Sit or stand tall with the arms relaxed.",
+          "Gently draw the shoulder blades back and slightly down.",
+          "Hold without shrugging.",
+          "Relax slowly."
+        ],
+        "commonMistakes": [
+          "Shrugging the shoulders",
+          "Arching the low back",
+          "Squeezing too hard"
+        ],
+        "whenToStop": "Stop with sharp pain or arm symptoms.",
+        "progression": "Band rows.",
+        "regression": "Lying on your back, press the shoulder blades into the floor."
+      },
+      "fa": {
+        "name": "جمع کردن کتف‌ها",
+        "purpose": "فعال کردن عضلات میانه پشت که از گردن و شانه حمایت می‌کنند.",
+        "howTo": [
+          "صاف بنشینید یا بایستید؛ دست‌ها شل.",
+          "کتف‌ها را آرام به عقب و کمی پایین بکشید.",
+          "بدون بالا انداختن شانه نگه دارید.",
+          "آرام رها کنید."
+        ],
+        "commonMistakes": [
+          "بالا انداختن شانه‌ها",
+          "قوس دادن کمر",
+          "فشار بیش از حد"
+        ],
+        "whenToStop": "با درد تیز یا علائم در دست توقف کنید.",
+        "progression": "پارویی با کش.",
+        "regression": "به پشت دراز بکشید و کتف‌ها را به زمین فشار دهید."
+      }
+    },
+    {
+      "id": "ex_upper_trap_stretch",
+      "review": "pending",
+      "region": "neck",
+      "category": "stretch",
+      "difficulty": "beginner",
+      "stage": [
+        "subacute",
+        "chronic"
+      ],
+      "equipment": {
+        "en": "Chair",
+        "fa": "صندلی"
+      },
+      "goal": {
+        "en": "Upper trapezius flexibility",
+        "fa": "انعطاف ذوزنقه فوقانی"
+      },
+      "defaultDosage": {
+        "targetSets": 3,
+        "targetReps": 1,
+        "holdSeconds": 30,
+        "side": "both"
+      },
+      "en": {
+        "name": "Upper Trapezius Stretch",
+        "purpose": "Ease tension at the side of the neck.",
+        "howTo": [
+          "Sit tall and hold the chair seat with one hand.",
+          "Tilt the head away from that side, ear toward the shoulder.",
+          "Feel a gentle stretch at the side of the neck.",
+          "Hold, then return slowly."
+        ],
+        "commonMistakes": [
+          "Pulling the head with force",
+          "Rotating the head",
+          "Lifting the anchored shoulder"
+        ],
+        "whenToStop": "Stop with tingling in the arm or dizziness.",
+        "progression": "Add a gentle hand on the head.",
+        "regression": "Without holding the chair."
+      },
+      "fa": {
+        "name": "کشش ذوزنقه فوقانی",
+        "purpose": "کاهش سفتی کنار گردن.",
+        "howTo": [
+          "صاف بنشینید و با یک دست لبه صندلی را بگیرید.",
+          "سر را به طرف مخالف خم کنید؛ گوش به سمت شانه.",
+          "کشش ملایم را کنار گردن حس کنید.",
+          "نگه دارید و آرام برگردید."
+        ],
+        "commonMistakes": [
+          "کشیدن سر با زور",
+          "چرخاندن سر",
+          "بالا آمدن شانه طرف ثابت"
+        ],
+        "whenToStop": "با گزگز در دست یا سرگیجه توقف کنید.",
+        "progression": "گذاشتن ملایم دست روی سر.",
+        "regression": "بدون گرفتن صندلی."
+      }
+    },
+    {
+      "id": "ex_neck_isometrics",
+      "review": "pending",
+      "region": "neck",
+      "category": "isometric",
+      "difficulty": "beginner",
+      "stage": [
+        "acute",
+        "subacute"
+      ],
+      "equipment": {
+        "en": "None",
+        "fa": "بدون وسیله"
+      },
+      "goal": {
+        "en": "Pain-limited neck strength",
+        "fa": "تقویت گردن در محدوده درد"
+      },
+      "defaultDosage": {
+        "targetSets": 2,
+        "targetReps": 5,
+        "holdSeconds": 5,
+        "painLimit": 2
+      },
+      "en": {
+        "name": "Neck Isometrics",
+        "purpose": "Gentle muscle activation without neck movement.",
+        "howTo": [
+          "Sit tall and place a hand on the forehead.",
+          "Press the head lightly into the hand without moving.",
+          "Hold, then relax.",
+          "Repeat to the back and each side."
+        ],
+        "commonMistakes": [
+          "Pushing too hard",
+          "Letting the head move",
+          "Holding the breath"
+        ],
+        "whenToStop": "Stop with headache, dizziness or arm symptoms.",
+        "progression": "Longer holds or more effort.",
+        "regression": "Very light effort."
+      },
+      "fa": {
+        "name": "ایزومتریک گردن",
+        "purpose": "فعال کردن ملایم عضلات بدون حرکت گردن.",
+        "howTo": [
+          "صاف بنشینید و یک دست را روی پیشانی بگذارید.",
+          "سر را آرام به دست فشار دهید بدون اینکه حرکت کند.",
+          "نگه دارید و شل کنید.",
+          "به عقب و هر دو طرف تکرار کنید."
+        ],
+        "commonMistakes": [
+          "فشار زیاد",
+          "حرکت کردن سر",
+          "حبس نفس"
+        ],
+        "whenToStop": "با سردرد، سرگیجه یا علائم در دست توقف کنید.",
+        "progression": "نگه‌داشتن طولانی‌تر یا فشار بیشتر.",
+        "regression": "فشار بسیار کم."
+      }
+    },
+    {
+      "id": "ex_median_nerve_slider",
+      "review": "pending",
+      "region": "neck",
+      "category": "neural",
+      "difficulty": "beginner",
+      "stage": [
+        "subacute",
+        "chronic"
+      ],
+      "equipment": {
+        "en": "None",
+        "fa": "بدون وسیله"
+      },
+      "goal": {
+        "en": "Median nerve mobility",
+        "fa": "تحرک عصب مدین"
+      },
+      "defaultDosage": {
+        "targetSets": 2,
+        "targetReps": 10,
+        "side": "both"
+      },
+      "precautions": {
+        "en": "Gentle, symptom-free or symptom-easing movement only; stop with numbness or worsening weakness.",
+        "fa": "فقط حرکت ملایم بدون علامت یا با کاهش علامت؛ با بی‌حسی یا ضعف رو به افزایش متوقف کنید."
+      },
+      "en": {
+        "name": "Median Nerve Slider",
+        "purpose": "Glide the median nerve gently in neck-related arm symptoms.",
+        "howTo": [
+          "Stand with the arm out to the side, elbow bent, palm up.",
+          "Straighten the elbow and wrist while tilting the head toward the arm.",
+          "Bend the elbow and wrist while tilting the head away.",
+          "Move smoothly; the two ends move in opposite directions."
+        ],
+        "commonMistakes": [
+          "Holding the stretched position",
+          "Moving into strong tingling",
+          "Shrugging the shoulder"
+        ],
+        "whenToStop": "Stop with increasing tingling, numbness or pain that lingers.",
+        "progression": "Larger range as symptoms settle.",
+        "regression": "Move only the wrist."
+      },
+      "fa": {
+        "name": "لغزاندن عصب مدین",
+        "purpose": "لغزاندن ملایم عصب مدین در علائم دست با منشأ گردنی.",
+        "howTo": [
+          "بایستید؛ دست به پهلو، آرنج خم و کف دست رو به بالا.",
+          "آرنج و مچ را صاف کنید و سر را به سمت همان دست خم کنید.",
+          "آرنج و مچ را خم کنید و سر را به طرف مخالف خم کنید.",
+          "نرم حرکت کنید؛ دو انتها در جهت مخالف حرکت می‌کنند."
+        ],
+        "commonMistakes": [
+          "نگه داشتن حالت کشیده",
+          "حرکت تا حد گزگز شدید",
+          "بالا انداختن شانه"
+        ],
+        "whenToStop": "با گزگز، بی‌حسی یا دردی که می‌ماند و بیشتر می‌شود توقف کنید.",
+        "progression": "دامنه بیشتر با کاهش علائم.",
+        "regression": "فقط حرکت مچ."
+      }
+    },
+    {
+      "id": "ex_pendulum",
+      "review": "pending",
+      "region": "shoulder",
+      "category": "mobility",
+      "difficulty": "beginner",
+      "stage": [
+        "acute",
+        "post-op"
+      ],
+      "equipment": {
+        "en": "Table",
+        "fa": "میز"
+      },
+      "goal": {
+        "en": "Pain relief and gentle motion",
+        "fa": "کاهش درد و حرکت ملایم"
+      },
+      "defaultDosage": {
+        "targetDurationSeconds": 60,
+        "timesPerDay": 3
+      },
+      "precautions": {
+        "en": "After surgery, follow the surgeon's range and sling instructions.",
+        "fa": "پس از جراحی، دستور جراح درباره دامنه حرکت و آویز را رعایت کنید."
+      },
+      "en": {
+        "name": "Pendulum",
+        "purpose": "Relaxed, gravity-assisted shoulder motion when pain is high.",
+        "howTo": [
+          "Lean forward with the good hand on a table.",
+          "Let the painful arm hang loosely.",
+          "Sway the body gently so the arm swings in small circles.",
+          "Keep the shoulder muscles relaxed."
+        ],
+        "commonMistakes": [
+          "Lifting the arm with the shoulder muscles",
+          "Large fast circles",
+          "Standing too upright"
+        ],
+        "whenToStop": "Stop with sharp pain or arm tingling.",
+        "progression": "Assisted shoulder flexion.",
+        "regression": "Smaller swings."
+      },
+      "fa": {
+        "name": "آونگی",
+        "purpose": "حرکت شل و با کمک جاذبه شانه در درد زیاد.",
+        "howTo": [
+          "به جلو خم شوید و دست سالم را روی میز بگذارید.",
+          "بگذارید دست دردناک شل آویزان شود.",
+          "بدن را آرام تکان دهید تا دست در دایره‌های کوچک بچرخد.",
+          "عضلات شانه شل بمانند."
+        ],
+        "commonMistakes": [
+          "بالا بردن دست با عضلات شانه",
+          "دایره‌های بزرگ و سریع",
+          "ایستادن بیش از حد صاف"
+        ],
+        "whenToStop": "با درد تیز یا گزگز دست توقف کنید.",
+        "progression": "بالا بردن دست با کمک.",
+        "regression": "تکان‌های کوچک‌تر."
+      }
+    },
+    {
+      "id": "ex_shoulder_flexion_aaro",
+      "review": "pending",
+      "region": "shoulder",
+      "category": "mobility",
+      "difficulty": "beginner",
+      "stage": [
+        "subacute",
+        "post-op"
+      ],
+      "equipment": {
+        "en": "Stick",
+        "fa": "چوب"
+      },
+      "goal": {
+        "en": "Shoulder elevation range",
+        "fa": "دامنه بالا بردن شانه"
+      },
+      "defaultDosage": {
+        "targetSets": 2,
+        "targetReps": 10,
+        "holdSeconds": 3,
+        "timesPerDay": 2
+      },
+      "precautions": {
+        "en": "After surgery, stay within the range the surgeon allows.",
+        "fa": "پس از جراحی، در دامنه مجاز جراح بمانید."
+      },
+      "en": {
+        "name": "Assisted Shoulder Flexion with Stick",
+        "purpose": "Regain overhead range with help from the other arm.",
+        "howTo": [
+          "Lie on your back holding a stick with both hands.",
+          "Use the good arm to lift both arms overhead.",
+          "Go as far as comfortable and hold.",
+          "Lower slowly."
+        ],
+        "commonMistakes": [
+          "Arching the back",
+          "Shrugging",
+          "Forcing into sharp pain"
+        ],
+        "whenToStop": "Stop with sharp pain or catching.",
+        "progression": "Active flexion without the stick.",
+        "regression": "Smaller range."
+      },
+      "fa": {
+        "name": "بالا بردن شانه با کمک چوب",
+        "purpose": "بازگرداندن دامنه بالای سر با کمک دست دیگر.",
+        "howTo": [
+          "به پشت دراز بکشید و چوب را با دو دست بگیرید.",
+          "با دست سالم هر دو دست را بالای سر ببرید.",
+          "تا جایی که راحت است بروید و نگه دارید.",
+          "آرام پایین بیاورید."
+        ],
+        "commonMistakes": [
+          "قوس دادن کمر",
+          "بالا انداختن شانه",
+          "فشار تا حد درد تیز"
+        ],
+        "whenToStop": "با درد تیز یا گیر کردن شانه توقف کنید.",
+        "progression": "بالا بردن فعال بدون چوب.",
+        "regression": "دامنه کمتر."
+      }
+    },
+    {
+      "id": "ex_er_band",
+      "review": "pending",
+      "region": "shoulder",
+      "category": "strength",
+      "difficulty": "intermediate",
+      "stage": [
+        "subacute",
+        "chronic"
+      ],
+      "equipment": {
+        "en": "Resistance band",
+        "fa": "کش ورزشی"
+      },
+      "goal": {
+        "en": "Rotator cuff strength",
+        "fa": "تقویت روتاتور کاف"
+      },
+      "defaultDosage": {
+        "targetSets": 3,
+        "targetReps": 12,
+        "restSeconds": 60,
+        "loadType": "band",
+        "targetRpe": 6,
+        "painLimit": 3,
+        "tempo": "2-1-3"
+      },
+      "en": {
+        "name": "External Rotation with Band",
+        "purpose": "Strengthen the posterior rotator cuff.",
+        "howTo": [
+          "Stand side-on to the band anchor, elbow at your side bent to 90°.",
+          "A small towel between elbow and body can help.",
+          "Rotate the forearm outward against the band.",
+          "Return slowly."
+        ],
+        "commonMistakes": [
+          "Elbow drifting away from the body",
+          "Rotating the trunk",
+          "Shrugging"
+        ],
+        "whenToStop": "Stop with sharp shoulder pain.",
+        "progression": "Side-lying external rotation with a weight.",
+        "regression": "External rotation isometric."
+      },
+      "fa": {
+        "name": "چرخش خارجی با کش",
+        "purpose": "تقویت روتاتور کاف خلفی.",
+        "howTo": [
+          "پهلو به محل بستن کش بایستید؛ آرنج کنار بدن و ۹۰ درجه خم.",
+          "یک حوله کوچک بین آرنج و بدن کمک می‌کند.",
+          "ساعد را در برابر کش به بیرون بچرخانید.",
+          "آرام برگردید."
+        ],
+        "commonMistakes": [
+          "دور شدن آرنج از بدن",
+          "چرخاندن تنه",
+          "بالا انداختن شانه"
+        ],
+        "whenToStop": "با درد تیز شانه توقف کنید.",
+        "progression": "چرخش خارجی به پهلو با وزنه.",
+        "regression": "ایزومتریک چرخش خارجی."
+      }
+    },
+    {
+      "id": "ex_ir_band",
+      "review": "pending",
+      "region": "shoulder",
+      "category": "strength",
+      "difficulty": "intermediate",
+      "stage": [
+        "subacute",
+        "chronic"
+      ],
+      "equipment": {
+        "en": "Resistance band",
+        "fa": "کش ورزشی"
+      },
+      "goal": {
+        "en": "Rotator cuff strength",
+        "fa": "تقویت روتاتور کاف"
+      },
+      "defaultDosage": {
+        "targetSets": 3,
+        "targetReps": 12,
+        "restSeconds": 60,
+        "loadType": "band",
+        "targetRpe": 6,
+        "painLimit": 3,
+        "tempo": "2-1-3"
+      },
+      "en": {
+        "name": "Internal Rotation with Band",
+        "purpose": "Strengthen the internal rotators of the shoulder.",
+        "howTo": [
+          "Stand side-on to the band anchor with the working arm nearest it, elbow at 90°.",
+          "Keep the elbow at your side.",
+          "Rotate the forearm inward across the body.",
+          "Return slowly."
+        ],
+        "commonMistakes": [
+          "Elbow drifting away from the body",
+          "Rotating the trunk",
+          "Moving fast"
+        ],
+        "whenToStop": "Stop with sharp shoulder pain.",
+        "progression": "Stronger band.",
+        "regression": "Internal rotation isometric."
+      },
+      "fa": {
+        "name": "چرخش داخلی با کش",
+        "purpose": "تقویت چرخاننده‌های داخلی شانه.",
+        "howTo": [
+          "پهلو به محل بستن کش بایستید؛ دست تمرینی نزدیک کش و آرنج ۹۰ درجه.",
+          "آرنج کنار بدن بماند.",
+          "ساعد را به داخل و جلوی بدن بچرخانید.",
+          "آرام برگردید."
+        ],
+        "commonMistakes": [
+          "دور شدن آرنج از بدن",
+          "چرخاندن تنه",
+          "حرکت سریع"
+        ],
+        "whenToStop": "با درد تیز شانه توقف کنید.",
+        "progression": "کش قوی‌تر.",
+        "regression": "ایزومتریک چرخش داخلی."
+      }
+    },
+    {
+      "id": "ex_row_band",
+      "review": "pending",
+      "region": "shoulder",
+      "category": "strength",
+      "difficulty": "beginner",
+      "stage": [
+        "subacute",
+        "chronic"
+      ],
+      "equipment": {
+        "en": "Resistance band",
+        "fa": "کش ورزشی"
+      },
+      "goal": {
+        "en": "Scapular retractor strength",
+        "fa": "تقویت عضلات جمع‌کننده کتف"
+      },
+      "defaultDosage": {
+        "targetSets": 3,
+        "targetReps": 12,
+        "holdSeconds": 2,
+        "restSeconds": 60,
+        "loadType": "band",
+        "targetRpe": 6
+      },
+      "en": {
+        "name": "Band Row",
+        "purpose": "Strengthen the mid-back and scapular muscles.",
+        "howTo": [
+          "Anchor the band at chest height and hold an end in each hand.",
+          "Stand tall with arms forward.",
+          "Pull the elbows back, drawing the shoulder blades together.",
+          "Return slowly."
+        ],
+        "commonMistakes": [
+          "Shrugging",
+          "Leaning back",
+          "Leading with the hands instead of the elbows"
+        ],
+        "whenToStop": "Stop with sharp shoulder or neck pain.",
+        "progression": "Stronger band or single-arm row.",
+        "regression": "Scapular retraction without a band."
+      },
+      "fa": {
+        "name": "پارویی با کش",
+        "purpose": "تقویت عضلات میانه پشت و کتف.",
+        "howTo": [
+          "کش را هم‌سطح سینه ببندید و هر سر را با یک دست بگیرید.",
+          "صاف بایستید؛ دست‌ها جلو.",
+          "آرنج‌ها را به عقب بکشید و کتف‌ها را به هم نزدیک کنید.",
+          "آرام برگردید."
+        ],
+        "commonMistakes": [
+          "بالا انداختن شانه",
+          "خم شدن به عقب",
+          "کشیدن با دست به جای آرنج"
+        ],
+        "whenToStop": "با درد تیز شانه یا گردن توقف کنید.",
+        "progression": "کش قوی‌تر یا یک‌دستی.",
+        "regression": "جمع کردن کتف بدون کش."
+      }
+    },
+    {
+      "id": "ex_prone_t",
+      "review": "pending",
+      "region": "shoulder",
+      "category": "strength",
+      "difficulty": "intermediate",
+      "stage": [
+        "chronic"
+      ],
+      "equipment": {
+        "en": "Mat or bench",
+        "fa": "تشک یا نیمکت"
+      },
+      "goal": {
+        "en": "Lower and middle trapezius strength",
+        "fa": "تقویت ذوزنقه میانی و تحتانی"
+      },
+      "defaultDosage": {
+        "targetSets": 3,
+        "targetReps": 10,
+        "holdSeconds": 3,
+        "restSeconds": 60,
+        "painLimit": 3
+      },
+      "en": {
+        "name": "Prone T Raise",
+        "purpose": "Strengthen the muscles that control the shoulder blade.",
+        "howTo": [
+          "Lie face down with the arms out to the sides, thumbs up.",
+          "Draw the shoulder blades gently back.",
+          "Lift the arms a few centimetres.",
+          "Hold, then lower slowly."
+        ],
+        "commonMistakes": [
+          "Shrugging",
+          "Lifting the head or chest",
+          "Swinging the arms"
+        ],
+        "whenToStop": "Stop with sharp shoulder or neck pain.",
+        "progression": "Add a light weight or progress to Y raise.",
+        "regression": "Arms bent at the elbows."
+      },
+      "fa": {
+        "name": "بالا بردن دست‌ها به شکل T (دمر)",
+        "purpose": "تقویت عضلات کنترل‌کننده کتف.",
+        "howTo": [
+          "دمر دراز بکشید؛ دست‌ها به پهلو و شست رو به بالا.",
+          "کتف‌ها را آرام به عقب بکشید.",
+          "دست‌ها را چند سانتی‌متر بالا ببرید.",
+          "نگه دارید و آرام پایین بیاورید."
+        ],
+        "commonMistakes": [
+          "بالا انداختن شانه",
+          "بلند کردن سر یا سینه",
+          "تاب دادن دست‌ها"
+        ],
+        "whenToStop": "با درد تیز شانه یا گردن توقف کنید.",
+        "progression": "وزنه سبک یا پیشرفت به شکل Y.",
+        "regression": "آرنج‌ها خم."
+      }
+    },
+    {
+      "id": "ex_cross_body_stretch",
+      "review": "pending",
+      "region": "shoulder",
+      "category": "stretch",
+      "difficulty": "beginner",
+      "stage": [
+        "subacute",
+        "chronic"
+      ],
+      "equipment": {
+        "en": "None",
+        "fa": "بدون وسیله"
+      },
+      "goal": {
+        "en": "Posterior shoulder flexibility",
+        "fa": "انعطاف پشت شانه"
+      },
+      "defaultDosage": {
+        "targetSets": 3,
+        "targetReps": 1,
+        "holdSeconds": 30,
+        "side": "both"
+      },
+      "en": {
+        "name": "Cross-Body Stretch",
+        "purpose": "Stretch the back of the shoulder.",
+        "howTo": [
+          "Bring one arm across the chest.",
+          "Use the other hand to gently draw it closer at the elbow.",
+          "Keep the shoulder blade down.",
+          "Hold, then release slowly."
+        ],
+        "commonMistakes": [
+          "Shrugging",
+          "Rotating the trunk",
+          "Pulling into pain"
+        ],
+        "whenToStop": "Stop with pinching pain at the front of the shoulder.",
+        "progression": "Sleeper stretch if prescribed.",
+        "regression": "Smaller range."
+      },
+      "fa": {
+        "name": "کشش ضربدری جلوی بدن",
+        "purpose": "کشش پشت شانه.",
+        "howTo": [
+          "یک دست را از جلوی سینه به طرف دیگر ببرید.",
+          "با دست دیگر از آرنج آرام آن را نزدیک‌تر کنید.",
+          "کتف پایین بماند.",
+          "نگه دارید و آرام رها کنید."
+        ],
+        "commonMistakes": [
+          "بالا انداختن شانه",
+          "چرخاندن تنه",
+          "کشیدن تا حد درد"
+        ],
+        "whenToStop": "با درد گیرکننده جلوی شانه توقف کنید.",
+        "progression": "کشش خوابیده (اسلیپر) در صورت تجویز.",
+        "regression": "دامنه کمتر."
+      }
+    },
+    {
+      "id": "ex_wall_pushup_plus",
+      "review": "pending",
+      "region": "shoulder",
+      "category": "strength",
+      "difficulty": "beginner",
+      "stage": [
+        "subacute",
+        "chronic"
+      ],
+      "equipment": {
+        "en": "Wall",
+        "fa": "دیوار"
+      },
+      "goal": {
+        "en": "Serratus anterior strength",
+        "fa": "تقویت دندانه‌ای قدامی"
+      },
+      "defaultDosage": {
+        "targetSets": 3,
+        "targetReps": 12,
+        "restSeconds": 45,
+        "targetRpe": 5
+      },
+      "en": {
+        "name": "Wall Push-Up Plus",
+        "purpose": "Strengthen the serratus anterior to support shoulder blade motion.",
+        "howTo": [
+          "Stand facing a wall with the hands at shoulder height.",
+          "Do a small push-up against the wall.",
+          "At the end, push further so the shoulder blades move apart.",
+          "Return slowly."
+        ],
+        "commonMistakes": [
+          "Sagging hips",
+          "Shrugging",
+          "Skipping the final 'plus' push"
+        ],
+        "whenToStop": "Stop with sharp shoulder pain.",
+        "progression": "Push-up plus on a bench or the floor.",
+        "regression": "Plus movement only."
+      },
+      "fa": {
+        "name": "شنای دیواری پلاس",
+        "purpose": "تقویت دندانه‌ای قدامی برای حمایت از حرکت کتف.",
+        "howTo": [
+          "رو به دیوار بایستید؛ دست‌ها هم‌سطح شانه.",
+          "یک شنای کوچک روی دیوار انجام دهید.",
+          "در انتها بیشتر فشار دهید تا کتف‌ها از هم باز شوند.",
+          "آرام برگردید."
+        ],
+        "commonMistakes": [
+          "افتادن لگن",
+          "بالا انداختن شانه",
+          "انجام ندادن فشار انتهایی"
+        ],
+        "whenToStop": "با درد تیز شانه توقف کنید.",
+        "progression": "شنای پلاس روی نیمکت یا زمین.",
+        "regression": "فقط حرکت انتهایی کتف."
+      }
+    },
+    {
+      "id": "ex_sidelying_er",
+      "review": "pending",
+      "region": "shoulder",
+      "category": "strength",
+      "difficulty": "intermediate",
+      "stage": [
+        "chronic",
+        "return-to-sport"
+      ],
+      "equipment": {
+        "en": "Light dumbbell",
+        "fa": "دمبل سبک"
+      },
+      "goal": {
+        "en": "Rotator cuff strength",
+        "fa": "تقویت روتاتور کاف"
+      },
+      "defaultDosage": {
+        "targetSets": 3,
+        "targetReps": 12,
+        "restSeconds": 60,
+        "loadType": "free_weight",
+        "loadDetail": "0.5–2 kg",
+        "targetRpe": 7,
+        "painLimit": 3,
+        "tempo": "2-1-3"
+      },
+      "en": {
+        "name": "Side-Lying External Rotation",
+        "purpose": "Load the posterior rotator cuff with a weight.",
+        "howTo": [
+          "Lie on the non-working side, a towel under the working elbow.",
+          "Keep the elbow at your side bent to 90°.",
+          "Rotate the forearm up toward the ceiling.",
+          "Lower slowly."
+        ],
+        "commonMistakes": [
+          "Rolling the trunk backward",
+          "Elbow lifting off the towel",
+          "Heavy weight with poor control"
+        ],
+        "whenToStop": "Stop with sharp shoulder pain.",
+        "progression": "Heavier weight or 90/90 external rotation.",
+        "regression": "Band external rotation."
+      },
+      "fa": {
+        "name": "چرخش خارجی به پهلو",
+        "purpose": "بارگذاری روتاتور کاف خلفی با وزنه.",
+        "howTo": [
+          "روی طرف غیرتمرینی دراز بکشید؛ حوله زیر آرنج تمرینی.",
+          "آرنج کنار بدن و ۹۰ درجه خم بماند.",
+          "ساعد را به سمت سقف بچرخانید.",
+          "آرام پایین بیاورید."
+        ],
+        "commonMistakes": [
+          "چرخیدن تنه به عقب",
+          "جدا شدن آرنج از حوله",
+          "وزنه سنگین با کنترل ضعیف"
+        ],
+        "whenToStop": "با درد تیز شانه توقف کنید.",
+        "progression": "وزنه سنگین‌تر یا چرخش خارجی ۹۰/۹۰.",
+        "regression": "چرخش خارجی با کش."
+      }
+    },
+    {
+      "id": "ex_ankle_alphabet",
+      "review": "pending",
+      "region": "ankle-foot",
+      "category": "mobility",
+      "difficulty": "beginner",
+      "stage": [
+        "acute",
+        "subacute",
+        "post-op"
+      ],
+      "equipment": {
+        "en": "Chair",
+        "fa": "صندلی"
+      },
+      "goal": {
+        "en": "Ankle range of motion",
+        "fa": "دامنه حرکتی مچ پا"
+      },
+      "defaultDosage": {
+        "targetSets": 2,
+        "targetReps": 1,
+        "timesPerDay": 3
+      },
+      "en": {
+        "name": "Ankle Alphabet",
+        "purpose": "Move the ankle through all directions early after injury.",
+        "howTo": [
+          "Sit with the leg supported and the foot free.",
+          "Trace the letters of the alphabet with the big toe.",
+          "Move from the ankle, not the knee.",
+          "Keep the movements within comfort."
+        ],
+        "commonMistakes": [
+          "Moving the whole leg",
+          "Forcing painful directions",
+          "Rushing"
+        ],
+        "whenToStop": "Stop with sharp pain or increasing swelling.",
+        "progression": "Band ankle exercises.",
+        "regression": "Simple up-down movement only."
+      },
+      "fa": {
+        "name": "نوشتن حروف با مچ پا",
+        "purpose": "حرکت مچ پا در همه جهت‌ها در مراحل اولیه پس از آسیب.",
+        "howTo": [
+          "بنشینید؛ ساق پا تکیه داشته و پا آزاد باشد.",
+          "با شست پا حروف الفبا را در هوا بنویسید.",
+          "حرکت از مچ باشد، نه از زانو.",
+          "در محدوده راحت حرکت کنید."
+        ],
+        "commonMistakes": [
+          "حرکت دادن کل پا",
+          "فشار به جهت‌های دردناک",
+          "عجله"
+        ],
+        "whenToStop": "با درد تیز یا افزایش ورم توقف کنید.",
+        "progression": "تمرین مچ پا با کش.",
+        "regression": "فقط حرکت بالا و پایین."
+      }
+    },
+    {
+      "id": "ex_ankle_band_4way",
+      "review": "pending",
+      "region": "ankle-foot",
+      "category": "strength",
+      "difficulty": "beginner",
+      "stage": [
+        "subacute",
+        "chronic"
+      ],
+      "equipment": {
+        "en": "Resistance band",
+        "fa": "کش ورزشی"
+      },
+      "goal": {
+        "en": "Ankle strength in all directions",
+        "fa": "تقویت مچ پا در همه جهت‌ها"
+      },
+      "defaultDosage": {
+        "targetSets": 2,
+        "targetReps": 15,
+        "restSeconds": 45,
+        "loadType": "band",
+        "tempo": "2-0-2"
+      },
+      "en": {
+        "name": "Ankle 4-Way Band",
+        "purpose": "Strengthen the ankle up, down, in and out.",
+        "howTo": [
+          "Sit with the leg straight and a band around the foot.",
+          "Push the foot down against the band, then return slowly.",
+          "Repeat pulling up, turning in and turning out with the band anchored appropriately.",
+          "Move only at the ankle."
+        ],
+        "commonMistakes": [
+          "Rotating the leg instead of the ankle",
+          "Snapping back quickly",
+          "Using too strong a band"
+        ],
+        "whenToStop": "Stop with sharp pain.",
+        "progression": "Standing calf raises and balance work.",
+        "regression": "No band, active movement only."
+      },
+      "fa": {
+        "name": "مچ پا چهارجهته با کش",
+        "purpose": "تقویت مچ پا به بالا، پایین، داخل و خارج.",
+        "howTo": [
+          "بنشینید؛ پا صاف و کش دور پنجه.",
+          "پنجه را در برابر کش به پایین فشار دهید و آرام برگردید.",
+          "با بستن مناسب کش، بالا کشیدن، چرخش به داخل و به خارج را تکرار کنید.",
+          "فقط مچ پا حرکت کند."
+        ],
+        "commonMistakes": [
+          "چرخاندن کل پا به جای مچ",
+          "برگشت سریع",
+          "کش خیلی سفت"
+        ],
+        "whenToStop": "با درد تیز توقف کنید.",
+        "progression": "بالا رفتن روی پنجه ایستاده و تمرین تعادل.",
+        "regression": "بدون کش، فقط حرکت فعال."
+      }
+    },
+    {
+      "id": "ex_eccentric_heel_drop",
+      "review": "pending",
+      "region": "ankle-foot",
+      "category": "strength",
+      "difficulty": "intermediate",
+      "stage": [
+        "chronic"
+      ],
+      "equipment": {
+        "en": "Step",
+        "fa": "پله"
+      },
+      "goal": {
+        "en": "Achilles tendon loading",
+        "fa": "بارگذاری تاندون آشیل"
+      },
+      "defaultDosage": {
+        "targetSets": 3,
+        "targetReps": 15,
+        "restSeconds": 60,
+        "painLimit": 5,
+        "tempo": "1-0-3",
+        "side": "both"
+      },
+      "precautions": {
+        "en": "Some tendon discomfort is acceptable if it settles by the next morning; reduce load if morning stiffness increases.",
+        "fa": "کمی ناراحتی تاندون قابل قبول است اگر تا صبح روز بعد برطرف شود؛ اگر خشکی صبحگاهی بیشتر شد بار را کم کنید."
+      },
+      "en": {
+        "name": "Eccentric Heel Drop",
+        "purpose": "Progressive loading for Achilles tendinopathy.",
+        "howTo": [
+          "Stand on the edge of a step with the heels off the edge.",
+          "Rise up on both feet.",
+          "Shift onto one leg and lower the heel slowly below the step.",
+          "Use both feet to come back up."
+        ],
+        "commonMistakes": [
+          "Dropping fast",
+          "Rolling the ankle outward",
+          "Bouncing at the bottom"
+        ],
+        "whenToStop": "Stop with sharp pain or if pain and stiffness are worse the next morning.",
+        "progression": "Bent-knee version, then add weight in a backpack.",
+        "regression": "Double-leg lowering on the floor."
+      },
+      "fa": {
+        "name": "پایین آوردن اکسنتریک پاشنه",
+        "purpose": "بارگذاری تدریجی در تاندینوپاتی آشیل.",
+        "howTo": [
+          "لبه پله بایستید؛ پاشنه‌ها بیرون از لبه.",
+          "روی هر دو پنجه بالا بروید.",
+          "وزن را روی یک پا ببرید و پاشنه را آرام پایین‌تر از پله بیاورید.",
+          "با هر دو پا بالا برگردید."
+        ],
+        "commonMistakes": [
+          "پایین آمدن سریع",
+          "چرخیدن مچ به بیرون",
+          "تکان دادن در پایین"
+        ],
+        "whenToStop": "با درد تیز یا اگر درد و خشکی صبح روز بعد بیشتر شد توقف کنید.",
+        "progression": "نسخه با زانوی خم، سپس وزنه در کوله.",
+        "regression": "پایین آوردن دوپا روی زمین."
+      }
+    },
+    {
+      "id": "ex_soleus_raise",
+      "review": "pending",
+      "region": "ankle-foot",
+      "category": "strength",
+      "difficulty": "intermediate",
+      "stage": [
+        "subacute",
+        "chronic"
+      ],
+      "equipment": {
+        "en": "Wall",
+        "fa": "دیوار"
+      },
+      "goal": {
+        "en": "Soleus strength",
+        "fa": "تقویت عضله نعلی"
+      },
+      "defaultDosage": {
+        "targetSets": 3,
+        "targetReps": 15,
+        "restSeconds": 60,
+        "targetRpe": 7,
+        "tempo": "2-1-2",
+        "side": "both"
+      },
+      "en": {
+        "name": "Bent-Knee Calf Raise",
+        "purpose": "Target the soleus, important for running and walking endurance.",
+        "howTo": [
+          "Stand near a wall with the knees slightly bent.",
+          "Keep the knee bend while rising onto the toes.",
+          "Pause at the top.",
+          "Lower slowly."
+        ],
+        "commonMistakes": [
+          "Straightening the knees",
+          "Rolling onto the outer foot",
+          "Rushing"
+        ],
+        "whenToStop": "Stop with sharp calf or Achilles pain.",
+        "progression": "Single-leg or with weight.",
+        "regression": "Seated calf raise."
+      },
+      "fa": {
+        "name": "بالا رفتن روی پنجه با زانوی خم",
+        "purpose": "هدف‌گیری عضله نعلی که برای استقامت راه رفتن و دویدن مهم است.",
+        "howTo": [
+          "نزدیک دیوار بایستید؛ زانوها کمی خم.",
+          "با حفظ خم بودن زانو روی پنجه بالا بروید.",
+          "در بالا مکث کنید.",
+          "آرام پایین بیایید."
+        ],
+        "commonMistakes": [
+          "صاف کردن زانوها",
+          "افتادن وزن روی لبه بیرونی پا",
+          "عجله"
+        ],
+        "whenToStop": "با درد تیز ساق یا آشیل توقف کنید.",
+        "progression": "تک‌پا یا با وزنه.",
+        "regression": "بالا رفتن روی پنجه نشسته."
+      }
+    },
+    {
+      "id": "ex_plantar_fascia_stretch",
+      "review": "pending",
+      "region": "ankle-foot",
+      "category": "stretch",
+      "difficulty": "beginner",
+      "stage": [
+        "subacute",
+        "chronic"
+      ],
+      "equipment": {
+        "en": "Chair",
+        "fa": "صندلی"
+      },
+      "goal": {
+        "en": "Plantar fascia flexibility",
+        "fa": "انعطاف فاسیای کف پا"
+      },
+      "defaultDosage": {
+        "targetSets": 3,
+        "targetReps": 1,
+        "holdSeconds": 30,
+        "timesPerDay": 2
+      },
+      "en": {
+        "name": "Plantar Fascia Stretch",
+        "purpose": "Ease heel pain, especially before the first steps in the morning.",
+        "howTo": [
+          "Sit and cross the affected foot over the other knee.",
+          "Pull the toes back toward the shin.",
+          "Feel the stretch along the arch.",
+          "Hold, then release."
+        ],
+        "commonMistakes": [
+          "Pulling the ankle instead of the toes",
+          "Bouncing",
+          "Stretching into sharp pain"
+        ],
+        "whenToStop": "Stop with sharp or burning pain.",
+        "progression": "Add calf stretching and foot strengthening.",
+        "regression": "Shorter holds."
+      },
+      "fa": {
+        "name": "کشش فاسیای کف پا",
+        "purpose": "کاهش درد پاشنه، به‌ویژه پیش از اولین قدم‌های صبح.",
+        "howTo": [
+          "بنشینید و پای درگیر را روی زانوی دیگر بگذارید.",
+          "انگشتان پا را به سمت ساق عقب بکشید.",
+          "کشش را در قوس کف پا حس کنید.",
+          "نگه دارید و رها کنید."
+        ],
+        "commonMistakes": [
+          "کشیدن مچ به جای انگشتان",
+          "تکان دادن",
+          "کشش تا حد درد تیز"
+        ],
+        "whenToStop": "با درد تیز یا سوزشی توقف کنید.",
+        "progression": "اضافه کردن کشش ساق و تقویت پا.",
+        "regression": "نگه‌داشتن کوتاه‌تر."
+      }
+    },
+    {
+      "id": "ex_short_foot",
+      "review": "pending",
+      "region": "ankle-foot",
+      "category": "motor_control",
+      "difficulty": "beginner",
+      "stage": [
+        "subacute",
+        "chronic"
+      ],
+      "equipment": {
+        "en": "None",
+        "fa": "بدون وسیله"
+      },
+      "goal": {
+        "en": "Intrinsic foot strength",
+        "fa": "تقویت عضلات داخلی پا"
+      },
+      "defaultDosage": {
+        "targetSets": 3,
+        "targetReps": 10,
+        "holdSeconds": 5
+      },
+      "en": {
+        "name": "Short Foot",
+        "purpose": "Strengthen the small muscles that support the arch.",
+        "howTo": [
+          "Sit with the foot flat on the floor.",
+          "Shorten the foot by drawing the ball of the foot toward the heel.",
+          "Keep the toes long and relaxed.",
+          "Hold, then relax."
+        ],
+        "commonMistakes": [
+          "Curling the toes",
+          "Lifting the heel",
+          "Rolling the foot outward"
+        ],
+        "whenToStop": "Stop with cramping or sharp pain.",
+        "progression": "Standing, then single-leg standing.",
+        "regression": "With hand-guided help."
+      },
+      "fa": {
+        "name": "کوتاه کردن پا (شورت فوت)",
+        "purpose": "تقویت عضلات کوچک نگه‌دارنده قوس پا.",
+        "howTo": [
+          "بنشینید؛ کف پا روی زمین.",
+          "با نزدیک کردن برجستگی جلوی پا به پاشنه، پا را کوتاه کنید.",
+          "انگشتان کشیده و شل بمانند.",
+          "نگه دارید و شل کنید."
+        ],
+        "commonMistakes": [
+          "جمع کردن انگشتان",
+          "بلند کردن پاشنه",
+          "چرخیدن پا به بیرون"
+        ],
+        "whenToStop": "با گرفتگی یا درد تیز توقف کنید.",
+        "progression": "ایستاده، سپس تک‌پا.",
+        "regression": "با کمک دست."
+      }
+    },
+    {
+      "id": "ex_balance_reach",
+      "review": "pending",
+      "region": "ankle-foot",
+      "category": "balance",
+      "difficulty": "intermediate",
+      "stage": [
+        "chronic",
+        "return-to-sport"
+      ],
+      "equipment": {
+        "en": "None",
+        "fa": "بدون وسیله"
+      },
+      "goal": {
+        "en": "Dynamic balance",
+        "fa": "تعادل پویا"
+      },
+      "defaultDosage": {
+        "targetSets": 3,
+        "targetReps": 6,
+        "restSeconds": 45,
+        "side": "both"
+      },
+      "en": {
+        "name": "Single-Leg Balance Reach",
+        "purpose": "Train dynamic balance in several directions (star excursion style).",
+        "howTo": [
+          "Stand on one leg with the knee softly bent.",
+          "Reach the other foot forward, to the side and backward, lightly tapping the floor.",
+          "Return to the centre between reaches.",
+          "Keep the standing knee over the toes."
+        ],
+        "commonMistakes": [
+          "Putting weight on the reaching foot",
+          "Knee collapsing inward",
+          "Trunk leaning a lot"
+        ],
+        "whenToStop": "Stop with sharp pain or if you lose balance repeatedly.",
+        "progression": "Farther reaches or unstable surface.",
+        "regression": "Single-leg stance without reach."
+      },
+      "fa": {
+        "name": "دسترسی تک‌پا",
+        "purpose": "تمرین تعادل پویا در چند جهت (به سبک ستاره).",
+        "howTo": [
+          "روی یک پا با زانوی کمی خم بایستید.",
+          "پای دیگر را به جلو، کنار و عقب ببرید و آرام زمین را لمس کنید.",
+          "بین هر دسترسی به مرکز برگردید.",
+          "زانوی پای ایستاده بالای انگشتان بماند."
+        ],
+        "commonMistakes": [
+          "گذاشتن وزن روی پای دسترسی",
+          "جمع شدن زانو به داخل",
+          "خم شدن زیاد تنه"
+        ],
+        "whenToStop": "با درد تیز یا از دست دادن مکرر تعادل توقف کنید.",
+        "progression": "دسترسی دورتر یا سطح ناپایدار.",
+        "regression": "ایستادن تک‌پا بدون دسترسی."
+      }
+    },
+    {
+      "id": "ex_hop_progression",
+      "review": "pending",
+      "region": "ankle-foot",
+      "category": "plyometric",
+      "difficulty": "advanced",
+      "stage": [
+        "return-to-sport"
+      ],
+      "equipment": {
+        "en": "None",
+        "fa": "بدون وسیله"
+      },
+      "goal": {
+        "en": "Return-to-sport hopping",
+        "fa": "پرش برای بازگشت به ورزش"
+      },
+      "defaultDosage": {
+        "targetSets": 3,
+        "targetReps": 10,
+        "restSeconds": 90,
+        "painLimit": 2,
+        "side": "both"
+      },
+      "precautions": {
+        "en": "Introduce only after the clinician confirms adequate strength and pain-free single-leg tasks.",
+        "fa": "فقط پس از تأیید درمانگر درباره قدرت کافی و انجام بدون درد تمرین‌های تک‌پا شروع شود."
+      },
+      "en": {
+        "name": "Hop Progression",
+        "purpose": "Build landing control and reactive strength before returning to sport.",
+        "howTo": [
+          "Start with small two-foot hops in place.",
+          "Land softly with the knees over the toes.",
+          "Progress to single-leg hops when two-foot hops are easy.",
+          "Stick each landing for a moment."
+        ],
+        "commonMistakes": [
+          "Stiff, loud landings",
+          "Knee collapsing inward",
+          "Progressing too fast"
+        ],
+        "whenToStop": "Stop with sharp pain, giving way or swelling afterwards.",
+        "progression": "Forward and lateral hops, then hop for distance.",
+        "regression": "Two-foot hops only or calf raises."
+      },
+      "fa": {
+        "name": "پیشرفت پرش",
+        "purpose": "افزایش کنترل فرود و قدرت واکنشی پیش از بازگشت به ورزش.",
+        "howTo": [
+          "با پرش‌های کوچک دوپا درجا شروع کنید.",
+          "نرم فرود بیایید؛ زانوها بالای انگشتان.",
+          "وقتی پرش دوپا آسان شد به پرش تک‌پا بروید.",
+          "پس از هر فرود لحظه‌ای ثابت بمانید."
+        ],
+        "commonMistakes": [
+          "فرود خشک و پرصدا",
+          "جمع شدن زانو به داخل",
+          "پیشرفت سریع"
+        ],
+        "whenToStop": "با درد تیز، خالی کردن پا یا ورم پس از تمرین توقف کنید.",
+        "progression": "پرش به جلو و پهلو، سپس پرش برای مسافت.",
+        "regression": "فقط پرش دوپا یا بالا رفتن روی پنجه."
+      }
+    }
+  ]
+}

@@ -814,6 +814,25 @@ begin
     raise exception 'FAIL: unreviewed exercise ID entered a prescription';
   exception when invalid_parameter_value then null;
   end;
+  -- Migration 031: library exercises awaiting clinical review exist in the
+  -- catalog but stay inactive, so they cannot be prescribed, and clinicians
+  -- cannot activate them directly.
+  begin
+    perform public.save_scheduled_prescription_draft(
+      v_plan_two, current_date, current_date + 30,
+      'Follow the documented precautions',
+      'Stop and contact the clinic if symptoms worsen',
+      current_date + 14,
+      '[{"exerciseId":"ex_slr","dosageFa":"3 sets x 10 reps","daysPerWeek":1,"scheduledWeekdays":[1],"targetSets":3,"targetReps":10}]'::jsonb,
+      'Asia/Tehran');
+    raise exception 'FAIL: exercise pending clinical review entered a prescription';
+  exception when invalid_parameter_value then null;
+  end;
+  begin
+    update public.exercise_catalog_versions set active = true where exercise_id = 'ex_slr';
+    raise exception 'FAIL: clinician activated a catalog exercise directly';
+  exception when insufficient_privilege then null;
+  end;
 
   select prescription_id into v_prescription_one
   from public.save_scheduled_prescription_draft(
@@ -2422,6 +2441,20 @@ begin
        'service_role', 'public.cases', 'UPDATE,DELETE,TRUNCATE'
      ) then
     raise exception 'FAIL: service_role retained direct clinical workflow mutation';
+  end if;
+end $$;
+
+-- Migration 031: the expanded library is stored but not prescribable; only
+-- the eight originally reviewed exercises are active.
+do $$
+begin
+  if (select count(*) from public.exercise_catalog_versions where not active) < 56
+     or (select count(*) from public.exercise_catalog_versions where active) <> 8
+     or exists (
+       select 1 from public.exercise_catalog_versions
+       where active and exercise_id in ('ex_slr', 'ex_step_down', 'ex_hop_progression')
+     ) then
+    raise exception 'FAIL: exercises awaiting clinical review are active in the catalog';
   end if;
 end $$;
 

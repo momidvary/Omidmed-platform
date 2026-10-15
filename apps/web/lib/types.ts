@@ -1,4 +1,4 @@
-import type { DosageDetails } from "@/lib/clinical/dosage";
+import type { DosageDetails, DosageTargets } from "@/lib/clinical/dosage";
 // Core domain types shared by mock/demo and authenticated Supabase modes.
 import type { ClinicalDraft } from "@/lib/ai/clinicalDraftSchema";
 
@@ -146,7 +146,23 @@ export interface Exercise {
   whenToStop: string;
   progression: string;
   regression: string;
+  category: ExerciseCategory;
+  /** Suggested starting dose; the clinician adjusts it for each patient. */
+  defaultDosage: DosageTargets & DosageDetails;
+  precautions?: string;
+  /**
+   * "approved": reviewed patient-facing content that can be prescribed.
+   * "pending": library reference only until a physiotherapist reviews it and
+   * an activating catalog migration is applied.
+   */
+  review: "approved" | "pending";
 }
+
+export const EXERCISE_CATEGORIES = [
+  "mobility", "stretch", "strength", "isometric", "motor_control",
+  "balance", "neural", "plyometric", "aerobic",
+] as const;
+export type ExerciseCategory = (typeof EXERCISE_CATEGORIES)[number];
 
 export interface BodyRegionModule {
   id: BodyRegionId;

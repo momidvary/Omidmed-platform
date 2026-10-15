@@ -25,6 +25,17 @@ import { localDateValue, uid } from "@/lib/utils";
 import { useLocale } from "@/lib/store/LocaleContext";
 import { intlLocale, useText } from "@/lib/i18n/text";
 import { prescriptionText } from "./prescriptionText";
+import {
+  LOAD_TYPES,
+  SIDES,
+  describeDosage,
+  dosagePayload,
+  loadTypeLabel,
+  sideLabel,
+  validateDosage,
+  type LoadType,
+  type Side,
+} from "@/lib/clinical/dosage";
 
 interface DraftItem extends PrescriptionItemInput {
   rowId: string;
@@ -161,6 +172,10 @@ export function PrescriptionBuilder({
     if (items.length < 1 || items.length > 20) {
       return t.errCount;
     }
+    for (const [index, item] of items.entries()) {
+      const detailError = validateDosage(item);
+      if (detailError) return t.errDetails[detailError](index + 1);
+    }
     const ids = items.map((item) => item.exerciseId);
     if (ids.some((id) => !patientReadyExercises.some((exercise) => exercise.id === id))) {
       return t.errExercise;
@@ -198,12 +213,15 @@ export function PrescriptionBuilder({
       stopRules,
       reviewDate,
       scheduleTimezone: scheduleTimezone.trim(),
-      items: items.map(({ exerciseId, dosageFa, daysPerWeek, scheduledWeekdays, targetSets, targetReps, targetDurationSeconds }) => ({
-        targetSets, targetReps, targetDurationSeconds,
-        scheduledWeekdays,
-        exerciseId,
-        dosageFa: dosageFa.trim(),
-        daysPerWeek,
+      items: items.map((item) => ({
+        targetSets: item.targetSets,
+        targetReps: item.targetReps,
+        targetDurationSeconds: item.targetDurationSeconds,
+        scheduledWeekdays: item.scheduledWeekdays,
+        exerciseId: item.exerciseId,
+        dosageFa: item.dosageFa.trim(),
+        daysPerWeek: item.daysPerWeek,
+        ...dosagePayload(item),
       })),
     });
     setBusy(false);
@@ -435,6 +453,11 @@ export function PrescriptionBuilder({
               >
                 <Icon name="close" width={16} height={16} />
               </Button>
+              <DosageDetailsFields
+                item={item}
+                busy={busy}
+                onChange={(patch) => updateItem(item.rowId, patch)}
+              />
             </div>
           ))}
           <Button
@@ -580,5 +603,99 @@ export function PrescriptionBuilder({
         ) : null}
       </CardBody>
     </Card>
+  );
+}
+
+function numberOrUndefined(value: string): number | undefined {
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+  const latin = trimmed.replace(/[۰-۹]/g, (d) => String(d.charCodeAt(0) - 0x06f0));
+  const number = Number(latin);
+  return Number.isFinite(number) ? number : NaN;
+}
+
+function DosageDetailsFields({
+  item,
+  busy,
+  onChange,
+}: {
+  item: DraftItem;
+  busy: boolean;
+  onChange: (patch: Partial<DraftItem>) => void;
+}) {
+  const t = useText(prescriptionText);
+  const { locale } = useLocale();
+  const lang = locale === "fa" ? "fa" : "en";
+  const summary = describeDosage(item, "fa");
+  const hasDetails = [item.holdSeconds, item.restSeconds, item.loadType, item.targetRpe,
+    item.painLimit, item.tempo, item.side, item.timesPerDay, item.clinicianNote]
+    .some((value) => value !== undefined && value !== "");
+  const num = (label: string, key: "holdSeconds" | "restSeconds" | "timesPerDay", min: number, max: number) => (
+    <Field label={label}>
+      <Input type="number" inputMode="numeric" min={min} max={max} dir="ltr" disabled={busy}
+        value={item[key] === undefined || Number.isNaN(item[key]) ? "" : String(item[key])}
+        onChange={(event) => onChange({ [key]: numberOrUndefined(event.target.value) })} />
+    </Field>
+  );
+  const scale = (label: string, key: "targetRpe" | "painLimit", min: number) => (
+    <Field label={label}>
+      <Select value={item[key] === undefined ? "" : String(item[key])} disabled={busy}
+        onChange={(event) => onChange({ [key]: event.target.value === "" ? undefined : Number(event.target.value) })}>
+        <option value="">{t.notSpecified}</option>
+        {Array.from({ length: 11 - min }, (_, i) => i + min).map((value) => (
+          <option key={value} value={value}>{lang === "fa" ? value.toLocaleString("fa-IR") : value}</option>
+        ))}
+      </Select>
+    </Field>
+  );
+  return (
+    <details className="rounded-lg bg-[var(--color-surface-muted)] px-3 py-2 sm:col-span-4" open={hasDetails || undefined}>
+      <summary className="cursor-pointer text-sm font-medium text-[var(--color-ink)]">
+        {t.details} <span className="text-xs font-normal text-[var(--color-ink-faint)]">({t.detailsHint})</span>
+      </summary>
+      <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
+        {num(t.holdSeconds, "holdSeconds", 1, 300)}
+        {num(t.restSeconds, "restSeconds", 0, 600)}
+        {num(t.timesPerDay, "timesPerDay", 1, 12)}
+        <Field label={t.loadType}>
+          <Select value={item.loadType ?? ""} disabled={busy}
+            onChange={(event) => onChange({ loadType: (event.target.value || undefined) as LoadType | undefined })}>
+            <option value="">{t.notSpecified}</option>
+            {LOAD_TYPES.map((type) => <option key={type} value={type}>{loadTypeLabel(type, lang)}</option>)}
+          </Select>
+        </Field>
+        <Field label={t.loadDetail}>
+          <Input value={item.loadDetail ?? ""} maxLength={80} disabled={busy || !item.loadType} dir="auto"
+            placeholder={t.loadDetailPlaceholder}
+            onChange={(event) => onChange({ loadDetail: event.target.value })} />
+        </Field>
+        <Field label={t.side}>
+          <Select value={item.side ?? ""} disabled={busy}
+            onChange={(event) => onChange({ side: (event.target.value || undefined) as Side | undefined })}>
+            <option value="">{t.notSpecified}</option>
+            {SIDES.map((side) => <option key={side} value={side}>{sideLabel(side, lang)}</option>)}
+          </Select>
+        </Field>
+        {scale(t.targetRpe, "targetRpe", 1)}
+        {scale(t.painLimit, "painLimit", 0)}
+        <Field label={t.tempo}>
+          <Input value={item.tempo ?? ""} maxLength={11} dir="ltr" disabled={busy} placeholder={t.tempoPlaceholder}
+            onChange={(event) => onChange({ tempo: event.target.value })} />
+        </Field>
+        <div className="sm:col-span-3">
+          <Field label={t.clinicianNote}>
+            <Input value={item.clinicianNote ?? ""} maxLength={300} dir="auto" disabled={busy}
+              placeholder={t.clinicianNotePlaceholder}
+              onChange={(event) => onChange({ clinicianNote: event.target.value })} />
+          </Field>
+        </div>
+      </div>
+      {summary.length > 0 && (
+        <p className="mt-3 text-xs text-[var(--color-ink-soft)]" dir="rtl">
+          <span className="font-semibold">{t.patientSees}: </span>
+          {summary.join(" · ")}
+        </p>
+      )}
+    </details>
   );
 }

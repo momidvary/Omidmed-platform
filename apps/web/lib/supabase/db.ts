@@ -1,3 +1,4 @@
+import { DOSAGE_COLUMNS, dosageFromRow } from "@/lib/clinical/dosage";
 import { getSupabase } from "./client";
 import type {
   CaseAssessmentRevisionInput,
@@ -210,7 +211,8 @@ export async function fetchMyPatients(userId: string): Promise<Patient[] | null>
              exercise_prescriptions ( id, version, status, start_date, end_date,
                precautions, stop_rules, review_date, published_at, schedule_timezone,
                prescription_items ( id, exercise_id, exercise_version, content_snapshot,
-                 dosage_fa, days_per_week, scheduled_weekdays, target_sets, target_reps, target_duration_seconds, sort_order ) ) ),
+                 dosage_fa, days_per_week, scheduled_weekdays, target_sets, target_reps, target_duration_seconds, sort_order,
+                 ${DOSAGE_COLUMNS} ) ) ),
            tickets ( id, episode_id, exercise_id, subject, message, status, priority,
              acknowledged_by, acknowledged_at, closed_by, closed_at, closure_note,
              created_at,
@@ -289,6 +291,7 @@ export async function fetchMyPatients(userId: string): Promise<Patient[] | null>
             contentSnapshot: row.content_snapshot as Patient["program"][number]["contentSnapshot"],
             dosageFa: row.dosage_fa as string,
             daysPerWeek: row.days_per_week as number,
+            ...dosageFromRow(row),
           })),
           progress: ((active.patient_daily_logs as PortalRow[]) ?? [])
             .map((row) => ({
@@ -2283,7 +2286,8 @@ export async function fetchPrescriptionHistory(
            end_date, precautions, stop_rules, review_date, created_at,
            published_at, revoked_at, schedule_timezone,
            prescription_items ( id, exercise_id, exercise_version, content_snapshot,
-             dosage_fa, days_per_week, scheduled_weekdays, target_sets, target_reps, target_duration_seconds, sort_order )`
+             dosage_fa, days_per_week, scheduled_weekdays, target_sets, target_reps, target_duration_seconds, sort_order,
+             ${DOSAGE_COLUMNS} )`
         )
         .eq("episode_id", episodeId)
         .order("version", { ascending: false })
@@ -2329,6 +2333,7 @@ export async function fetchPrescriptionHistory(
           targetSets: (item.target_sets as number | null) ?? undefined,
           targetReps: (item.target_reps as number | null) ?? undefined,
           targetDurationSeconds: (item.target_duration_seconds as number | null) ?? undefined,
+          ...dosageFromRow(item),
         })),
     }));
   } catch {

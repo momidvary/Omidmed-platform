@@ -1,3 +1,4 @@
+import type { DosageDetails } from "@/lib/clinical/dosage";
 // Core domain types shared by mock/demo and authenticated Supabase modes.
 import type { ClinicalDraft } from "@/lib/ai/clinicalDraftSchema";
 
@@ -182,7 +183,7 @@ export interface ChatMessage {
 
 // ── Patient portal ──────────────────────────────────────────────
 
-export interface PrescribedExercise {
+export interface PrescribedExercise extends DosageDetails {
   targetSets?: number;
   targetReps?: number;
   targetDurationSeconds?: number;
@@ -513,7 +514,7 @@ export type PrescriptionStatus =
   | "suspended"
   | "revoked";
 
-export interface PrescriptionItemInput {
+export interface PrescriptionItemInput extends DosageDetails {
   targetSets?: number;
   targetReps?: number;
   targetDurationSeconds?: number;

@@ -821,7 +821,7 @@ begin
     'Follow the documented precautions',
     'Stop and contact the clinic if symptoms worsen',
     current_date + 14,
-    '[{"exerciseId":"ex_quad_sets","dosageFa":"3 sets x 10 reps","daysPerWeek":5,"scheduledWeekdays":[0,1,2,3,4],"targetSets":3,"targetReps":10}]'::jsonb,
+    '[{"exerciseId":"ex_quad_sets","dosageFa":"3 sets x 10 reps","daysPerWeek":5,"scheduledWeekdays":[0,1,2,3,4],"targetSets":3,"targetReps":10,"holdSeconds":5,"restSeconds":60,"loadType":"band","loadDetail":"  کش   قرمز ","targetRpe":6,"painLimit":3,"tempo":"3-1-3","side":"right","timesPerDay":2,"clinicianNote":"زانو را کامل صاف کنید"}]'::jsonb,
     'Asia/Tehran'
   );
   declare
@@ -837,6 +837,30 @@ begin
       raise exception 'FAIL: duplicate weekdays accepted';
     exception when invalid_parameter_value then null;
     end;
+    -- Migration 030: every malformed dosage detail rejects the whole draft.
+    declare
+      v_bad jsonb;
+    begin
+      foreach v_bad in array array[
+        '{"holdSeconds":0}', '{"holdSeconds":2.5}', '{"holdSeconds":"5"}',
+        '{"restSeconds":601}', '{"targetRpe":11}', '{"painLimit":-1}',
+        '{"loadType":"kettlebell"}', '{"loadDetail":"red band"}',
+        '{"tempo":"slow"}', '{"tempo":"3-1-3-1-3"}', '{"side":"top"}',
+        '{"timesPerDay":13}', '{"clinicianNote":5}',
+        '{"clinicianNote":"' || repeat('x', 301) || '"}'
+      ]::jsonb[] loop
+        begin
+          perform public.save_scheduled_prescription_draft(
+            v_plan_two, current_date, current_date + 30, 'Precautions documented',
+            'Stop if symptoms worsen', current_date + 14,
+            jsonb_build_array(
+              '{"exerciseId":"ex_quad_sets","dosageFa":"3 sets x 10 reps","daysPerWeek":1,"scheduledWeekdays":[1],"targetSets":3,"targetReps":10}'::jsonb || v_bad),
+            'Asia/Tehran');
+          raise exception 'FAIL: invalid dosage detail accepted: %', v_bad;
+        exception when invalid_parameter_value then null;
+        end;
+      end loop;
+    end;
     if (select count(*) from public.exercise_prescriptions) <> before_count then
       raise exception 'FAIL: invalid schedule left a partial prescription';
     end if;
@@ -848,6 +872,19 @@ begin
         and scheduled_weekdays = array[0,1,2,3,4]::smallint[]) then
     raise exception 'FAIL: precise prescription schedule was not persisted';
   end if;
+  if not exists (select 1 from public.prescription_items
+      where prescription_id = v_prescription_one
+        and hold_seconds = 5 and rest_seconds = 60 and load_type = 'band'
+        and load_detail = 'کش قرمز' and target_rpe = 6 and pain_limit = 3
+        and tempo = '3-1-3' and side = 'right' and times_per_day = 2
+        and clinician_note = 'زانو را کامل صاف کنید') then
+    raise exception 'FAIL: prescription dosage details were not persisted';
+  end if;
+  begin
+    update public.prescription_items set pain_limit = 2 where prescription_id = v_prescription_one;
+    raise exception 'FAIL: clinician rewrote dosage details outside the draft RPC';
+  exception when insufficient_privilege then null;
+  end;
   perform public.publish_prescription(v_prescription_one);
   begin
     insert into public.patient_daily_logs (episode_id, date, pain_level, completed)

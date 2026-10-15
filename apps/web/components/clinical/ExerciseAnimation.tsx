@@ -3,7 +3,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { FLOOR, dir, type Pt, type SegName, type Shape } from "@/lib/animation/figure";
 import { motionFor, type Motion } from "@/lib/animation/motions";
-import { buildScene, type GlowShape, type PropShape, type Scene } from "@/lib/animation/scene";
+import { buildScene, round2, type GlowShape, type PropShape, type Scene } from "@/lib/animation/scene";
 import { cn } from "@/lib/utils";
 
 /*
@@ -64,6 +64,11 @@ const C = {
 };
 
 const fmt = (p: Pt) => `${p[0].toFixed(1)},${p[1].toFixed(1)}`;
+/** Direction vector rounded so server and browser render identical SVG. */
+const dirR = (deg: number): Pt => {
+  const d = dir(deg);
+  return [round2(d[0] * 100) / 100, round2(d[1] * 100) / 100];
+};
 const along = (a: Pt, b: Pt, t: number): Pt => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
 
 const SEG_STYLE: Partial<Record<SegName, { width: number; color: string; cover?: { color: string; to: number; extra: number } }>> = {
@@ -179,7 +184,7 @@ function Props({ shapes }: { shapes: PropShape[] }) {
 function Head({ shape, view }: { shape: Extract<Shape, { kind: "head" }>; view: "side" | "front" | "top" }) {
   const { at, r, faceAngle, yaw } = shape;
   if (view === "top") {
-    const f = dir(faceAngle - 90);
+    const f = dirR(faceAngle - 90);
     return (
       <g>
         <circle cx={at[0] + f[0] * (r - 1)} cy={at[1] + f[1] * (r - 1)} r={3.4} fill={C.skin} />
@@ -187,8 +192,8 @@ function Head({ shape, view }: { shape: Extract<Shape, { kind: "head" }>; view: 
       </g>
     );
   }
-  const f = dir(faceAngle);
-  const up = dir(faceAngle + 90);
+  const f = dirR(faceAngle);
+  const up = dirR(faceAngle + 90);
   if (view === "side") {
     const back: Pt = [at[0] - f[0] * 2.5 + up[0] * 2, at[1] - f[1] * 2.5 + up[1] * 2];
     const tip: Pt = [at[0] + f[0] * (r + 3.5) + up[0] * 1, at[1] + f[1] * (r + 3.5) + up[1] * 1];

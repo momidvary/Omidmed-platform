@@ -83,6 +83,7 @@ const en = {
   times: (n: number) => `${n}×`,
   doseNote: "Library default only; the clinician sets the final dose in the home program.",
   steps: "Steps",
+  usedInProtocols: "Used in treatment protocols",
   harderEasier: "Harder or easier",
   changeLevel: "Change the level only with the clinician's agreement.",
   disclaimer:
@@ -173,6 +174,7 @@ export const exerciseLibraryText: PageText<typeof en> = {
     times: (n) => `${n.toLocaleString("fa-IR")} بار`,
     doseNote: "دوز پیش‌فرض کتابخانه است؛ دوز نهایی را درمانگر در نسخهٔ تمرینی تعیین می‌کند.",
     steps: "مراحل انجام",
+    usedInProtocols: "استفاده در پروتکل‌های درمانی",
     harderEasier: "سخت‌تر یا آسان‌تر",
     changeLevel: "تغییر سطح تمرین فقط با نظر درمانگر.",
     disclaimer:

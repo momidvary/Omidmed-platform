@@ -152,3 +152,23 @@ test("expanded library marks unreviewed exercises and links progression ladders"
   await expect(page.getByText(/cannot be added to a home program/)).toHaveCount(0);
   await expect(page.getByRole("link", { name: "Prescribe from a patient's record" })).toHaveAttribute("href", "/patients");
 });
+
+test("treatment protocols link phases to library exercises", async ({ page }) => {
+  await page.goto("/");
+  const nav = page.locator("aside nav");
+  await nav.getByRole("button", { name: "Tools" }).click();
+  await nav.locator('a[href="/protocols"]').click();
+  await expect(page.getByRole("heading", { level: 2, name: "Treatment protocols" })).toBeVisible();
+  await expect(page.getByText(/Draft · awaiting clinical review/)).toBeVisible();
+
+  await page.getByRole("link", { name: "Open protocol: Patellofemoral pain" }).click();
+  await expect(page).toHaveURL(/\/protocols\/pfp$/);
+  await expect(page.getByRole("heading", { level: 1, name: "Patellofemoral pain" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Settle symptoms and start loading" })).toBeVisible();
+  await expect(page.getByText("Move to the next phase when").first()).toBeVisible();
+  await expect(page.getByText(/Willy RW, et al\./)).toBeVisible();
+
+  await page.getByRole("link", { name: /Quad Sets/ }).first().click();
+  await expect(page).toHaveURL(/\/exercise-library\/ex_quad_sets$/);
+  await expect(page.getByRole("link", { name: "Patellofemoral pain" })).toHaveAttribute("href", "/protocols/pfp");
+});

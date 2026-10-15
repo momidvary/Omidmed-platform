@@ -1,6 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { protocolLinkFor } from "@/lib/clinical/protocols";
 import { isMockMode } from "@/lib/config";
 import { useLocale } from "@/lib/store/LocaleContext";
 import { hasClinicalSafetyClearance } from "@/lib/clinical/safety";
@@ -529,6 +531,7 @@ function HypothesisRow({
   const s = reasoningStrings[locale];
   const width = Math.max(4, Math.round((Math.max(0, hypothesis.score) / maxScore) * 100));
   const reasons = [...hypothesis.supporting, ...hypothesis.against];
+  const protocol = protocolLinkFor(hypothesis);
 
   return (
     <li className="rounded-xl border border-[var(--color-border)] px-3 py-2.5">
@@ -554,6 +557,14 @@ function HypothesisRow({
           style={{ width: `${width}%` }}
         />
       </div>
+      {protocol && (
+        <Link
+          href={`/protocols/${protocol.id}`}
+          className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-[var(--color-primary-soft)] px-2.5 py-0.5 text-[11px] font-semibold text-[var(--color-primary-strong)] hover:underline focus-visible:outline-2 focus-visible:outline-[var(--color-primary)]"
+        >
+          {s.protocol}: {localized(protocol.title, locale)}
+        </Link>
+      )}
       <details className="mt-1.5">
         <summary className="cursor-pointer text-[11px] text-[var(--color-primary-strong)]">
           {s.why} ({hypothesis.score > 0 ? "+" : ""}

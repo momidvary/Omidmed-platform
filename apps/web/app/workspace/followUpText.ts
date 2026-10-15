@@ -1,0 +1,103 @@
+import type { PageText } from "@/lib/i18n/text";
+import type { SuggestionKind, SuggestionReason } from "@/lib/clinical/adherence";
+
+const en = {
+  title: "Home program follow-up",
+  subtitle: (days: number) => `Patient reports for each exercise · last ${days} days`,
+  loading: "Loading reports…",
+  failed: "Reports could not be loaded. Nothing here should be read as \"no reports\".",
+  retry: "Retry",
+  noSchedule:
+    "This program has no exact weekdays, so per-exercise reports are not possible. Save a new version with scheduled days to enable follow-up.",
+  reported: (reported: number, scheduled: number) =>
+    `Reported ${reported} of ${scheduled} scheduled days`,
+  complete: (n: number) => `complete ${n}`,
+  partial: (n: number) => `partial ${n}`,
+  notDone: (n: number) => `not done ${n}`,
+  painSeries: "Pain after exercise",
+  noReports: "No reports yet",
+  trendUp: "rising",
+  trendDown: "falling",
+  trendFlat: "steady",
+  topReason: "Most common reason",
+  lastReport: (date: string) => `last report ${date}`,
+  suggestion: {
+    review: "Review now",
+    regress: "Consider regression",
+    reteach: "Re-teach technique",
+    simplify: "Simplify the program",
+    progress: "Consider progression",
+    hold: "Keep as is",
+    insufficient: "Not enough reports",
+  } as Record<SuggestionKind, string>,
+  why: {
+    highPain: "Pain of 7/10 or more was reported. Stop progression, contact the patient and follow the alert pathway.",
+    suspended: "The program is suspended for safety review. Resolve the alert before any change.",
+    fewReports: "Fewer than three reports in this period; wait for more data.",
+    painRising: "Pain after exercise is rising across recent reports (24-hour response rule).",
+    painHigh: "Average pain over the last three reports is 5/10 or more.",
+    lowCompletionPain: "Mostly not completed, most often because of pain.",
+    lowCompletionUnclear: "Mostly not completed because the patient was unsure how to do it.",
+    lowCompletionTime: "Mostly not completed because of time or forgetting; fewer or shorter sessions may help.",
+    lowCompletion: "Mostly not completed; ask the patient why before changing the dose.",
+    consistentLowPain: "The last reports were complete with low, stable pain.",
+    stable: "No signal to change the dose yet.",
+  } as Record<SuggestionReason, string>,
+  progressionOption: "Library progression",
+  regressionOption: "Library regression",
+  editProgram: "Edit home program",
+  disclaimer:
+    "Self-reported by the patient; a missing report does not mean the exercise was not done. Suggestions are transparent rules for your review — nothing changes until you save and publish a new program version.",
+};
+
+export const followUpText: PageText<typeof en> = {
+  en,
+  fa: {
+    title: "پیگیری برنامه خانگی",
+    subtitle: (days) => `گزارش بیمار برای هر تمرین · ${days.toLocaleString("fa-IR")} روز اخیر`,
+    loading: "در حال دریافت گزارش‌ها…",
+    failed: "گزارش‌ها دریافت نشد. خالی بودن این بخش را به معنای «گزارشی نیست» تلقی نکنید.",
+    retry: "تلاش دوباره",
+    noSchedule:
+      "این برنامه روزهای مشخص هفته ندارد، پس گزارش تمرین‌به‌تمرین ممکن نیست. برای پیگیری، نسخه جدید را با روزهای مشخص ذخیره کنید.",
+    reported: (reported, scheduled) =>
+      `گزارش ${reported.toLocaleString("fa-IR")} از ${scheduled.toLocaleString("fa-IR")} روز برنامه`,
+    complete: (n) => `کامل ${n.toLocaleString("fa-IR")}`,
+    partial: (n) => `بخشی ${n.toLocaleString("fa-IR")}`,
+    notDone: (n) => `انجام‌نشده ${n.toLocaleString("fa-IR")}`,
+    painSeries: "درد پس از تمرین",
+    noReports: "هنوز گزارشی ثبت نشده",
+    trendUp: "رو به افزایش",
+    trendDown: "رو به کاهش",
+    trendFlat: "ثابت",
+    topReason: "شایع‌ترین دلیل",
+    lastReport: (date) => `آخرین گزارش ${date}`,
+    suggestion: {
+      review: "بررسی فوری",
+      regress: "پسرفت را در نظر بگیرید",
+      reteach: "آموزش دوباره تکنیک",
+      simplify: "ساده‌تر کردن برنامه",
+      progress: "پیشرفت را در نظر بگیرید",
+      hold: "فعلاً بدون تغییر",
+      insufficient: "گزارش کافی نیست",
+    },
+    why: {
+      highPain: "درد ۷ از ۱۰ یا بیشتر گزارش شده است. پیشرفت را متوقف کنید، با بیمار تماس بگیرید و مسیر هشدار را دنبال کنید.",
+      suspended: "برنامه برای بررسی ایمنی معلق است. پیش از هر تغییری هشدار را رسیدگی کنید.",
+      fewReports: "در این بازه کمتر از سه گزارش ثبت شده؛ منتظر داده بیشتر بمانید.",
+      painRising: "درد پس از تمرین در گزارش‌های اخیر رو به افزایش است (قانون پاسخ ۲۴ ساعته).",
+      painHigh: "میانگین درد در سه گزارش اخیر ۵ از ۱۰ یا بیشتر است.",
+      lowCompletionPain: "بیشتر روزها کامل انجام نشده و شایع‌ترین دلیل، درد بوده است.",
+      lowCompletionUnclear: "بیشتر روزها کامل انجام نشده چون بیمار مطمئن نبوده چطور انجام دهد.",
+      lowCompletionTime: "بیشتر روزها به دلیل وقت یا فراموشی انجام نشده؛ جلسات کمتر یا کوتاه‌تر ممکن است کمک کند.",
+      lowCompletion: "بیشتر روزها کامل انجام نشده؛ پیش از تغییر دوز، دلیل را از بیمار بپرسید.",
+      consistentLowPain: "گزارش‌های اخیر کامل بوده و درد کم و ثابت است.",
+      stable: "هنوز نشانه‌ای برای تغییر دوز نیست.",
+    },
+    progressionOption: "پیشرفت پیشنهادی کتابخانه",
+    regressionOption: "پسرفت پیشنهادی کتابخانه",
+    editProgram: "ویرایش برنامه خانگی",
+    disclaimer:
+      "این‌ها گزارش‌های خود بیمار است؛ نبود گزارش به معنی انجام‌نشدن تمرین نیست. پیشنهادها قواعد شفاف برای بررسی شماست و تا وقتی نسخه جدید برنامه را ذخیره و منتشر نکنید، چیزی تغییر نمی‌کند.",
+  },
+};

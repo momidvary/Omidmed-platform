@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Badge } from "@/components/ui/Badge";
 import { Button, ButtonLink } from "@/components/ui/Button";
@@ -31,6 +31,8 @@ import {
 import type { OutcomeMeasurement, PatientCase } from "@/lib/types";
 import { cn, isUuid } from "@/lib/utils";
 import { workspaceText } from "./text";
+import { useSection } from "./useSection";
+import { HomeProgramFollowUp } from "./HomeProgramFollowUp";
 
 interface PathwayStep {
   key: CareStep;
@@ -40,52 +42,6 @@ interface PathwayStep {
   action?: { label: string; run: () => void };
 }
 
-interface Loaded<T> {
-  loading: boolean;
-  failed: boolean;
-  data: T | null;
-}
-
-/**
- * Load one section for a request key. State is tagged with the key it was
- * loaded for, so switching patient never shows the previous patient's rows
- * and nothing is set synchronously inside the effect.
- */
-function useSection<T>(
-  key: string | null,
-  load: () => Promise<T | null>
-): Loaded<T> {
-  const [state, setState] = useState<{
-    key: string;
-    data: T | null;
-    failed: boolean;
-  } | null>(null);
-
-  useEffect(() => {
-    if (!key) return;
-    let cancelled = false;
-    load()
-      .then((data) => {
-        if (!cancelled) setState({ key, data, failed: data === null });
-      })
-      .catch(() => {
-        if (!cancelled) setState({ key, data: null, failed: true });
-      });
-    return () => {
-      cancelled = true;
-    };
-    // The key encodes every input of load().
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key]);
-
-  if (!key) return { loading: false, failed: false, data: null };
-  const current = state?.key === key ? state : null;
-  return {
-    loading: !current,
-    failed: current?.failed ?? false,
-    data: current?.data ?? null,
-  };
-}
 
 function formatDate(value: string | null | undefined, locale: string): string {
   if (!value) return "—";
@@ -598,6 +554,18 @@ export function WorkspaceClient() {
           )}
         </div>
       </section>
+
+      {episode &&
+        latestCase &&
+        currentProgram &&
+        (currentProgram.status === "published" || currentProgram.status === "suspended") && (
+          <HomeProgramFollowUp
+            program={currentProgram}
+            episodeId={episode.id}
+            scopeKey={baseKey ?? ""}
+            onEdit={() => openCase(latestCase.id, "/treatment-planner#home-program")}
+          />
+        )}
 
       <div className="grid gap-5 xl:grid-cols-2">
         <Card>

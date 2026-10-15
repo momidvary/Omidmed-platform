@@ -527,6 +527,12 @@ export interface PrescriptionItemInput {
 
 export interface PrescriptionRecord {
   scheduleTimezone: string | null;
+  /**
+   * Database id of each item by exercise id (unique within a version), used
+   * to match patient adherence reports. Kept apart from `items` so ids never
+   * flow back into a new draft.
+   */
+  itemIds: Record<string, string>;
   id: string;
   treatmentPlanId: string;
   episodeId: string;

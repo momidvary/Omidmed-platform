@@ -1039,6 +1039,67 @@ export async function invitePatientAccount(
  * user from mixing the inactive tenant into the current inbox. RLS remains
  * the final authorization boundary.
  */
+export interface ExerciseReport {
+  id: string;
+  prescriptionId: string;
+  prescriptionItemId: string;
+  localDate: string;
+  status: "complete" | "partial" | "not_done";
+  painLevel: number;
+  completedSets: number | null;
+  completedReps: number | null;
+  completedDurationSeconds: number | null;
+  nonCompletionReason: string | null;
+  createdAt: string;
+  supersedesId: string | null;
+}
+
+/**
+ * Patient exercise reports for one episode since a local date, for the
+ * clinician. RLS admits only clinic owners and assigned therapists.
+ * Returns null on failure so the UI never treats a failed load as "no reports".
+ */
+export async function fetchEpisodeExerciseReports(
+  episodeId: string,
+  sinceLocalDate: string
+): Promise<ExerciseReport[] | null> {
+  const supabase = getSupabase();
+  if (!supabase || !episodeId || !/^\d{4}-\d{2}-\d{2}$/.test(sinceLocalDate)) return null;
+  try {
+    const result = await withTimeout(
+      supabase
+        .from("patient_exercise_completion_events")
+        .select(
+          `id, prescription_id, prescription_item_id, local_date, status, pain_level,
+           completed_sets, completed_reps, completed_duration_seconds,
+           non_completion_reason, created_at, supersedes_id`
+        )
+        .eq("episode_id", episodeId)
+        .gte("local_date", sinceLocalDate)
+        .order("created_at", { ascending: true })
+        .limit(1000)
+    );
+    if (!result || result.error || !result.data) return null;
+    type Row = Record<string, unknown>;
+    return (result.data as Row[]).map((row) => ({
+      id: row.id as string,
+      prescriptionId: row.prescription_id as string,
+      prescriptionItemId: row.prescription_item_id as string,
+      localDate: row.local_date as string,
+      status: row.status as ExerciseReport["status"],
+      painLevel: row.pain_level as number,
+      completedSets: (row.completed_sets as number | null) ?? null,
+      completedReps: (row.completed_reps as number | null) ?? null,
+      completedDurationSeconds: (row.completed_duration_seconds as number | null) ?? null,
+      nonCompletionReason: (row.non_completion_reason as string | null) ?? null,
+      createdAt: row.created_at as string,
+      supersedesId: (row.supersedes_id as string | null) ?? null,
+    }));
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Counts for the sidebar badges and dashboard: unresolved clinical alerts
  * and tickets still waiting for a clinician response in the active clinic.
@@ -2221,7 +2282,7 @@ export async function fetchPrescriptionHistory(
           `id, treatment_plan_id, episode_id, version, status, start_date,
            end_date, precautions, stop_rules, review_date, created_at,
            published_at, revoked_at, schedule_timezone,
-           prescription_items ( exercise_id, exercise_version, content_snapshot,
+           prescription_items ( id, exercise_id, exercise_version, content_snapshot,
              dosage_fa, days_per_week, scheduled_weekdays, target_sets, target_reps, target_duration_seconds, sort_order )`
         )
         .eq("episode_id", episodeId)
@@ -2250,6 +2311,12 @@ export async function fetchPrescriptionHistory(
       publishedAt: row.published_at,
       revokedAt: row.revoked_at,
       scheduleTimezone: row.schedule_timezone,
+      itemIds: Object.fromEntries(
+        ((row.prescription_items as Row[]) ?? []).map((item) => [
+          item.exercise_id as string,
+          item.id as string,
+        ])
+      ),
       items: ([...((row.prescription_items as Row[]) ?? [])])
         .sort((a, b) => Number(a.sort_order ?? 0) - Number(b.sort_order ?? 0))
         .map((item) => ({

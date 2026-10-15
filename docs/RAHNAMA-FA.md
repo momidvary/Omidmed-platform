@@ -44,6 +44,9 @@
    28. `028_patient_phone_accounts.sql` — اتصال حساب پرتال بیمار با شماره همراه.
    29. `029_case_clinical_findings.sql` — ثبت ساختاریافته شرح حال و معاینه و
        رتبه‌بندی فرضیه‌ها (راهنما: `docs/CLINICAL_REASONING_FA.md`).
+   30. `030_exercise_dosage_details.sql` — دوز حرفه‌ای هر تمرین: زمان نگه‌داشتن،
+       استراحت، نوع و جزئیات بار، شدت هدف (RPE)، حداکثر درد مجاز، ریتم، سمت،
+       دفعات در روز و نکته برای بیمار (همه اختیاری).
 
    اگر دیتابیس را قبلاً با `02_all_migrations.sql` ساخته‌اید، migrationهای جدید را
    با فایل‌های پوشه `database/supabase-sql-editor/upgrades/` (به ترتیب شماره) در

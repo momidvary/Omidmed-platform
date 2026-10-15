@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { usePatient } from "@/lib/store/PatientContext";
 import { exerciseFa } from "@/lib/data/exerciseFa";
+import { describeDosage } from "@/lib/clinical/dosage";
 import {
   buildPatientChatReply,
   buildTicketAutoReply,
@@ -769,6 +770,11 @@ function ProgramTab({ patient }: { patient: Patient }) {
           );
         }
         const open = openId === item.exerciseId;
+        // Sets/reps are already in the dosage line; list only the extra details.
+        const details = describeDosage(
+          { ...item, targetSets: undefined, targetReps: undefined, targetDurationSeconds: undefined },
+          "fa"
+        );
         return (
           <Card key={item.exerciseId}>
             <button
@@ -787,6 +793,20 @@ function ProgramTab({ patient }: { patient: Patient }) {
                   <p className="mt-2 inline-block rounded-full bg-[var(--color-primary-soft)] px-3 py-1 text-[11px] font-medium text-[var(--color-primary-strong)]">
                     {item.dosageFa}
                   </p>
+                  {details.length > 0 && (
+                    <ul className="mt-2 flex flex-wrap gap-1.5" aria-label="جزئیات دوز">
+                      {details.map((line) => (
+                        <li key={line} className="rounded-full border border-[var(--color-border)] px-2.5 py-0.5 text-[11px] text-[var(--color-ink-soft)]">
+                          {line}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  {item.clinicianNote && (
+                    <p className="mt-2 rounded-lg bg-[var(--color-surface-muted)] px-3 py-1.5 text-[12px] text-[var(--color-ink)]">
+                      <span className="font-semibold">نکته درمانگر: </span>{item.clinicianNote}
+                    </p>
+                  )}
                 </div>
                 <span
                   className={cn(

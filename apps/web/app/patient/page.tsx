@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { usePatient } from "@/lib/store/PatientContext";
 import { exerciseFa } from "@/lib/data/exerciseFa";
+import { ExerciseAnimation } from "@/components/clinical/ExerciseAnimation";
 import { describeDosage } from "@/lib/clinical/dosage";
 import {
   buildPatientChatReply,
@@ -820,6 +821,14 @@ function ProgramTab({ patient }: { patient: Patient }) {
             </button>
             <div hidden={!open}>
               <CardBody className="space-y-3 border-t border-[var(--color-border)]">
+                {open && (
+                  <ExerciseAnimation
+                    exerciseId={item.exerciseId}
+                    name={content.name}
+                    lang="fa"
+                    holdSeconds={item.holdSeconds}
+                  />
+                )}
                 <div>
                   <h4 className="mb-1.5 text-xs font-bold text-[var(--color-ink-faint)]">
                     نحوه انجام

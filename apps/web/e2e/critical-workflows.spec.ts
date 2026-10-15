@@ -139,6 +139,9 @@ test("expanded library marks unreviewed exercises and links progression ladders"
   await expect(slr.getByText(/cannot be added to a home program/)).toBeVisible();
   await expect(slr.getByText("3 sets × 10 reps")).toBeVisible();
   await expect(slr.locator('[aria-current="step"]')).toContainText("Straight Leg Raise");
+  await expect(slr.getByRole("img", { name: "Animated demonstration of Straight Leg Raise" })).toBeVisible();
+  await slr.getByRole("button", { name: "End position" }).click();
+  await expect(slr.getByRole("button", { name: "Play" })).toBeVisible();
 
   // A reviewed step is filtered out by "pending"; the ladder still opens it.
   await slr.getByRole("button", { name: /Quad Sets/ }).click();

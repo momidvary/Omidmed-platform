@@ -1,6 +1,11 @@
+import { describeDosage } from "@/lib/clinical/dosage";
+import { catalogEntries, legacyExerciseMeta } from "@/lib/data/exerciseCatalog";
+import { exerciseFa } from "@/lib/data/exerciseFa";
 import type { Exercise } from "@/lib/types";
 
-export const exercises: Exercise[] = [
+type LegacyExercise = Omit<Exercise, "category" | "defaultDosage" | "review">;
+
+const legacyExercises: LegacyExercise[] = [
   {
     id: "ex_curl_up",
     name: "Modified Curl-Up (McGill)",
@@ -321,6 +326,40 @@ export const exercises: Exercise[] = [
     progression: "Add a gentle overhead reach.",
     regression: "Reduce the forward shift.",
   },
+];
+
+export const exercises: Exercise[] = [
+  // The original library; only the ones with reviewed Persian patient content
+  // (exerciseFa, mirrored by the active catalog rows) can be prescribed.
+  ...legacyExercises.map((exercise): Exercise => {
+    const meta = legacyExerciseMeta[exercise.id];
+    return {
+      ...exercise,
+      category: meta.category,
+      defaultDosage: meta.defaultDosage,
+      review: exerciseFa[exercise.id] ? "approved" : "pending",
+    };
+  }),
+  ...catalogEntries.map((entry): Exercise => ({
+    id: entry.id,
+    name: entry.en.name,
+    region: entry.region,
+    goal: entry.goal.en,
+    difficulty: entry.difficulty,
+    equipment: entry.equipment.en,
+    stage: entry.stage,
+    purpose: entry.en.purpose,
+    howTo: entry.en.howTo,
+    setsReps: describeDosage(entry.defaultDosage, "en").join(", "),
+    commonMistakes: entry.en.commonMistakes,
+    whenToStop: entry.en.whenToStop,
+    progression: entry.en.progression,
+    regression: entry.en.regression,
+    category: entry.category,
+    defaultDosage: entry.defaultDosage,
+    precautions: entry.precautions?.en,
+    review: entry.review,
+  })),
 ];
 
 export const exerciseGoals = Array.from(new Set(exercises.map((e) => e.goal)));

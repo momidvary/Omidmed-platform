@@ -1,14 +1,37 @@
 import type { PageText } from "@/lib/i18n/text";
-import type { Difficulty, Stage } from "@/lib/types";
+import type { Difficulty, ExerciseCategory, Stage } from "@/lib/types";
 
 const en = {
   title: "Exercise Library",
-  intro: (count: number) =>
-    `${count} evidence-informed exercises with dosage, mistakes to watch for, and progression / regression options.`,
+  intro: (count: number, approved: number) =>
+    `${count} exercises with a suggested starting dose, mistakes to watch for and progression ladders. ${approved} are clinically reviewed and can be prescribed; the rest are reference cards awaiting physiotherapist review.`,
   search: "Search…",
   searchAria: "Search exercises",
   allRegions: "All regions",
-  allGoals: "All goals",
+  allCategories: "All exercise types",
+  category: {
+    mobility: "Mobility",
+    stretch: "Stretch",
+    strength: "Strength",
+    isometric: "Isometric",
+    motor_control: "Motor control",
+    balance: "Balance",
+    neural: "Neural mobility",
+    plyometric: "Plyometric",
+    aerobic: "Aerobic",
+  } as Record<ExerciseCategory, string>,
+  allReview: "Reviewed and pending",
+  reviewApproved: "Prescribable (reviewed)",
+  reviewPending: "Awaiting clinical review",
+  pendingBadge: "Awaiting clinical review",
+  pendingNote:
+    "Reference only. This exercise cannot be added to a home program until a physiotherapist reviews its patient-facing text and the catalog is activated.",
+  startingDose: "Suggested starting dose",
+  startingDoseNote: "Adjust for each patient's irritability, capacity and goals.",
+  precautions: "Precautions",
+  ladder: "Progression ladder",
+  ladderHint: "Easier on the start side, harder toward the end. Select a step to open it.",
+  currentStep: "this exercise",
   allDifficulties: "All difficulties",
   allStages: "All stages",
   difficulty: {
@@ -27,7 +50,6 @@ const en = {
   noMatchBody: "Try removing a filter or using a broader search term.",
   clearFilters: "Clear all filters",
   howTo: "How to do it",
-  setsReps: "Sets & reps",
   stages: "Stages",
   mistakes: "Common mistakes",
   whenToStop: "When to stop",
@@ -39,12 +61,35 @@ export const exerciseLibraryText: PageText<typeof en> = {
   en,
   fa: {
     title: "کتابخانه تمرین",
-    intro: (count) =>
-      `${count.toLocaleString("fa-IR")} تمرین مبتنی بر شواهد همراه با دوز، خطاهای رایج و گزینه‌های پیشرفت / پسرفت.`,
+    intro: (count, approved) =>
+      `${count.toLocaleString("fa-IR")} تمرین همراه با دوز شروع پیشنهادی، خطاهای رایج و نردبان پیشرفت. ${approved.toLocaleString("fa-IR")} تمرین بازبینی بالینی شده و قابل تجویز است؛ بقیه کارت مرجع‌اند و منتظر بازبینی فیزیوتراپیست.`,
     search: "جستجو…",
     searchAria: "جستجوی تمرین",
     allRegions: "همه نواحی",
-    allGoals: "همه اهداف",
+    allCategories: "همه انواع تمرین",
+    category: {
+      mobility: "تحرک",
+      stretch: "کشش",
+      strength: "تقویت",
+      isometric: "ایزومتریک",
+      motor_control: "کنترل حرکتی",
+      balance: "تعادل",
+      neural: "تحرک عصبی",
+      plyometric: "پلایومتریک",
+      aerobic: "هوازی",
+    },
+    allReview: "بازبینی‌شده و در انتظار",
+    reviewApproved: "قابل تجویز (بازبینی‌شده)",
+    reviewPending: "در انتظار بازبینی بالینی",
+    pendingBadge: "در انتظار بازبینی بالینی",
+    pendingNote:
+      "فقط برای مرجع. این تمرین تا وقتی فیزیوتراپیست متن بیمار آن را بازبینی نکند و در کاتالوگ فعال نشود، به برنامه خانگی اضافه نمی‌شود.",
+    startingDose: "دوز شروع پیشنهادی",
+    startingDoseNote: "متناسب با تحریک‌پذیری، توان و هدف هر بیمار تنظیم کنید.",
+    precautions: "احتیاط‌ها",
+    ladder: "نردبان پیشرفت",
+    ladderHint: "ابتدای مسیر آسان‌تر و انتهای آن سخت‌تر است. برای باز کردن هر مرحله آن را انتخاب کنید.",
+    currentStep: "همین تمرین",
     allDifficulties: "همه سطوح دشواری",
     allStages: "همه مراحل",
     difficulty: {
@@ -63,7 +108,6 @@ export const exerciseLibraryText: PageText<typeof en> = {
     noMatchBody: "یک فیلتر را بردارید یا عبارت جستجوی کلی‌تری امتحان کنید.",
     clearFilters: "پاک کردن همه فیلترها",
     howTo: "روش انجام",
-    setsReps: "ست و تکرار",
     stages: "مراحل",
     mistakes: "خطاهای رایج",
     whenToStop: "چه زمانی متوقف شود",

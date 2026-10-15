@@ -1,0 +1,149 @@
+/*
+  Glute-bridge coach loop: 6 s per repetition — lift (8–33 %), hold (33–62 %),
+  lower (62–90 %), rest. Each body segment rotates about its joint, nested so
+  the hip, knee and ankle follow the torso; the foot counter-rotates to stay
+  flat on the mat.
+*/
+.anim {
+  animation-duration: 6s;
+  animation-iteration-count: infinite;
+  animation-timing-function: ease-in-out;
+}
+.slow .anim {
+  animation-duration: 12s;
+}
+.paused .anim {
+  animation-play-state: paused;
+}
+.noGuide .guide {
+  display: none;
+}
+
+.torso {
+  animation-name: torso;
+}
+.thigh {
+  animation-name: thigh;
+}
+.shin {
+  animation-name: shin;
+}
+.foot {
+  animation-name: foot;
+}
+.glute {
+  animation-name: glute;
+  filter: blur(5px);
+}
+.guideLine {
+  animation-name: guideLine;
+}
+.progress {
+  animation-name: progress;
+  animation-timing-function: linear;
+  transform-origin: 0 50%;
+}
+.progress:dir(rtl) {
+  transform-origin: 100% 50%;
+}
+.chip {
+  animation-timing-function: linear;
+  background: rgb(255 255 255 / 0.12);
+  color: #ffffff;
+}
+.phase1 {
+  animation-name: phase1;
+}
+.phase2 {
+  animation-name: phase2;
+}
+.phase3 {
+  animation-name: phase3;
+}
+
+@keyframes torso {
+  0%, 8%, 90%, 100% {
+    transform: translate(520px, 380px) rotate(0deg) translate(-520px, -380px);
+  }
+  33%, 62% {
+    transform: translate(520px, 380px) rotate(22deg) translate(-520px, -380px);
+  }
+}
+@keyframes thigh {
+  0%, 8%, 90%, 100% {
+    transform: translate(370px, 380px) rotate(0deg) translate(-370px, -380px);
+  }
+  33%, 62% {
+    transform: translate(370px, 380px) rotate(-48.95deg) translate(-370px, -380px);
+  }
+}
+@keyframes shin {
+  0%, 8%, 90%, 100% {
+    transform: translate(292.5px, 288.4px) rotate(0deg) translate(-292.5px, -288.4px);
+  }
+  33%, 62% {
+    transform: translate(292.5px, 288.4px) rotate(14.55deg) translate(-292.5px, -288.4px);
+  }
+}
+@keyframes foot {
+  0%, 8%, 90%, 100% {
+    transform: translate(230px, 385px) rotate(0deg) translate(-230px, -385px);
+  }
+  33%, 62% {
+    transform: translate(230px, 385px) rotate(12.4deg) translate(-230px, -385px);
+  }
+}
+@keyframes glute {
+  0%, 8%, 85%, 100% {
+    opacity: 0;
+  }
+  30%, 62% {
+    opacity: 0.75;
+  }
+}
+@keyframes guideLine {
+  0%, 26%, 70%, 100% {
+    opacity: 0;
+  }
+  35%, 60% {
+    opacity: 1;
+  }
+}
+@keyframes progress {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+@keyframes phase1 {
+  0%, 7.9%, 33%, 100% {
+    background: rgb(255 255 255 / 0.12);
+    color: #ffffff;
+  }
+  8%, 32.9% {
+    background: #ffffff;
+    color: #14211d;
+  }
+}
+@keyframes phase2 {
+  0%, 32.9%, 62%, 100% {
+    background: rgb(255 255 255 / 0.12);
+    color: #ffffff;
+  }
+  33%, 61.9% {
+    background: #ffffff;
+    color: #14211d;
+  }
+}
+@keyframes phase3 {
+  0%, 61.9%, 90%, 100% {
+    background: rgb(255 255 255 / 0.12);
+    color: #ffffff;
+  }
+  62%, 89.9% {
+    background: #ffffff;
+    color: #14211d;
+  }
+}

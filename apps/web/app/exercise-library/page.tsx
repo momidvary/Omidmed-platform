@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Input, Select } from "@/components/ui/Form";
 import { Icon } from "@/components/ui/Icon";
+import { CoachDemo } from "@/components/exercise/CoachDemo";
 import { BulletList, EmptyState, PageIntro } from "@/components/ui/Misc";
 import { cn } from "@/lib/utils";
 import { exerciseLibraryText } from "./text";
@@ -209,6 +210,7 @@ function ExerciseCard({
                 {t.pendingNote}
               </p>
             )}
+            <CoachDemo exerciseId={ex.id} name={ex.name} locale={locale} />
             <Section label={t.howTo}>
               <ol className="list-decimal space-y-1.5 ps-5 text-sm text-[var(--color-ink-soft)]">
                 {ex.howTo.map((step, i) => (

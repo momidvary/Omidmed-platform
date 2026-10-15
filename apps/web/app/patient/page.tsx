@@ -23,6 +23,7 @@ import { SaveStatusPill } from "@/components/ui/SaveStatusPill";
 import { detectSafetySignals } from "@/lib/clinical/safety";
 import { ExerciseAdherenceForm } from "@/components/clinical/ExerciseAdherenceForm";
 import { ExerciseAdherenceHistory } from "@/components/clinical/ExerciseAdherenceHistory";
+import { CoachDemo } from "@/components/exercise/CoachDemo";
 
 const statusLabelsFa = {
   connected: "متصل",
@@ -820,6 +821,7 @@ function ProgramTab({ patient }: { patient: Patient }) {
             </button>
             <div hidden={!open}>
               <CardBody className="space-y-3 border-t border-[var(--color-border)]">
+                {open && <CoachDemo exerciseId={item.exerciseId} name={content.name} locale="fa" />}
                 <div>
                   <h4 className="mb-1.5 text-xs font-bold text-[var(--color-ink-faint)]">
                     نحوه انجام

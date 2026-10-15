@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { ExerciseAnimation } from "@/components/clinical/ExerciseAnimation";
+import { ExerciseAnimation, frameAt } from "@/components/clinical/ExerciseAnimation";
 import { FLOOR, L, VIEW_H, VIEW_W, dist, poseAt, solve, type JointName, type PinName, type Pt } from "@/lib/animation/figure";
 import { motions } from "@/lib/animation/motions";
 import { buildScene, figureOptions, sampleSkeletons } from "@/lib/animation/scene";
@@ -60,9 +60,23 @@ describe("exercise animations", () => {
   it("renders an accessible, labelled player with controls", () => {
     render(<ExerciseAnimation exerciseId="ex_glute_bridge" name="پل باسن" lang="fa" holdSeconds={5} />);
     expect(screen.getByRole("img", { name: "نمایش متحرک تمرین پل باسن" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "آهسته" })).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByRole("button", { name: "آهسته ۰٫۵×" })).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByRole("button", { name: "عادی ۱×" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "خط راهنما" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByRole("button", { name: "وضعیت پایانی" })).toBeInTheDocument();
-    expect(screen.getByText(/راهنمای کلی حرکت/)).toBeInTheDocument();
+    expect(screen.getByText(/شکل کلی حرکت/)).toBeInTheDocument();
+  });
+
+  it("walks through move, hold and return within one repetition", () => {
+    const motion = motions.ex_glute_bridge;
+    const phases = [0, 1200, 2800, 4400, 5800].map((clock) => frameAt(motion, clock, 2).phase);
+    expect(phases).toEqual([0, 1, 2, 3, 3]);
+    expect(frameAt(motion, 0, 2).p).toBe(0);
+    expect(frameAt(motion, 2800, 2).p).toBe(1);
+    // A full cycle (700 + 1600 + 2000 + 1600 ms) starts the next repetition.
+    expect(frameAt(motion, 5900, 2).rep).toBe(2);
+    expect(frameAt(motions.ex_bird_dog, 5900, 2).alternate).toBe(true);
+    expect(frameAt(motions.ex_cat_camel, 100, undefined).phase).toBe(-1);
   });
 
   it("renders nothing for an exercise without a motion", () => {

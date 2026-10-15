@@ -131,21 +131,24 @@ test("expanded library marks unreviewed exercises and links progression ladders"
   page,
 }) => {
   await page.goto("/exercise-library");
+  await page.getByText("More filters").click();
   await page.getByRole("combobox", { name: "Reviewed and pending" }).selectOption("pending");
-  const slr = page.locator("#exercise-ex_slr");
-  await expect(slr.getByText("Awaiting clinical review", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Knee", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Knee", exact: true })).toHaveAttribute("aria-pressed", "true");
 
-  await slr.getByRole("button", { name: /Straight Leg Raise/ }).click();
-  await expect(slr.getByText(/cannot be added to a home program/)).toBeVisible();
-  await expect(slr.getByText("3 sets × 10 reps")).toBeVisible();
-  await expect(slr.locator('[aria-current="step"]')).toContainText("Straight Leg Raise");
-  await expect(slr.getByRole("img", { name: "Animated demonstration of Straight Leg Raise" })).toBeVisible();
-  await slr.getByRole("button", { name: "End position" }).click();
-  await expect(slr.getByRole("button", { name: "Play" })).toBeVisible();
+  await page.getByRole("link", { name: "Open Straight Leg Raise" }).click();
+  await expect(page).toHaveURL(/\/exercise-library\/ex_slr$/);
+  await expect(page.getByRole("heading", { level: 1, name: "Straight Leg Raise" })).toBeVisible();
+  await expect(page.getByText(/cannot be added to a home program/)).toBeVisible();
+  await expect(page.getByRole("link", { name: "Prescribe from a patient's record" })).toHaveCount(0);
+  await expect(page.getByRole("img", { name: "Animated demonstration of Straight Leg Raise" })).toBeVisible();
+  await page.getByRole("button", { name: "End position" }).click();
+  await expect(page.getByRole("button", { name: "Play" })).toBeVisible();
+  await expect(page.locator('[aria-current="step"]').first()).toContainText("Straight Leg Raise");
 
-  // A reviewed step is filtered out by "pending"; the ladder still opens it.
-  await slr.getByRole("button", { name: /Quad Sets/ }).click();
-  const quadSets = page.locator("#exercise-ex_quad_sets");
-  await expect(quadSets.locator("button[aria-expanded]")).toHaveAttribute("aria-expanded", "true");
-  await expect(quadSets.getByText("Awaiting clinical review", { exact: true })).toHaveCount(0);
+  // A reviewed step of the same ladder opens its own page.
+  await page.getByRole("link", { name: /Quad Sets/ }).first().click();
+  await expect(page).toHaveURL(/\/exercise-library\/ex_quad_sets$/);
+  await expect(page.getByText(/cannot be added to a home program/)).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Prescribe from a patient's record" })).toHaveAttribute("href", "/patients");
 });

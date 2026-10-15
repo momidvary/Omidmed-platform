@@ -1,5 +1,5 @@
 import type { PageText } from "@/lib/i18n/text";
-import type { Difficulty, ExerciseCategory, Stage } from "@/lib/types";
+import type { BodyRegionId, Difficulty, ExerciseCategory, Stage } from "@/lib/types";
 
 const en = {
   title: "Exercise Library",
@@ -55,6 +55,38 @@ const en = {
   whenToStop: "When to stop",
   progression: "Progression",
   regression: "Regression",
+  regionShort: {
+    neck: "Neck", shoulder: "Shoulder", "low-back": "Low back", hip: "Hip",
+    knee: "Knee", "ankle-foot": "Ankle & foot", "post-op": "Post-op", neuro: "Neuro", sports: "Sport",
+  } as Record<BodyRegionId, string>,
+  all: "All",
+  regionFilter: "Body region",
+  moreFilters: "More filters",
+  animated: "Coach animation",
+  open: (name: string) => `Open ${name}`,
+  breadcrumb: "Breadcrumb",
+  back: "Back to the library",
+  notFoundTitle: "Exercise not found",
+  notFoundBody: "This exercise is not in the library. It may have been renamed.",
+  prescribe: "Prescribe from a patient's record",
+  prescribeHint: "Exercises reach a patient only through the home-program builder, after the safety screen and an approved plan.",
+  sets: "Sets",
+  reps: "Reps per set",
+  total: "Total time",
+  hold: "Hold",
+  rest: "Rest",
+  rpe: "Effort (RPE)",
+  pain: "Pain limit",
+  perDay: "Per day",
+  seconds: (n: number) => `${n} s`,
+  outOf10: (n: number) => `${n}/10`,
+  times: (n: number) => `${n}×`,
+  doseNote: "Library default only; the clinician sets the final dose in the home program.",
+  steps: "Steps",
+  harderEasier: "Harder or easier",
+  changeLevel: "Change the level only with the clinician's agreement.",
+  disclaimer:
+    "This page helps clinicians teach the correct movement; it does not replace examination or clinical judgement. Severe pain, numbness or warning signs mean stop and contact the treating clinician.",
 };
 
 export const exerciseLibraryText: PageText<typeof en> = {
@@ -113,5 +145,37 @@ export const exerciseLibraryText: PageText<typeof en> = {
     whenToStop: "چه زمانی متوقف شود",
     progression: "پیشرفت",
     regression: "پسرفت",
+    regionShort: {
+      neck: "گردن", shoulder: "شانه", "low-back": "کمر", hip: "لگن و ران",
+      knee: "زانو", "ankle-foot": "مچ و کف پا", "post-op": "پس از جراحی", neuro: "عصبی", sports: "ورزشی",
+    },
+    all: "همه",
+    regionFilter: "ناحیه بدن",
+    moreFilters: "فیلترهای بیشتر",
+    animated: "انیمیشن مربی",
+    open: (name) => `باز کردن ${name}`,
+    breadcrumb: "مسیر صفحه",
+    back: "بازگشت به کتابخانه",
+    notFoundTitle: "تمرین پیدا نشد",
+    notFoundBody: "این تمرین در کتابخانه نیست؛ شاید نامش تغییر کرده باشد.",
+    prescribe: "تجویز از پرونده بیمار",
+    prescribeHint: "تمرین فقط از راه نسخه‌نویس برنامه خانگی، پس از غربالگری ایمنی و تأیید برنامه درمان، به بیمار می‌رسد.",
+    sets: "ست",
+    reps: "تکرار در هر ست",
+    total: "مدت کل",
+    hold: "نگه‌داشتن",
+    rest: "استراحت",
+    rpe: "شدت تلاش (RPE)",
+    pain: "حد درد",
+    perDay: "در روز",
+    seconds: (n) => `${n.toLocaleString("fa-IR")} ثانیه`,
+    outOf10: (n) => `${n.toLocaleString("fa-IR")} از ۱۰`,
+    times: (n) => `${n.toLocaleString("fa-IR")} بار`,
+    doseNote: "دوز پیش‌فرض کتابخانه است؛ دوز نهایی را درمانگر در نسخهٔ تمرینی تعیین می‌کند.",
+    steps: "مراحل انجام",
+    harderEasier: "سخت‌تر یا آسان‌تر",
+    changeLevel: "تغییر سطح تمرین فقط با نظر درمانگر.",
+    disclaimer:
+      "این صفحه برای آموزش شکل صحیح حرکت است و جایگزین معاینه و قضاوت بالینی نیست. در صورت درد شدید، بی‌حسی یا علائم هشدار، تمرین متوقف و با درمانگر تماس گرفته شود.",
   },
 };

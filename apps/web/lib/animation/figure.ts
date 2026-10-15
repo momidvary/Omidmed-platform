@@ -288,7 +288,7 @@ export type Layer = "far" | "body" | "near";
 export type Tone = "figure" | "moving" | "ghost";
 
 export type Shape =
-  | { kind: "line"; from: Pt; to: Pt; width: number; tone: Tone; layer: Layer; seg: SegName }
+  | { kind: "line"; from: Pt; to: Pt; width: number; tone: Tone; layer: Layer; seg: SegName; part?: "shoulders" | "pelvis" }
   | { kind: "spine"; from: Pt; control: Pt; to: Pt; width: number; tone: Tone }
   | { kind: "head"; at: Pt; r: number; faceAngle: number; view: "side" | "front"; yaw: number; tone: Tone };
 
@@ -328,8 +328,8 @@ export function drawFigure(
   if (front) {
     // Shoulder and pelvis lines, so the figure reads from the front or above.
     const t = ghost ? "ghost" : "figure";
-    shapes.push({ kind: "line", from: j.farShoulder, to: j.nearShoulder, width: 10, tone: t, layer: "body", seg: "trunk" });
-    shapes.push({ kind: "line", from: j.farHip, to: j.nearHip, width: 12, tone: t, layer: "body", seg: "trunk" });
+    shapes.push({ kind: "line", from: j.farShoulder, to: j.nearShoulder, width: 10, tone: t, layer: "body", seg: "trunk", part: "shoulders" });
+    shapes.push({ kind: "line", from: j.farHip, to: j.nearHip, width: 12, tone: t, layer: "body", seg: "trunk", part: "pelvis" });
   }
   shapes.push({
     kind: "spine", from: j.hip, control: skeleton.spineControl, to: j.shoulder,

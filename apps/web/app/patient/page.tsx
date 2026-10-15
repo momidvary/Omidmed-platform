@@ -827,6 +827,7 @@ function ProgramTab({ patient }: { patient: Patient }) {
                     name={content.name}
                     lang="fa"
                     holdSeconds={item.holdSeconds}
+                    reps={item.targetReps}
                   />
                 )}
                 <div>

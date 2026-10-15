@@ -38,6 +38,8 @@ export interface Motion {
   tempo?: number;
   /** Magnify around a point, e.g. the head or the foot. */
   zoom?: { scale: number; at: Pt };
+  /** Scenery: the gym seen from the side (default) or the floor seen from above. */
+  backdrop?: "gym" | "floor";
 }
 
 type PoseInput = Partial<Omit<Pose, "legN" | "legF" | "armN" | "armF">> & {
@@ -508,21 +510,21 @@ export const motions: Record<string, Motion> = {
     tempo: 1.5,
   },
   ex_ext_rotation: {
-    view: "front", head: "top",
+    view: "front", head: "top", backdrop: "floor",
     keys: [P(TOP, { armN: { b: -90 } }), P(TOP, { armN: { b: -90 } })],
     props: [{ kind: "wall", x: 226, side: "right" }],
     glow: ["nearUpperArm"],
     zoom: { scale: 2, at: [210, 135] },
   },
   ex_er_band: {
-    view: "front", head: "top",
+    view: "front", head: "top", backdrop: "floor",
     keys: [P(TOP, { armN: { b: 180 } }), P(TOP, { armN: { b: 360 } })],
     props: [{ kind: "roll", at: [150, 150], r: 5 }, { kind: "band", from: [150, 150], to: { joint: "nearWrist" } }],
     track: "nearWrist",
     zoom: { scale: 2, at: [205, 140] },
   },
   ex_ir_band: {
-    view: "front", head: "top",
+    view: "front", head: "top", backdrop: "floor",
     keys: [P(TOP, { armN: { b: 360 } }), P(TOP, { armN: { b: 180 } })],
     props: [{ kind: "roll", at: [265, 150], r: 5 }, { kind: "band", from: [265, 150], to: { joint: "nearWrist" } }],
     track: "nearWrist",

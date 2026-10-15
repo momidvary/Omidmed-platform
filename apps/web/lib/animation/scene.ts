@@ -21,6 +21,11 @@ export interface Scene {
   glow: GlowShape[];
   track: Pt[];
   headView: "side" | "front" | "top";
+  /** Numeric view box: x, y, width, height. */
+  box: [number, number, number, number];
+  backdrop: "gym" | "floor";
+  /** Exercise mat under a figure that lies, sits or kneels on the floor. */
+  mat: { x0: number; x1: number } | null;
 }
 
 export function figureOptions(motion: Motion): FigureOptions {
@@ -145,7 +150,7 @@ function fittedViewBox(motion: Motion): string {
   let x0 = Math.min(...xs) - pad;
   let x1 = Math.max(...xs) + pad;
   let y0 = Math.min(...ys) - pad;
-  const y1 = FLOOR + 10;
+  const y1 = FLOOR + 26;
   let w = x1 - x0;
   let h = y1 - y0;
   const ratio = VIEW_W / VIEW_H;
@@ -180,6 +185,26 @@ export function keysFor(motion: Motion, alternate: boolean): readonly Pose[] {
   return alternate && motion.alt ? motion.alt : motion.keys;
 }
 
+const matCache = new WeakMap<Motion, { x0: number; x1: number } | null>();
+
+function matFor(motion: Motion): { x0: number; x1: number } | null {
+  if (matCache.has(motion)) return matCache.get(motion)!;
+  let mat: { x0: number; x1: number } | null = null;
+  if (motion.backdrop !== "floor") {
+    const samples = sampleSkeletons(motion, 4);
+    // On the floor: hips, shoulders or knees within a body-width of it.
+    const low = samples.some((sk) =>
+      (["hip", "shoulder", "nearKnee", "farKnee"] as const).some((name) => sk.joints[name][1] > FLOOR - 16)
+    );
+    if (low) {
+      const xs = samples.flatMap((sk) => [sk.joints.hip[0], sk.joints.shoulder[0], sk.joints.head[0], sk.joints.nearToe[0], sk.joints.farToe[0], sk.joints.nearKnee[0]]);
+      mat = { x0: Math.min(...xs) - 18, x1: Math.max(...xs) + 18 };
+    }
+  }
+  matCache.set(motion, mat);
+  return mat;
+}
+
 const movingCache = new WeakMap<readonly Pose[], Set<SegName>>();
 const trackCache = new WeakMap<readonly Pose[], Pt[]>();
 
@@ -204,8 +229,12 @@ export function buildScene(motion: Motion, p: number, alternate = false): Scene 
     }
   }
   const props = motion.props ?? [];
+  const vb = viewBox(motion);
   return {
-    viewBox: viewBox(motion),
+    viewBox: vb,
+    box: vb.split(" ").map(Number) as [number, number, number, number],
+    backdrop: motion.backdrop ?? "gym",
+    mat: matFor(motion),
     floor: true,
     props: props.flatMap(staticProp),
     ghost: moving.size > 0 ? drawFigure(end, opts, moving, true) : [],

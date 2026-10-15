@@ -44,6 +44,7 @@ type Strings = {
   supports: string;
   against: string;
   noReasons: string;
+  protocol: string;
   limitedData: string;
   medicalReview: string;
   nextTests: string;
@@ -115,6 +116,7 @@ const en: Strings = {
   supports: "Supports",
   against: "Argues against",
   noReasons: "No recorded finding bears on this hypothesis yet.",
+  protocol: "Treatment protocol",
   limitedData: "Very few findings recorded — the ranking mostly reflects base rates.",
   medicalReview:
     "A serious hypothesis has support from the findings. Arrange medical review before treatment:",
@@ -188,6 +190,7 @@ const fa: Strings = {
   supports: "پشتیبانی می‌کند",
   against: "خلاف آن",
   noReasons: "هنوز یافته ثبت‌شده‌ای به این فرضیه مربوط نیست.",
+  protocol: "پروتکل درمانی",
   limitedData: "یافته‌های ثبت‌شده بسیار کم است — رتبه‌بندی عمدتاً بر اساس شیوع پایه است.",
   medicalReview: "یک فرضیه جدی از یافته‌ها پشتیبانی دارد. پیش از درمان ارزیابی پزشکی ترتیب دهید:",
   nextTests: "آموزنده‌ترین تست‌های بعدی",
@@ -251,6 +254,7 @@ const ar: Strings = {
     against: "النتائج تعارضها",
   },
   why: "لماذا",
+  protocol: "بروتوكول العلاج",
   supports: "يدعم",
   against: "يعارض",
   medicalReview: "فرضية خطيرة مدعومة بالنتائج. رتّب مراجعة طبية قبل العلاج:",

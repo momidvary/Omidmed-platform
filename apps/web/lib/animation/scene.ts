@@ -208,6 +208,21 @@ function matFor(motion: Motion): { x0: number; x1: number } | null {
 const movingCache = new WeakMap<readonly Pose[], Set<SegName>>();
 const trackCache = new WeakMap<readonly Pose[], Pt[]>();
 
+/**
+ * Round every number in a drawn shape to 0.01 px. Server (Node) and browser
+ * engines can differ in the last bit of Math.cos/sin; unrounded coordinates
+ * would make server-rendered SVG fail to hydrate.
+ */
+export const round2 = (v: number) => Math.round(v * 100) / 100;
+function roundDeep<T>(value: T): T {
+  if (typeof value === "number") return round2(value) as T;
+  if (Array.isArray(value)) return value.map(roundDeep) as T;
+  if (value && typeof value === "object") {
+    return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, roundDeep(v)])) as T;
+  }
+  return value;
+}
+
 /** Everything needed to draw one frame at progress p (0 = start, 1 = end). */
 export function buildScene(motion: Motion, p: number, alternate = false): Scene {
   const opts = figureOptions(motion);
@@ -230,7 +245,7 @@ export function buildScene(motion: Motion, p: number, alternate = false): Scene 
   }
   const props = motion.props ?? [];
   const vb = viewBox(motion);
-  return {
+  return roundDeep({
     viewBox: vb,
     box: vb.split(" ").map(Number) as [number, number, number, number],
     backdrop: motion.backdrop ?? "gym",
@@ -243,7 +258,7 @@ export function buildScene(motion: Motion, p: number, alternate = false): Scene 
     glow: glowShapes(motion.glow ?? [], current, opts),
     track,
     headView: motion.head ?? (opts.view === "front" ? "front" : "side"),
-  };
+  } satisfies Scene);
 }
 
 /** All joints over a sampled movement, for bounds checks in tests. */

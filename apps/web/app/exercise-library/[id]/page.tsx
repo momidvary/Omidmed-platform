@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Card, CardBody } from "@/components/ui/Card";
 import { Icon } from "@/components/ui/Icon";
 import { EmptyState } from "@/components/ui/Misc";
+import { protocolsUsingExercise } from "@/lib/clinical/protocols";
 import { laddersFor } from "@/lib/data/exerciseCatalog";
 import { exercises } from "@/lib/data/exercises";
 import { localizeExercise } from "@/lib/data/exerciseLibraryFa";
@@ -191,6 +192,24 @@ export default function ExerciseDetailPage() {
             </div>
             <p className="mt-2 text-xs text-[var(--color-ink-faint)]">{t.changeLevel}</p>
           </section>
+
+          {protocolsUsingExercise(ex.id).length > 0 && (
+            <section aria-labelledby="protocols-heading">
+              <h2 id="protocols-heading" className="mb-2 text-base font-bold text-[var(--color-ink)]">{t.usedInProtocols}</h2>
+              <ul className="flex flex-wrap gap-1.5">
+                {protocolsUsingExercise(ex.id).map((protocol) => (
+                  <li key={protocol.id}>
+                    <Link
+                      href={`/protocols/${protocol.id}`}
+                      className="inline-flex min-h-8 items-center rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1 text-xs text-[var(--color-ink-soft)] hover:border-[var(--color-primary)] hover:text-[var(--color-primary-strong)] focus-visible:outline-2 focus-visible:outline-[var(--color-primary)]"
+                    >
+                      {protocol.title[lang]}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
 
           {laddersFor(ex.id).map((ladder) => (
             <section key={ladder.id} aria-label={`${t.ladder} · ${lang === "fa" ? ladder.label.fa : ladder.label.en}`}>

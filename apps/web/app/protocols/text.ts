@@ -1,0 +1,66 @@
+import type { PageText } from "@/lib/i18n/text";
+
+const en = {
+  title: "Treatment protocols",
+  intro: (count: number) =>
+    `${count} condition-based rehabilitation templates with criteria-based phases, library exercises, outcome measures and the guidelines they draw on. They support, and never replace, examination and clinical judgement.`,
+  draft: "Draft · awaiting clinical review",
+  draftNote:
+    "Reference template for a provisional hypothesis. Choose exercises, dose and progression from your examination; exercises reach a patient only through the home-program builder. Verify references against the current versions.",
+  phases: (n: number) => `${n} phases`,
+  linked: "Linked hypotheses",
+  regionShort: {
+    neck: "Neck", shoulder: "Shoulder", "low-back": "Low back", hip: "Hip",
+    knee: "Knee", "ankle-foot": "Ankle & foot", "post-op": "Post-op", neuro: "Neuro", sports: "Sport",
+  } as Record<string, string>,
+  open: (name: string) => `Open protocol: ${name}`,
+  breadcrumb: "Breadcrumb",
+  notFoundTitle: "Protocol not found",
+  notFoundBody: "This protocol is not in the list.",
+  back: "Back to protocols",
+  principles: "Key principles",
+  phase: (n: number) => `Phase ${n}`,
+  goals: "Goals",
+  exercises: "Library exercises",
+  other: "Other interventions",
+  progressWhen: "Move to the next phase when",
+  pending: "awaiting review",
+  outcomes: "Outcome measures",
+  watchFor: "Re-assess or refer if",
+  references: "Guidelines and evidence",
+  usedIn: "Used in protocols",
+};
+
+export const protocolText: PageText<typeof en> = {
+  en,
+  fa: {
+    title: "پروتکل‌های درمانی",
+    intro: (count) =>
+      `${count.toLocaleString("fa-IR")} الگوی توان‌بخشی بر اساس عارضه، با فازهای معیارمحور، تمرین‌های کتابخانه، ابزارهای سنجش پیامد و راهنماهای بالینی مرجع. این الگوها پشتیبان معاینه و قضاوت بالینی‌اند، نه جایگزین آن.`,
+    draft: "پیش‌نویس · در انتظار بازبینی بالینی",
+    draftNote:
+      "الگوی مرجع برای یک فرضیه بالینی موقت است. انتخاب تمرین، دوز و پیشرفت بر اساس معاینه شماست؛ تمرین فقط از راه نسخه‌نویس برنامه خانگی به بیمار می‌رسد. منابع را با نسخه فعلی تطبیق دهید.",
+    phases: (n) => `${n.toLocaleString("fa-IR")} فاز`,
+    linked: "فرضیه‌های مرتبط",
+    regionShort: {
+      neck: "گردن", shoulder: "شانه", "low-back": "کمر", hip: "لگن و ران",
+      knee: "زانو", "ankle-foot": "مچ و کف پا", "post-op": "پس از جراحی", neuro: "عصبی", sports: "ورزشی",
+    },
+    open: (name) => `باز کردن پروتکل ${name}`,
+    breadcrumb: "مسیر صفحه",
+    notFoundTitle: "پروتکل پیدا نشد",
+    notFoundBody: "این پروتکل در فهرست نیست.",
+    back: "بازگشت به پروتکل‌ها",
+    principles: "اصول کلیدی",
+    phase: (n) => `فاز ${n.toLocaleString("fa-IR")}`,
+    goals: "اهداف",
+    exercises: "تمرین‌های کتابخانه",
+    other: "سایر مداخلات",
+    progressWhen: "رفتن به فاز بعد وقتی که",
+    pending: "در انتظار بازبینی",
+    outcomes: "ابزارهای سنجش پیامد",
+    watchFor: "ارزیابی مجدد یا ارجاع اگر",
+    references: "راهنماها و شواهد",
+    usedIn: "استفاده در پروتکل‌ها",
+  },
+};

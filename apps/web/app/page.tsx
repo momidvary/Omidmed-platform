@@ -314,7 +314,6 @@ export default function DashboardPage() {
               href={`/case-analysis?region=${region.id}`}
               className="flex items-center gap-1.5 rounded-full border border-[var(--color-border)] bg-white px-3 py-1.5 text-xs font-medium text-[var(--color-ink-soft)] transition-colors hover:border-[var(--color-primary)] hover:text-[var(--color-primary-strong)]"
             >
-              <span>{region.emoji}</span>
               {region.label}
             </Link>
           ))}

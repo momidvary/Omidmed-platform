@@ -12,7 +12,7 @@ const en = {
   accessRequiredHint:
     "Patient PHI is available only to clinic owners and therapists. Clinic staff and other roles cannot open this registry.",
   selectClinic: "Select an active clinic",
-  selectClinicHint: "Choose a clinic from the top bar. Patient records are loaded only for that active tenant.",
+  selectClinicHint: "Choose a clinic from the top bar. Patient records are loaded only for that active clinic.",
   closeForm: "Close form",
   newPatient: "New patient",
   createTitle: "Register a new patient",
@@ -38,7 +38,7 @@ const en = {
   creating: "Creating…",
   createButton: "Register and open patient",
   createFailed:
-    "Patient was not created. Check your connection and permissions, and confirm the create_patient_episode RPC is deployed.",
+    "Patient was not created. Check your connection and access, then retry. If it keeps failing, contact the clinic administrator.",
   created: "Patient and active care episode were created atomically.",
   errName2: "Enter at least 2 characters.",
   errName120: "Name must be 120 characters or fewer.",
@@ -85,7 +85,7 @@ const en = {
   manageTitle: (name: string) => `Manage ${name}`,
   manageSubtitle: "All lifecycle and portal changes are authorized and stamped by the database.",
   close: "Close",
-  changeRejected: "The change was rejected. Check permissions, current episode state and database migration 015.",
+  changeRejected: "The change was rejected. Check your access and the current episode state, then retry.",
   demographics: "Demographics",
   phone: "Phone",
   birthYear: "Birth year",
@@ -157,7 +157,7 @@ const en = {
     account_not_eligible:
       "This number belongs to an account that cannot be a patient login: a clinic staff account, an account without a patient profile (e.g. created before the database was reset — run 03_first_clinic_owner.sql again to restore profiles), or the account already represents another patient.",
     create_failed:
-      "The portal account could not be created for this number. Check that phone sign-in is enabled in Supabase (Authentication → Providers → Phone) and retry.",
+      "The portal account could not be created for this number. Ask the clinic administrator to check that phone sign-in is enabled, then retry.",
     not_configured:
       "Invitations are not configured on the server: set SUPABASE_SECRET_KEY (server-only) and restart / redeploy.",
     not_permitted:
@@ -210,7 +210,7 @@ export const patientsText: PageText<PatientsText> = {
     creating: "در حال ثبت…",
     createButton: "ثبت و باز کردن صفحه بیمار",
     createFailed:
-      "بیمار ثبت نشد. اتصال و دسترسی‌ها را بررسی کنید و مطمئن شوید تابع create_patient_episode در دیتابیس نصب شده است.",
+      "بیمار ثبت نشد. اتصال و دسترسی خود را بررسی و دوباره تلاش کنید. اگر باز هم ثبت نشد، با مدیر کلینیک تماس بگیرید.",
     created: "بیمار و دوره درمان فعال با هم ثبت شدند.",
     errName2: "حداقل ۲ نویسه وارد کنید.",
     errName120: "نام باید حداکثر ۱۲۰ نویسه باشد.",
@@ -257,7 +257,7 @@ export const patientsText: PageText<PatientsText> = {
     manageTitle: (name) => `مدیریت ${name}`,
     manageSubtitle: "همه تغییرات دوره درمان و پرتال توسط دیتابیس مجوزدهی و ثبت می‌شود.",
     close: "بستن",
-    changeRejected: "تغییر پذیرفته نشد. دسترسی‌ها، وضعیت دوره درمان و migration 015 را بررسی کنید.",
+    changeRejected: "تغییر پذیرفته نشد. دسترسی خود و وضعیت فعلی دوره درمان را بررسی و دوباره تلاش کنید.",
     demographics: "مشخصات",
     phone: "تلفن",
     birthYear: "سال تولد",
@@ -328,7 +328,7 @@ export const patientsText: PageText<PatientsText> = {
       account_not_eligible:
         "این شماره متعلق به حسابی است که نمی‌تواند حساب بیمار باشد: حساب کارمند کلینیک، حساب بدون پروفایل بیمار (مثلاً ساخته‌شده پیش از ریست دیتابیس — فایل 03_first_clinic_owner.sql را دوباره اجرا کنید)، یا حسابی که از قبل به بیمار دیگری وصل است.",
       create_failed:
-        "حساب پرتال برای این شماره ساخته نشد. بررسی کنید ورود با تلفن در Supabase فعال باشد (Authentication → Providers → Phone) و دوباره تلاش کنید.",
+        "حساب پرتال برای این شماره ساخته نشد. از مدیر کلینیک بخواهید فعال بودن ورود با شماره موبایل را بررسی کند و دوباره تلاش کنید.",
       not_configured:
         "دعوت در سرور تنظیم نشده است: SUPABASE_SECRET_KEY را (فقط سمت سرور) تنظیم و دوباره Deploy کنید.",
       not_permitted:

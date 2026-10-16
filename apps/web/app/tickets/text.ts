@@ -40,7 +40,7 @@ const en = {
   accessBody:
     "Ticket PHI is available only to clinic owners and therapists. Clinic staff and other roles cannot open this inbox.",
   noClinicTitle: "Select an active clinic",
-  noClinicBody: "Choose a clinic from the top bar. Tickets are loaded only for that active tenant.",
+  noClinicBody: "Choose a clinic from the top bar. Tickets are loaded only for that active clinic.",
   refresh: "Refresh",
   safetyStrong: "Safety triage support only.",
   safetyBody:

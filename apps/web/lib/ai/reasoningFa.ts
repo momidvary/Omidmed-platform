@@ -15,7 +15,7 @@ export function buildReasoningFa(c: PatientCase): ClinicalReasoning {
 
   const subjective = [
     c.mainComplaint && `شکایت اصلی: ${c.mainComplaint}.`,
-    c.painLocation && `محل درد: ${c.painLocation}، شدت ${c.painIntensity} از ۱۰.`,
+    c.painLocation && `محل درد: ${c.painLocation}، شدت ${c.painIntensity.toLocaleString("fa-IR")} از ۱۰.`,
     c.duration && `مدت علائم: ${c.duration}.`,
     c.mechanism && `مکانیسم / نحوه شروع: ${c.mechanism}.`,
     c.aggravating && `عوامل تشدیدکننده: ${c.aggravating}.`,

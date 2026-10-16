@@ -29,7 +29,7 @@ import { evaluateSafetyScreen, splitSafetySelection } from "@/lib/clinical/safet
 import { isMockMode } from "@/lib/config";
 import { fetchPatientRegistry } from "@/lib/supabase/db";
 import { useLocale } from "@/lib/store/LocaleContext";
-import { useText } from "@/lib/i18n/text";
+import { intlLocale, useText } from "@/lib/i18n/text";
 import { newCaseText } from "./text";
 
 const emptyForm = {
@@ -765,16 +765,16 @@ function NewCaseForm() {
                 <div className="sm:col-span-2">
                   <Field label={t.painIntensity(form.painIntensity)}>
                     <div className="flex items-center gap-3">
-                      <span className="text-xs text-[var(--color-ink-faint)]">0</span>
+                      <span className="text-xs text-[var(--color-ink-faint)]">{(0).toLocaleString(intlLocale(locale))}</span>
                       <input
                         type="range"
                         min={0}
                         max={10}
                         value={form.painIntensity}
                         onChange={(e) => set("painIntensity", Number(e.target.value))}
-                        className="h-2 flex-1 cursor-pointer appearance-none rounded-full bg-gradient-to-r from-[var(--color-success)] via-[var(--color-warn)] to-[var(--color-danger)] accent-[var(--color-ink)]"
+                        className="h-2 flex-1 cursor-pointer appearance-none rounded-full bg-gradient-to-r rtl:bg-gradient-to-l from-[var(--color-success)] via-[var(--color-warn)] to-[var(--color-danger)] accent-[var(--color-ink)]"
                       />
-                      <span className="text-xs text-[var(--color-ink-faint)]">10</span>
+                      <span className="text-xs text-[var(--color-ink-faint)]">{(10).toLocaleString(intlLocale(locale))}</span>
                     </div>
                   </Field>
                 </div>

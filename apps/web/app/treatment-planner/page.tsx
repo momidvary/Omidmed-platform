@@ -584,7 +584,7 @@ function PlannerForm() {
                 setPainSeverity(Number(e.target.value));
                 invalidatePlan();
               }}
-              className="mt-3 h-2 w-full cursor-pointer appearance-none rounded-full bg-gradient-to-r from-[var(--color-success)] via-[var(--color-warn)] to-[var(--color-danger)]"
+              className="mt-3 h-2 w-full cursor-pointer appearance-none rounded-full bg-gradient-to-r rtl:bg-gradient-to-l from-[var(--color-success)] via-[var(--color-warn)] to-[var(--color-danger)]"
             />
           </Field>
           <Field label={t.impairment}>

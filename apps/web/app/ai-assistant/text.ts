@@ -12,14 +12,15 @@ const en = {
   invalid: "The AI service returned an invalid draft. It was discarded and must not be used.",
   failed: "The AI request failed. No clinical fallback was substituted; verify the case independently.",
   title: "AI Clinical Assistant",
+  titleTemplate: "Clinical Quick Reference",
   introAi:
     "Audited, structured draft assistant. A safety-cleared case and explicit clinician review are required.",
   introTemplate:
-    "Template assistant sandbox. Conversations and pending replies are isolated to the selected case.",
+    "Fixed reference answers on common topics (tests, progression, red flags). This is not AI and does not analyse the case.",
   warnAi:
     "AI drafts are generated server-side and logged, but no model output is clinical clearance. Review the original record, verify every unsupported claim and explicitly accept, edit or reject the draft.",
   warnTemplate:
-    "No validated clinical AI model or evidence retrieval service is connected. Treat every response as fixed demo content; do not copy it into a care plan without independent clinical review.",
+    "Answers are fixed, general text, not a patient-specific analysis. Do not copy them into a care plan without your own clinical judgement.",
   emptyTitle: "Ask a clinical question",
   emptyBody: "Try one of the suggested prompts, or type your own question below.",
   copyAnswer: "Copy answer",
@@ -75,14 +76,15 @@ export const aiAssistantText: PageText<typeof en> = {
     invalid: "سرویس هوش مصنوعی پیش‌نویس نامعتبر برگرداند. کنار گذاشته شد و نباید استفاده شود.",
     failed: "درخواست هوش مصنوعی ناموفق بود. هیچ جایگزین بالینی ارائه نشد؛ مورد را مستقلاً بررسی کنید.",
     title: "دستیار بالینی هوش مصنوعی",
+    titleTemplate: "مرجع سریع بالینی",
     introAi:
       "دستیار پیش‌نویس ساختاریافته و ممیزی‌شده. مورد با ایمنی تأییدشده و بررسی صریح درمانگر لازم است.",
     introTemplate:
-      "محیط آزمایشی دستیار الگو. گفتگوها و پاسخ‌های در انتظار به مورد انتخاب‌شده محدودند.",
+      "پاسخ‌های مرجعِ از پیش نوشته‌شده درباره موضوعات رایج (تست‌ها، پیشرفت تمرین، علائم هشدار). این بخش هوش مصنوعی نیست و پرونده بیمار را تحلیل نمی‌کند.",
     warnAi:
       "پیش‌نویس‌های هوش مصنوعی در سرور تولید و ثبت می‌شوند، اما هیچ خروجی مدلی مجوز بالینی نیست. پرونده اصلی را بررسی کنید، هر ادعای بدون پشتوانه را تأیید کنید و پیش‌نویس را صریحاً بپذیرید، ویرایش یا رد کنید.",
     warnTemplate:
-      "هیچ مدل هوش مصنوعی بالینی معتبر یا سرویس بازیابی شواهد متصل نیست. هر پاسخ را محتوای نمایشی ثابت بدانید؛ بدون بررسی بالینی مستقل آن را وارد برنامه درمان نکنید.",
+      "پاسخ‌ها متن ثابت و عمومی‌اند، نه تحلیل اختصاصی بیمار. بدون قضاوت بالینی شما وارد برنامه درمان نشوند.",
     emptyTitle: "یک سؤال بالینی بپرسید",
     emptyBody: "یکی از پیشنهادها را امتحان کنید یا سؤال خود را پایین بنویسید.",
     copyAnswer: "کپی پاسخ",

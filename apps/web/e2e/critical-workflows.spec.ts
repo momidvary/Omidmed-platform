@@ -89,10 +89,13 @@ test("sidebar keeps care steps inside the patient flow", async ({ page }) => {
   await expect(nav.locator('a[href="/patients"]')).toBeVisible();
   await expect(nav.locator('a[href="/new-case"]')).toHaveCount(0);
   await expect(nav.locator('a[href="/case-analysis"]')).toHaveCount(0);
-  await expect(nav.locator('a[href="/exercise-library"]')).toHaveCount(0);
+  // The library and protocols are everyday tools, listed without expanding.
+  await expect(nav.locator('a[href="/exercise-library"]')).toBeVisible();
+  await expect(nav.locator('a[href="/protocols"]')).toBeVisible();
+  await expect(nav.locator('a[href="/red-flags"]')).toHaveCount(0);
 
   await nav.getByRole("button", { name: "Tools" }).click();
-  await expect(nav.locator('a[href="/exercise-library"]')).toBeVisible();
+  await expect(nav.locator('a[href="/red-flags"]')).toBeVisible();
 
   await page.goto("/new-case");
   await expect(nav.locator('a[href="/patients"]')).toHaveAttribute(
@@ -156,7 +159,6 @@ test("expanded library marks unreviewed exercises and links progression ladders"
 test("treatment protocols link phases to library exercises", async ({ page }) => {
   await page.goto("/");
   const nav = page.locator("aside nav");
-  await nav.getByRole("button", { name: "Tools" }).click();
   await nav.locator('a[href="/protocols"]').click();
   await expect(page.getByRole("heading", { level: 2, name: "Treatment protocols" })).toBeVisible();
   await expect(page.getByText(/Draft · awaiting clinical review/)).toBeVisible();

@@ -81,7 +81,7 @@ export const caseAnalysisText: PageText<typeof en> = {
       urgent: "فوری",
       emergency: "اورژانسی",
     },
-    pain: (value) => `درد ${value}/10`,
+    pain: (value) => `درد ${value} از ۱۰`,
     planTreatment: "برنامه درمان",
     handout: "برگه آموزشی بیمار",
     locked: "توصیه‌ها تا مجوز ایمنی قفل است",

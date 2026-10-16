@@ -173,6 +173,14 @@ export default function SettingsPage() {
         </div>
       </Card>
 
+      <details className="group rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]">
+        <summary className="cursor-pointer list-none px-5 py-4 text-sm font-semibold text-[var(--color-ink-soft)] marker:hidden">
+          <span className="inline-flex items-center gap-2">
+            <Icon name="settings" width={16} height={16} />
+            {s.techTitle}
+          </span>
+        </summary>
+        <div className="space-y-4 border-t border-[var(--color-border)] p-4">
       <Card>
         <CardHeader
           title={s.dbTitle}
@@ -227,11 +235,10 @@ export default function SettingsPage() {
           <p className="text-sm text-[var(--color-ink-soft)]">
             {clinicalAiUiEnabled ? s.aiEnabled : s.aiDisabled}
           </p>
-          <Field label={s.aiKey}>
-            <Input disabled placeholder={s.aiKeyPlaceholder} />
-          </Field>
         </CardBody>
       </Card>
+        </div>
+      </details>
 
       {isMockMode && <Card>
         <CardHeader

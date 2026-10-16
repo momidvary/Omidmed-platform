@@ -173,7 +173,7 @@ export function CaseAnalysisClient() {
                 <div>
                   <p className="text-sm font-semibold text-[var(--color-ink)]">
                     {currentCase.name}
-                    {currentCase.age ? `, ${currentCase.age}` : ""}
+                    {currentCase.age ? (locale === "fa" ? `، ${currentCase.age.toLocaleString("fa-IR")} ساله` : `, ${currentCase.age}`) : ""}
                   </p>
                   <p className="text-xs text-[var(--color-ink-faint)]">
                     {currentCase.mainComplaint}

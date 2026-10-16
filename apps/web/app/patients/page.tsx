@@ -1,5 +1,6 @@
 "use client";
 
+import { DateInput } from "@/components/ui/DateInput";
 import { Suspense, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -1299,7 +1300,7 @@ function PatientManagementPanel({
                 </Select>
               </Field>
               <Field label={relationship === "self" ? t.expiryOptional : t.expiryRequired}>
-                <Input type="date" value={expiresOn} onChange={(event) => setExpiresOn(event.target.value)} required={relationship !== "self"} />
+                <DateInput value={expiresOn} onChange={(event) => setExpiresOn(event.target.value)} required={relationship !== "self"} />
               </Field>
               <label className="flex items-start gap-2 text-xs text-[var(--color-ink-soft)] md:col-span-2">
                 <input type="checkbox" checked={authorityAttested} onChange={(event) => setAuthorityAttested(event.target.checked)} className="mt-0.5" />

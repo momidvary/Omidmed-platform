@@ -1,5 +1,6 @@
 "use client";
 
+import { DateInput } from "@/components/ui/DateInput";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
@@ -582,8 +583,7 @@ export function PrescriptionBuilder({
           <h3 id="rx-schedule" className="text-sm font-semibold text-[var(--color-ink)]">{t.scheduleSafety}</h3>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label={t.startDate} required>
-            <Input
-              type="date"
+            <DateInput
               value={startDate}
               disabled={busy}
               onChange={(event) => {
@@ -593,8 +593,7 @@ export function PrescriptionBuilder({
             />
           </Field>
           <Field label={t.reviewDate} required>
-            <Input
-              type="date"
+            <DateInput
               min={startDate}
               value={reviewDate}
               disabled={busy}
@@ -640,8 +639,7 @@ export function PrescriptionBuilder({
             <summary className="cursor-pointer text-sm font-medium text-[var(--color-ink)]">{t.moreSettings}</summary>
             <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label={t.endDate}>
-            <Input
-              type="date"
+            <DateInput
               min={startDate}
               value={endDate}
               disabled={busy}

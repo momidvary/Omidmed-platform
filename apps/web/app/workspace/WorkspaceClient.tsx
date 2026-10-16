@@ -34,6 +34,8 @@ import { cn, isUuid } from "@/lib/utils";
 import { workspaceText } from "./text";
 import { useSection } from "./useSection";
 import { HomeProgramFollowUp } from "./HomeProgramFollowUp";
+import { ProtocolPhaseCard } from "./ProtocolPhaseCard";
+import { detectProtocolPhase } from "@/lib/clinical/protocols/detect";
 
 interface PathwayStep {
   key: CareStep;
@@ -271,6 +273,20 @@ export function WorkspaceClient() {
   const recordsHref = `/clinical-records?patient=${encodeURIComponent(record.id)}`;
   const noteCount = (documentation.data?.sessionNotes ?? []).filter((note) => note.isCurrent).length;
   const planApproved = latestPlan?.status === "approved";
+  // Which protocol phase the current treatment follows (a suggestion shown
+  // with its basis; the clinician decides when to move on).
+  const approvedPlan = (plans.data ?? []).find((record) => record.status === "approved") ?? null;
+  const approvedPlanText = approvedPlan
+    ? Object.values(approvedPlan.plan).flat().join("\n")
+    : "";
+  const detectedPhase =
+    currentProgram && (currentProgram.status === "published" || currentProgram.status === "suspended")
+      ? detectProtocolPhase(
+          approvedPlanText,
+          currentProgram.items.map((item) => item.exerciseId),
+          latestCase?.region
+        )
+      : null;
 
   const states = carePathwayStates({
     cases: !hydrated ? "loading" : loadError ? "failed" : "ready",
@@ -567,6 +583,21 @@ export function WorkspaceClient() {
           )}
         </div>
       </section>
+
+      {latestCase &&
+        currentProgram &&
+        (currentProgram.status === "published" || currentProgram.status === "suspended") && (
+          <ProtocolPhaseCard
+            detected={detectedPhase}
+            notesHref={recordsHref}
+            onNextPhase={(protocolId, phaseId) =>
+              openCase(
+                latestCase.id,
+                `/treatment-planner?protocol=${encodeURIComponent(protocolId)}&phase=${encodeURIComponent(phaseId)}#home-program`
+              )
+            }
+          />
+        )}
 
       {episode &&
         latestCase &&

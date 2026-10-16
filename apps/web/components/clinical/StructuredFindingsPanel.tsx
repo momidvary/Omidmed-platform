@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { protocolLinkFor } from "@/lib/clinical/protocols";
 import { isMockMode } from "@/lib/config";
-import { intlLocale } from "@/lib/i18n/text";
+import { intlLocale, useText } from "@/lib/i18n/text";
 import { useLocale } from "@/lib/store/LocaleContext";
 import { hasClinicalSafetyClearance } from "@/lib/clinical/safety";
 import {
@@ -75,6 +76,7 @@ function startingFindings(
 export function StructuredFindingsPanel({ patientCase }: { patientCase: PatientCase }) {
   const { locale } = useLocale();
   const s = reasoningStrings[locale];
+  const router = useRouter();
   const knowledge = getRegionKnowledge(patientCase.region);
   const safetyCleared = hasClinicalSafetyClearance(patientCase.safetyScreen);
   const requestKey = `${patientCase.id}:${patientCase.region ?? ""}`;
@@ -187,8 +189,10 @@ export function StructuredFindingsPanel({ patientCase }: { patientCase: PatientC
       return { ...previous, exam: { ...previous.exam, tests } };
     });
 
-  async function save() {
-    if (isMockMode || saving || !dirty) return;
+  /** Resolves true when the findings are stored (or there was nothing to store). */
+  async function save(): Promise<boolean> {
+    if (isMockMode || !dirty) return true;
+    if (saving) return false;
     setSaving(true);
     setFailure(null);
     const result = await recordCaseFindings({
@@ -200,7 +204,7 @@ export function StructuredFindingsPanel({ patientCase }: { patientCase: PatientC
     setSaving(false);
     if (!result.ok) {
       setFailure(result.reason);
-      return;
+      return false;
     }
     setLoad({
       status: "ready",
@@ -216,6 +220,14 @@ export function StructuredFindingsPanel({ patientCase }: { patientCase: PatientC
         createdAt: result.createdAt,
       },
     });
+    return true;
+  }
+
+  // "Next step" from the ranking: unsaved findings are saved first so leaving
+  // the page never loses the examination.
+  async function continueTo(href: string) {
+    if (!(await save())) return;
+    router.push(href);
   }
 
   const savedLabel = current
@@ -360,7 +372,7 @@ export function StructuredFindingsPanel({ patientCase }: { patientCase: PatientC
           <div className="flex flex-wrap items-center gap-3 border-t border-[var(--color-border)] pt-4">
             <Button
               type="button"
-              onClick={save}
+              onClick={() => void save()}
               disabled={isMockMode || saving || !dirty}
             >
               {saving ? s.saving : s.save}
@@ -393,6 +405,8 @@ export function StructuredFindingsPanel({ patientCase }: { patientCase: PatientC
         <RankingCard
           reasoning={reasoning}
           safetyCleared={safetyCleared}
+          dirty={dirty && !isMockMode}
+          onContinue={continueTo}
           aiReady={CLINICAL_AI_ENABLED && !isMockMode && !dirty && current !== null}
           screeningRules={knowledge.screeningRules
             .filter((rule) =>
@@ -408,19 +422,59 @@ export function StructuredFindingsPanel({ patientCase }: { patientCase: PatientC
   );
 }
 
+const nextText = {
+  en: {
+    title: "Next step",
+    withProtocol: (hypothesis: string, protocol: string) =>
+      `Leading hypothesis: ${hypothesis}. Start treatment with the "${protocol}" protocol, phase 1 — the plan draft and home program are prepared for your review.`,
+    withoutProtocol: (hypothesis: string) =>
+      `Leading hypothesis: ${hypothesis}. No protocol is linked; build the treatment plan from the region template.`,
+    startProtocol: "Start treatment with this protocol",
+    planOnly: "Plan without a protocol",
+    plan: "Go to the treatment plan",
+    savesFirst: "Your unsaved findings are saved first.",
+  },
+  fa: {
+    title: "قدم بعد",
+    withProtocol: (hypothesis: string, protocol: string) =>
+      `فرضیه اصلی فعلی: ${hypothesis}. درمان را با پروتکل «${protocol}» از فاز ۱ شروع کنید — پیش‌نویس برنامه و برنامه خانگی برای بازبینی شما آماده می‌شود.`,
+    withoutProtocol: (hypothesis: string) =>
+      `فرضیه اصلی فعلی: ${hypothesis}. پروتکلی برای آن تعریف نشده؛ برنامه درمان را از الگوی ناحیه بسازید.`,
+    startProtocol: "شروع درمان با این پروتکل",
+    planOnly: "برنامه درمان بدون پروتکل",
+    plan: "رفتن به برنامه درمان",
+    savesFirst: "یافته‌های ذخیره‌نشده ابتدا ذخیره می‌شوند.",
+  },
+};
+
 function RankingCard({
   reasoning,
   safetyCleared,
+  dirty,
+  onContinue,
   aiReady,
   screeningRules,
 }: {
   reasoning: ReasoningResult | null;
   safetyCleared: boolean;
+  dirty: boolean;
+  onContinue: (href: string) => void;
   aiReady: boolean;
   screeningRules: { text: string; source: string }[];
 }) {
   const { locale } = useLocale();
   const s = reasoningStrings[locale];
+  const n = useText(nextText);
+  const lang = locale === "fa" ? "fa" : "en";
+  const leading = reasoning?.hypotheses[0];
+  const showNext =
+    safetyCleared &&
+    reasoning &&
+    !reasoning.limitedData &&
+    reasoning.medicalReview.length === 0 &&
+    leading &&
+    leading.level !== "against";
+  const leadingProtocol = leading ? protocolLinkFor(leading) : undefined;
 
   return (
     <Card className="xl:sticky xl:top-4">
@@ -450,6 +504,43 @@ function RankingCard({
           </p>
         ) : (
           <>
+            {showNext && leading && (
+              <section
+                aria-labelledby="next-step"
+                className="space-y-3 rounded-xl border border-[var(--color-primary)]/30 bg-[var(--color-primary-tint)] p-4"
+              >
+                <h4 id="next-step" className="flex items-center gap-2 text-base font-bold text-[var(--color-primary-strong)]">
+                  <Icon name="arrow" width={16} height={16} className="rtl:rotate-180" />
+                  {n.title}
+                </h4>
+                <p className="text-sm text-[var(--color-ink)]">
+                  {leadingProtocol
+                    ? n.withProtocol(localized(leading.label, locale), leadingProtocol.title[lang])
+                    : n.withoutProtocol(localized(leading.label, locale))}
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {leadingProtocol ? (
+                    <>
+                      <Button
+                        onClick={() =>
+                          onContinue(
+                            `/treatment-planner?protocol=${leadingProtocol.id}&phase=${leadingProtocol.phases[0].id}#home-program`
+                          )
+                        }
+                      >
+                        {n.startProtocol}
+                      </Button>
+                      <Button variant="ghost" onClick={() => onContinue("/treatment-planner")}>
+                        {n.planOnly}
+                      </Button>
+                    </>
+                  ) : (
+                    <Button onClick={() => onContinue("/treatment-planner")}>{n.plan}</Button>
+                  )}
+                </div>
+                {dirty && <p className="text-xs text-[var(--color-ink-soft)]">{n.savesFirst}</p>}
+              </section>
+            )}
             <p className="text-xs text-[var(--color-ink-faint)]">
               {s.progress(
                 reasoning.answeredQuestions,

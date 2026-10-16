@@ -1,5 +1,6 @@
 "use client";
 
+import { DateInput } from "@/components/ui/DateInput";
 import { useEffect, useState } from "react";
 import { isMockMode } from "@/lib/config";
 import { bodyRegions } from "@/lib/data/bodyRegions";
@@ -382,8 +383,8 @@ export function CaseAssessmentHistory({
                       : t.reassessmentTimeHint
                   }
                 >
-                  <Input
-                    type="datetime-local"
+                  <DateInput
+                    withTime
                     value={draft.assessedAtLocal}
                     disabled={draft.changeType === "correction"}
                     onChange={(event) =>

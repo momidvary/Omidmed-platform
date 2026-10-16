@@ -1,5 +1,6 @@
 "use client";
 
+import { DateInput } from "@/components/ui/DateInput";
 import { Suspense, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useCases } from "@/lib/store/CaseContext";
@@ -775,8 +776,7 @@ function PlannerForm() {
                 />
               </Field>
               <Field label={t.surgeryDate} required>
-                <Input
-                  type="date"
+                <DateInput
                   max={localDateValue()}
                   value={surgeryDate}
                   disabled={formLocked}

@@ -1,5 +1,6 @@
 "use client";
 
+import { DateInput } from "@/components/ui/DateInput";
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Badge } from "@/components/ui/Badge";
@@ -675,8 +676,8 @@ function ClinicalRecords() {
                     </div>
                   )}
                   <Field label={t.sessionTime} required>
-                    <Input
-                      type="datetime-local"
+                    <DateInput
+                      withTime
                       value={sessionForm.occurredAt}
                       required
                       onChange={(event) =>
@@ -804,8 +805,7 @@ function ClinicalRecords() {
                       />
                     </Field>
                     <Field label={t.measuredDate} required>
-                      <Input
-                        type="date"
+                      <DateInput
                         value={outcomeForm.measuredAt}
                         required
                         onChange={(event) =>

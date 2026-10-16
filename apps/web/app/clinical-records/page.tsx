@@ -13,6 +13,7 @@ import { isMockMode } from "@/lib/config";
 import { useAuth } from "@/lib/store/AuthContext";
 import { useCases } from "@/lib/store/CaseContext";
 import { isUuid } from "@/lib/utils";
+import { instrumentLabel } from "@/lib/clinical/outcomeChange";
 import {
   SESSION_TEMPLATE_IDS,
   SOAP_FIELDS,
@@ -655,7 +656,7 @@ function ClinicalRecords() {
             </p>
           )}
 
-          <div className="grid gap-5 xl:grid-cols-2">
+          <div className="grid grid-cols-1 gap-5 xl:grid-cols-2 [&>*]:min-w-0">
             <Card id="session-note" className="scroll-mt-24">
               <CardHeader
                 title={sessionForm.supersedesId ? t.correctSession : t.signSession}
@@ -815,7 +816,7 @@ function ClinicalRecords() {
                       </option>
                       {instruments.map((instrument) => (
                         <option key={instrument.key} value={instrument.key}>
-                          {instrument.displayName} v{instrument.version}
+                          {instrumentLabel(instrument.key, instrument.displayName, locale)} v{instrument.version}
                         </option>
                       ))}
                     </Select>
@@ -958,7 +959,7 @@ function ClinicalRecords() {
                         <li key={measurement.id} className="rounded-xl border border-[var(--color-border)] p-4">
                           <div className="flex flex-wrap items-center justify-between gap-2">
                             <div>
-                              <p className="text-sm font-semibold text-[var(--color-ink)]">{measurement.instrumentName}</p>
+                              <p className="text-sm font-semibold text-[var(--color-ink)]">{instrumentLabel(measurement.instrumentKey, measurement.instrumentName, locale)}</p>
                               <p className="text-xs text-[var(--color-ink-soft)]">{t.measuredVersion(measurement.measuredAt, measurement.instrumentVersion)}</p>
                             </div>
                             <Badge tone={measurement.isCurrent ? "primary" : "neutral"}>{measurement.score} {measurement.unit}</Badge>

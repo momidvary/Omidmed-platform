@@ -483,12 +483,14 @@ function PatientDashboard({ patient }: { patient: Patient }) {
           <p className="text-sm font-semibold text-[var(--color-primary-strong)]">
             {patient.conditionFa}
           </p>
-          <p className="text-xs leading-relaxed text-[var(--color-ink-soft)]">
-            <span className="font-medium text-[var(--color-ink)]">
-              یادداشت فیزیوتراپیست:{" "}
-            </span>
-            {patient.therapistNoteFa}
-          </p>
+          {patient.therapistNoteFa?.trim() && (
+            <p className="text-xs leading-relaxed text-[var(--color-ink-soft)]">
+              <span className="font-medium text-[var(--color-ink)]">
+                یادداشت فیزیوتراپیست:{" "}
+              </span>
+              {patient.therapistNoteFa}
+            </p>
+          )}
           {patient.prescription && (
             <div className="space-y-2 border-t border-[var(--color-border)] pt-3 text-xs leading-relaxed">
               <p className="text-[var(--color-ink-soft)]">

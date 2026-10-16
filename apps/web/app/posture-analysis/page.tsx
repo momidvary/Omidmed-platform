@@ -418,7 +418,7 @@ function PhotoSlot({
             <span className="flex flex-col items-center gap-2 px-4 text-center text-xs text-[var(--color-ink-faint)]">
               <Icon name="plus" width={22} height={22} />
               {validating ? validationCopy.validating : t("posture.upload")}
-              <span className="text-[10px]">{t("posture.hint")}</span>
+              <span className="text-xs">{t("posture.hint")}</span>
             </span>
           )}
         </button>

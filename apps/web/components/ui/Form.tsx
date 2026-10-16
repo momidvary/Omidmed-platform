@@ -40,7 +40,7 @@ export function Field({
 
   return (
     <label className="block" htmlFor={controlId}>
-      <span className="mb-1.5 flex items-center gap-1 text-xs font-medium text-[var(--color-ink-soft)]">
+      <span className="mb-1.5 flex items-center gap-1 text-sm font-medium text-[var(--color-ink)]">
         {label}
         {required && (
           <span aria-hidden="true" className="text-[var(--color-danger)]">
@@ -52,7 +52,7 @@ export function Field({
       {hint && !error && (
         <span
           id={hintId}
-          className="mt-1 block text-[11px] text-[var(--color-ink-faint)]"
+          className="mt-1 block text-xs text-[var(--color-ink-faint)]"
         >
           {hint}
         </span>
@@ -61,7 +61,7 @@ export function Field({
         <span
           id={errorId}
           role="alert"
-          className="mt-1 block text-[11px] text-[var(--color-danger)]"
+          className="mt-1 block text-xs text-[var(--color-danger)]"
         >
           {error}
         </span>
@@ -71,7 +71,7 @@ export function Field({
 }
 
 const control =
-  "w-full rounded-xl border border-[var(--color-border)] bg-white px-3 py-2.5 text-sm text-[var(--color-ink)] placeholder:text-[var(--color-ink-faint)] focus:border-[var(--color-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/20";
+  "min-h-11 w-full rounded-xl border border-[var(--color-border)] bg-white px-3 py-2.5 text-sm text-[var(--color-ink)] shadow-[inset_0_1px_1px_rgba(15,23,42,0.03)] placeholder:text-[var(--color-ink-faint)] transition-colors hover:border-[#cbd5e1] focus:border-[var(--color-primary)] focus:outline-none focus:ring-4 focus:ring-[var(--color-primary)]/15 disabled:cursor-not-allowed disabled:bg-[var(--color-surface-muted)]";
 
 export function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
   return <input {...props} className={cn(control, props.className)} />;
@@ -87,6 +87,6 @@ export function Textarea(
 
 export function Select(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
   return (
-    <select {...props} className={cn(control, "appearance-none pr-8", props.className)} />
+    <select {...props} className={cn(control, "select-chevron cursor-pointer appearance-none", props.className)} />
   );
 }

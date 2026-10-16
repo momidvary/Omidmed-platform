@@ -441,10 +441,6 @@ export function WorkspaceClient() {
                 {t.newAssessment}
               </ButtonLink>
             )}
-            <ButtonLink href="/tickets" size="sm" variant="secondary">
-              <Icon name="inbox" width={14} height={14} />
-              {t.inbox}
-            </ButtonLink>
           </div>
         </CardBody>
       </Card>
@@ -512,13 +508,16 @@ export function WorkspaceClient() {
                     )}
                   </p>
                   {step.action && step.state !== "locked" && (
+                    // Only the step that needs doing now gets a full button;
+                    // finished steps keep a quiet link to reopen them.
                     <Button
                       size="sm"
-                      variant={emphasis ? "primary" : "secondary"}
-                      className="mt-auto"
+                      variant={emphasis ? "primary" : "ghost"}
+                      className={emphasis ? "mt-auto" : "mt-auto self-start px-2"}
                       onClick={step.action.run}
                     >
                       {step.action.label}
+                      {!emphasis && <Icon name="arrow" width={14} height={14} className="rtl:rotate-180" />}
                     </Button>
                   )}
                 </li>

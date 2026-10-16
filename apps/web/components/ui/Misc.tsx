@@ -16,7 +16,7 @@ export function PageIntro({
   return (
     <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
       <div>
-        <h2 className="text-xl font-semibold tracking-tight text-[var(--color-ink)]">
+        <h2 className="text-2xl font-bold tracking-tight text-[var(--color-ink)]">
           {title}
         </h2>
         <p className="mt-1 max-w-2xl text-sm text-[var(--color-ink-soft)]">
@@ -64,7 +64,7 @@ export function Disclaimer({
   return (
     <div
       className={cn(
-        "flex items-start gap-3 rounded-xl border border-[var(--color-warn)]/30 bg-[var(--color-warn-soft)]/60 px-4 py-3 text-xs leading-relaxed text-[var(--color-warn)]",
+        "flex items-start gap-3 rounded-xl bg-[var(--color-surface-muted)] px-4 py-3 text-xs leading-relaxed text-[var(--color-ink-soft)]",
         className
       )}
     >

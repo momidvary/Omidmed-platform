@@ -459,7 +459,7 @@ export function ExerciseAnimation({
             <span
               key={chip}
               className={cn(
-                "flex-1 truncate rounded-full px-2 py-1 text-center text-[11px] font-semibold transition-colors sm:text-xs",
+                "flex-1 truncate rounded-full px-2 py-1 text-center text-xs font-semibold transition-colors sm:text-xs",
                 i === activeChip ? "bg-white text-[#14211D]" : "bg-white/10 text-white"
               )}
             >
@@ -531,7 +531,7 @@ export function ExerciseAnimation({
           {t.endPose}
         </button>
       </div>
-      <p className="text-[11px] leading-relaxed text-[var(--color-ink-faint)]">
+      <p className="text-xs leading-relaxed text-[var(--color-ink-faint)]">
         {t.view[view]} · {t.simulated}. {t.note}
       </p>
     </div>

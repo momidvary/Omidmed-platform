@@ -651,7 +651,7 @@ function NewCaseForm() {
                         : "border-[var(--color-border)] bg-white hover:bg-[var(--color-surface-muted)]"
                     )}
                   >
-                    <span className="text-[11px] text-[var(--color-ink-faint)]">
+                    <span className="text-xs text-[var(--color-ink-faint)]">
                       {t.stepLabel(value, STEPS.length)}
                     </span>
                     <span
@@ -665,7 +665,7 @@ function NewCaseForm() {
                       {done && <Icon name="check" width={14} height={14} />}
                       {label}
                       {value === 2 && (
-                        <span className="text-[11px] font-normal text-[var(--color-ink-faint)]">
+                        <span className="text-xs font-normal text-[var(--color-ink-faint)]">
                           ({t.optional})
                         </span>
                       )}
@@ -912,7 +912,7 @@ function NewCaseForm() {
                         />
                         <span>
                           <span className="block font-medium">{flag.label}</span>
-                          <span className="block text-[11px] opacity-80">{flag.detail}</span>
+                          <span className="block text-xs opacity-80">{flag.detail}</span>
                         </span>
                       </button>
                     );

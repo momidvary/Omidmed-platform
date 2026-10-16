@@ -118,7 +118,7 @@ export default function ExerciseDetailPage() {
             <dl className="grid grid-cols-2 gap-2 sm:grid-cols-3">
               {doseTiles(ex, t, lang).map((tile) => (
                 <div key={tile.label} className="rounded-xl bg-[var(--color-surface-muted)] px-3 py-2">
-                  <dt className="text-[11px] text-[var(--color-ink-soft)]">{tile.label}</dt>
+                  <dt className="text-xs text-[var(--color-ink-soft)]">{tile.label}</dt>
                   <dd className="text-lg font-bold text-[var(--color-ink)]">{tile.value}</dd>
                 </div>
               ))}
@@ -238,7 +238,7 @@ export default function ExerciseDetailPage() {
                           href={`/exercise-library/${stepId}`}
                           className="inline-flex min-h-8 items-center rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1 text-xs text-[var(--color-ink-soft)] hover:border-[var(--color-primary)] hover:text-[var(--color-primary-strong)] focus-visible:outline-2 focus-visible:outline-[var(--color-primary)]"
                         >
-                          <span className="me-1 text-[10px] font-semibold text-[var(--color-ink-faint)]">
+                          <span className="me-1 text-xs font-semibold text-[var(--color-ink-faint)]">
                             {(index + 1).toLocaleString(locale === "fa" ? "fa-IR" : "en")}
                           </span>
                           {name}

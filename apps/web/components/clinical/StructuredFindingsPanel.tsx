@@ -437,7 +437,7 @@ function RankingCard({
               {screeningRules.map((rule) => (
                 <li key={rule.text} className="text-xs text-[var(--color-ink)]">
                   {rule.text}{" "}
-                  <span className="text-[10px] text-[var(--color-ink-faint)]">({rule.source})</span>
+                  <span className="text-xs text-[var(--color-ink-faint)]">({rule.source})</span>
                 </li>
               ))}
             </ul>
@@ -450,7 +450,7 @@ function RankingCard({
           </p>
         ) : (
           <>
-            <p className="text-[11px] text-[var(--color-ink-faint)]">
+            <p className="text-xs text-[var(--color-ink-faint)]">
               {s.progress(
                 reasoning.answeredQuestions,
                 reasoning.totalQuestions,
@@ -511,13 +511,13 @@ function RankingCard({
                 ) : (
                   <p className="text-xs text-[var(--color-ink-faint)]">{s.aiSaveFirst}</p>
                 )}
-                <p className="text-[11px] text-[var(--color-ink-faint)]">{s.askAiHint}</p>
+                <p className="text-xs text-[var(--color-ink-faint)]">{s.askAiHint}</p>
               </div>
             )}
           </>
         )}
 
-        <p className="rounded-lg bg-[var(--color-surface-muted)] px-3 py-2 text-[11px] text-[var(--color-ink-soft)]">
+        <p className="rounded-lg bg-[var(--color-surface-muted)] px-3 py-2 text-xs text-[var(--color-ink-soft)]">
           {s.disclaimer}
         </p>
       </CardBody>
@@ -568,25 +568,25 @@ function HypothesisRow({
       {protocol && (
         <Link
           href={`/protocols/${protocol.id}`}
-          className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-[var(--color-primary-soft)] px-2.5 py-0.5 text-[11px] font-semibold text-[var(--color-primary-strong)] hover:underline focus-visible:outline-2 focus-visible:outline-[var(--color-primary)]"
+          className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-[var(--color-primary-soft)] px-2.5 py-0.5 text-xs font-semibold text-[var(--color-primary-strong)] hover:underline focus-visible:outline-2 focus-visible:outline-[var(--color-primary)]"
         >
           {s.protocol}: {localized(protocol.title, locale)}
         </Link>
       )}
       <details className="mt-1.5">
-        <summary className="cursor-pointer text-[11px] text-[var(--color-primary-strong)]">
+        <summary className="cursor-pointer text-xs text-[var(--color-primary-strong)]">
           {s.why} ({hypothesis.score > 0 ? "+" : ""}
           {num(hypothesis.score)})
         </summary>
         {reasons.length === 0 ? (
-          <p className="mt-1 text-[11px] text-[var(--color-ink-faint)]">{s.noReasons}</p>
+          <p className="mt-1 text-xs text-[var(--color-ink-faint)]">{s.noReasons}</p>
         ) : (
           <ul className="mt-1 space-y-0.5">
             {reasons.map((reason, index) => (
               <li
                 key={`${reason.kind}-${index}`}
                 className={cn(
-                  "text-[11px]",
+                  "text-xs",
                   reason.weight > 0 ? "text-[var(--color-success)]" : "text-[var(--color-danger)]"
                 )}
               >
@@ -609,7 +609,7 @@ function AccuracyLine({ test, sn, sp }: { test: ExamTest; sn: string; sp: string
     accuracy.specificity !== undefined ? `${sp} ${Math.round(accuracy.specificity * 100)}%` : null,
   ].filter(Boolean);
   return (
-    <span className="mt-0.5 block text-[10px] leading-snug text-[var(--color-ink-faint)]" dir="ltr">
+    <span className="mt-0.5 block text-xs leading-snug text-[var(--color-ink-faint)]" dir="ltr">
       {accuracy.target}
       {parts.length > 0 ? ` · ${parts.join(" · ")}` : ""}
       {accuracy.note ? ` · ${accuracy.note}` : ""} — {accuracy.source}

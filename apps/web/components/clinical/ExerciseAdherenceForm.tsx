@@ -152,7 +152,7 @@ export function ExerciseAdherenceForm({ patient, item, onPaused }: {
   return <div className="space-y-4 border-t border-[var(--color-border)] pt-3">
     <div className="flex items-center justify-between gap-2">
       <p className="text-sm font-bold text-[var(--color-ink)]">گزارش امروز این تمرین</p>
-      <p className="text-[11px] text-[var(--color-ink-faint)]">روزهای تمرین: {days}</p>
+      <p className="text-xs text-[var(--color-ink-faint)]">روزهای تمرین: {days}</p>
     </div>
     <fieldset disabled={busy || uncertain || saved} className="space-y-4">
       <div role="group" aria-label="وضعیت انجام تمرین" className="grid gap-2 sm:grid-cols-3">

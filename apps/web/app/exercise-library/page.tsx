@@ -158,11 +158,11 @@ function ExerciseTile({ exercise }: { exercise: Exercise }) {
         {motion && (
           <ExerciseFigureSvg motion={motion} p={0.8} glow={0} guide={false} className="block aspect-[5/3] h-auto w-full" />
         )}
-        <span className="absolute start-2.5 top-2.5 rounded-full bg-[#14211D]/80 px-2.5 py-1 text-[11px] font-semibold text-white">
+        <span className="absolute start-2.5 top-2.5 rounded-full bg-[#14211D]/80 px-2.5 py-1 text-xs font-semibold text-white">
           {t.animated}
         </span>
         {ex.review === "pending" && (
-          <span className="absolute end-2.5 top-2.5 rounded-full bg-[var(--color-warn-soft)] px-2.5 py-1 text-[11px] font-semibold text-[var(--color-warn)]">
+          <span className="absolute end-2.5 top-2.5 rounded-full bg-[var(--color-warn-soft)] px-2.5 py-1 text-xs font-semibold text-[var(--color-warn)]">
             {t.pendingBadge}
           </span>
         )}

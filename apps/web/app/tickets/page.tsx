@@ -692,7 +692,7 @@ export default function ClinicianTicketInboxPage() {
                             {ticket.subject}
                           </h2>
                         </div>
-                        <span className="shrink-0 text-[11px] text-[var(--color-ink-soft)]">
+                        <span className="shrink-0 text-xs text-[var(--color-ink-soft)]">
                           {formatAge(view.ageMs, t)}
                         </span>
                       </div>
@@ -904,7 +904,7 @@ function TicketDetail({
                         : "border-[var(--color-border)] bg-white"
                   )}
                 >
-                  <div className="flex items-center justify-between gap-3 text-[11px] text-[var(--color-ink-soft)]">
+                  <div className="flex items-center justify-between gap-3 text-xs text-[var(--color-ink-soft)]">
                     <span className="font-semibold">{senderLabel(reply, t)}</span>
                     <time dateTime={reply.createdAt}>
                       {formatDateTime(reply.createdAt, locale, t)}

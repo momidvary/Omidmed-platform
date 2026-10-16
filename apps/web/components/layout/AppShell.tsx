@@ -153,7 +153,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             value={locale}
             onChange={(e) => setLocale(e.target.value as Locale)}
             aria-label={t("shell.language")}
-            className="rounded-lg border border-[var(--color-border)] bg-white px-2 py-1.5 text-xs text-[var(--color-ink-soft)] focus:border-[var(--color-primary)] focus:outline-none"
+            className="hidden rounded-lg border border-[var(--color-border)] bg-white px-2 py-1.5 text-xs text-[var(--color-ink-soft)] focus:border-[var(--color-primary)] focus:outline-none sm:block"
           >
             {locales.map((l) => (
               <option key={l.id} value={l.id}>
@@ -177,7 +177,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               value={activeClinicId ?? ""}
               onChange={(event) => setActiveClinicId(event.target.value)}
               aria-label={t("shell.activeClinic")}
-              className="max-w-44 rounded-lg border border-[var(--color-border)] bg-white px-2 py-1.5 text-xs text-[var(--color-ink-soft)] focus:border-[var(--color-primary)] focus:outline-none"
+              className="max-w-32 rounded-lg sm:max-w-44 border border-[var(--color-border)] bg-white px-2 py-1.5 text-xs text-[var(--color-ink-soft)] focus:border-[var(--color-primary)] focus:outline-none"
             >
               {profile.clinics.length > 1 && (
                 <option value="" disabled>
@@ -191,11 +191,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               ))}
             </select>
           )}
-
-          <div className="hidden items-center gap-2 rounded-full bg-[var(--color-primary-tint)] px-3 py-1.5 text-xs font-medium text-[var(--color-primary-strong)] sm:flex">
-            <Icon name="shield" width={14} height={14} />
-            {t("shell.evidence")}
-          </div>
 
           {!isMockMode && session && (
             <button

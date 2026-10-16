@@ -8,11 +8,9 @@ import { useAuth } from "@/lib/store/AuthContext";
 import { useAttention } from "@/lib/store/AttentionContext";
 import { Card, CardBody, CardHeader } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
-import { Button, ButtonLink } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Form";
+import { ButtonLink } from "@/components/ui/Button";
 import { Icon } from "@/components/ui/Icon";
 import { EmptyState, Disclaimer } from "@/components/ui/Misc";
-import { localizedRegions } from "@/lib/data/bodyRegionsFa";
 import { isMockMode } from "@/lib/config";
 import { cn, formatDate } from "@/lib/utils";
 import { useLocale } from "@/lib/store/LocaleContext";
@@ -150,6 +148,11 @@ export default function DashboardPage() {
   const router = useRouter();
   const t = useText(text);
   const [search, setSearch] = useState("");
+  const today = new Date().toLocaleDateString(locale === "fa" ? "fa-IR" : locale === "ar" ? "ar" : "en-GB", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  });
 
   const clinical =
     profile?.role === "clinic_owner" || profile?.role === "therapist";
@@ -166,52 +169,51 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardBody className="space-y-4">
-          <div>
-            <h2 className="text-xl font-bold text-[var(--color-ink)]">
-              {t.greeting(isMockMode ? null : displayName)}
-            </h2>
-            <p className="mt-1 text-sm text-[var(--color-ink-soft)]">{t.intro}</p>
-          </div>
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-            {isMockMode ? (
-              <ButtonLink href="/new-case">
-                <Icon name="plus" width={18} height={18} />
-                {t.newAssessment}
-              </ButtonLink>
-            ) : (
-              <ButtonLink href="/patients?new=1">
-                <Icon name="plus" width={18} height={18} />
-                {t.newPatient}
-              </ButtonLink>
-            )}
-            {!isMockMode && (
-              <form
-                role="search"
-                className="flex flex-1 gap-2"
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  const q = search.trim();
-                  router.push(q ? `/patients?q=${encodeURIComponent(q)}` : "/patients");
-                }}
-              >
-                <Input
-                  value={search}
-                  onChange={(event) => setSearch(event.target.value)}
-                  placeholder={t.searchPlaceholder}
-                  aria-label={t.searchLabel}
-                  maxLength={80}
-                />
-                <Button type="submit" variant="secondary">
-                  <Icon name="search" width={16} height={16} />
-                  {t.search}
-                </Button>
-              </form>
-            )}
-          </div>
-        </CardBody>
-      </Card>
+      <section className="overflow-hidden rounded-3xl bg-gradient-to-br from-[#0f766e] via-[#0d9488] to-[#14b8a6] p-6 text-white shadow-[0_18px_40px_-20px_rgba(13,148,136,0.7)] sm:p-8">
+        <p className="text-sm text-white/80">{today}</p>
+        <h2 className="mt-1 text-2xl font-bold sm:text-3xl">
+          {t.greeting(isMockMode ? null : displayName)}
+        </h2>
+        <p className="mt-2 max-w-xl text-sm text-white/85">{t.intro}</p>
+        <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center">
+          {!isMockMode && (
+            <form
+              role="search"
+              className="relative flex-1"
+              onSubmit={(event) => {
+                event.preventDefault();
+                const q = search.trim();
+                router.push(q ? `/patients?q=${encodeURIComponent(q)}` : "/patients");
+              }}
+            >
+              <Icon
+                name="search"
+                width={18}
+                height={18}
+                className="pointer-events-none absolute start-4 top-1/2 -translate-y-1/2 text-[var(--color-ink-faint)]"
+              />
+              <input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder={t.searchPlaceholder}
+                aria-label={t.searchLabel}
+                maxLength={80}
+                enterKeyHint="search"
+                className="min-h-12 w-full rounded-2xl border-0 bg-white ps-11 pe-4 text-base text-[var(--color-ink)] shadow-sm placeholder:text-[var(--color-ink-faint)] focus:outline-none focus:ring-4 focus:ring-white/40"
+              />
+            </form>
+          )}
+          <ButtonLink
+            href={isMockMode ? "/new-case" : "/patients?new=1"}
+            size="lg"
+            variant="secondary"
+            className="border-0 text-[var(--color-primary-strong)]"
+          >
+            <Icon name="plus" width={20} height={20} />
+            {isMockMode ? t.newAssessment : t.newPatient}
+          </ButtonLink>
+        </div>
+      </section>
 
       {!isMockMode && clinical && (
         <section aria-labelledby="attention-heading">
@@ -288,7 +290,7 @@ export default function DashboardPage() {
                       <Badge tone={c.painIntensity >= 7 ? "danger" : c.painIntensity >= 4 ? "warn" : "success"}>
                         {t.pain(c.painIntensity)}
                       </Badge>
-                      <span className="mt-1 block text-[11px] text-[var(--color-ink-faint)]">
+                      <span className="mt-1 block text-xs text-[var(--color-ink-faint)]">
                         {formatDate(c.createdAt, locale)}
                       </span>
                     </span>
@@ -299,26 +301,6 @@ export default function DashboardPage() {
           )}
         </CardBody>
       </Card>
-
-      <section aria-labelledby="regions-heading">
-        <h3
-          id="regions-heading"
-          className="mb-3 text-sm font-semibold text-[var(--color-ink)]"
-        >
-          {t.regions}
-        </h3>
-        <div className="flex flex-wrap gap-2">
-          {localizedRegions(locale).map((region) => (
-            <Link
-              key={region.id}
-              href={`/case-analysis?region=${region.id}`}
-              className="flex items-center gap-1.5 rounded-full border border-[var(--color-border)] bg-white px-3 py-1.5 text-xs font-medium text-[var(--color-ink-soft)] transition-colors hover:border-[var(--color-primary)] hover:text-[var(--color-primary-strong)]"
-            >
-              {region.label}
-            </Link>
-          ))}
-        </div>
-      </section>
 
       <Disclaimer />
     </div>

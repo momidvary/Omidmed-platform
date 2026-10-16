@@ -355,7 +355,7 @@ export default function ClinicalAlertsPage() {
                   </div>
                   <Badge tone={statusTone[alert.status]}>{t.statuses[alert.status]}</Badge>
                 </div>
-                <p className="mt-3 text-[11px] text-[var(--color-ink-faint)]">{t.created(fmt(alert.createdAt))}</p>
+                <p className="mt-3 text-xs text-[var(--color-ink-faint)]">{t.created(fmt(alert.createdAt))}</p>
               </button>
             ))}
           </div>

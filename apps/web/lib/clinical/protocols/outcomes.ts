@@ -114,6 +114,14 @@ export const HOOS: OutcomeMeasure = {
   detail: L("Hip disability and Osteoarthritis Outcome Score, at baseline and every 4–6 weeks.", "پرسشنامه HOOS لگن، در شروع و هر ۴ تا ۶ هفته."),
 };
 
+export const IHOT_HAGOS: OutcomeMeasure = {
+  name: "iHOT-12 / HAGOS",
+  detail: L(
+    "Hip-specific questionnaires for young and active adults with hip-related pain (including FAI syndrome), recommended by the 2023 nonarthritic hip pain guideline; at baseline and every 4–6 weeks.",
+    "پرسشنامه‌های اختصاصی لگن برای بزرگسالان جوان و فعال با درد مرتبط با لگن (از جمله سندرم FAI)، توصیه‌شده در راهنمای ۲۰۲۳ درد غیرآرتروزی لگن؛ در شروع و هر ۴ تا ۶ هفته."
+  ),
+};
+
 export const LEFS: OutcomeMeasure = {
   name: "LEFS",
   detail: L(

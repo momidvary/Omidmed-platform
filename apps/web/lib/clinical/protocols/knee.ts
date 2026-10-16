@@ -18,6 +18,7 @@ export const kneeProtocols: Protocol[] = [
     ),
     principles: [
       L("Combined hip- and knee-targeted exercise is preferred to knee-only exercise.", "تمرین ترکیبی لگن و زانو بر تمرین فقط زانو ترجیح دارد."),
+      L("Do not use isolated patellofemoral, knee or lumbar mobilisation, or electrophysical agents (2018 international consensus).", "از موبیلیزاسیون ایزوله پاتلوفمورال، زانو یا کمر و مدالیته‌های الکتروفیزیکی استفاده نشود (اجماع بین‌المللی ۲۰۱۸)."),
       L("Adjust, rather than stop, painful activities (stairs, squats, running volume).", "فعالیت‌های دردناک (پله، اسکوات، حجم دویدن) تنظیم شود، نه اینکه کاملاً کنار گذاشته شود."),
       L("Use a pain-monitoring rule and progress load gradually over at least 6 weeks.", "با قانون پایش درد، بار را دست‌کم طی ۶ هفته به تدریج افزایش دهید."),
     ],
@@ -82,6 +83,7 @@ export const kneeProtocols: Protocol[] = [
     ],
     references: [
       "Willy RW, et al. Patellofemoral Pain: Clinical Practice Guidelines Linked to the International Classification of Functioning, Disability and Health From the Academy of Orthopaedic Physical Therapy of the American Physical Therapy Association. J Orthop Sports Phys Ther. 2019;49(9):CPG1–CPG95.",
+      "Collins NJ, et al. 2018 Consensus statement on exercise therapy and physical interventions (orthoses, taping and manual therapy) to treat patellofemoral pain: recommendations from the 5th International Patellofemoral Pain Research Retreat, Gold Coast, Australia, 2017. Br J Sports Med. 2018;52(18):1170–1178.",
       "Crossley KM, et al. 2016 Patellofemoral pain consensus statement from the 4th International Patellofemoral Pain Research Retreat, Manchester. Part 2: recommended physical interventions. Br J Sports Med. 2016;50(14):844–852.",
     ],
   },
@@ -96,8 +98,10 @@ export const kneeProtocols: Protocol[] = [
     ),
     principles: [
       L("Exercise and education are core treatments for everyone with knee OA.", "تمرین و آموزش، درمان اصلی برای همه بیماران آرتروز زانو است."),
-      L("Some pain during exercise is acceptable if it settles within 24 hours.", "کمی درد حین تمرین قابل قبول است اگر ظرف ۲۴ ساعت فروکش کند."),
+      L("Warn that joint pain may increase when exercise starts; it is acceptable if it settles within 24 hours, and long-term adherence improves pain and function (NICE NG226).", "توضیح دهید که درد مفصل ممکن است در شروع تمرین بیشتر شود؛ اگر ظرف ۲۴ ساعت فروکش کند قابل قبول است و ادامه بلندمدت تمرین درد و عملکرد را بهتر می‌کند (NICE NG226)."),
       L("Combine strengthening, neuromuscular control and aerobic activity.", "تقویت، کنترل عصبی‌عضلانی و فعالیت هوازی با هم ترکیب شود."),
+      L("With overweight, any weight loss helps; about 10% of body weight helps more than 5%.", "در اضافه‌وزن، هر مقدار کاهش وزن مفید است؛ کاهش حدود ۱۰٪ وزن بدن از ۵٪ مؤثرتر است."),
+      L("Manual therapy only alongside exercise, never on its own.", "درمان دستی فقط همراه تمرین، نه به‌تنهایی."),
     ],
     phases: [
       {
@@ -110,7 +114,7 @@ export const kneeProtocols: Protocol[] = [
         ],
         exercises: ["ex_quad_sets", "ex_heel_slides", "ex_slr", "ex_short_arc_quad", "ex_sit_to_stand", "ex_walking_program"],
         other: [
-          L("Weight management advice where body mass is a factor", "توصیه مدیریت وزن در صورت نقش وزن بدن"),
+          L("Weight management support with an agreed goal where body mass is a factor", "حمایت برای مدیریت وزن با هدف توافق‌شده، در صورت نقش وزن بدن"),
           L("Walking aid on the opposite side if needed", "در صورت نیاز، وسیله کمکی راه رفتن در دست مقابل"),
         ],
         progressWhen: [
@@ -154,6 +158,7 @@ export const kneeProtocols: Protocol[] = [
       L("Rapid loss of function or night pain at rest", "افت سریع عملکرد یا درد شبانه در حال استراحت"),
     ],
     references: [
+      "NICE. Osteoarthritis in over 16s: diagnosis and management (NG226). National Institute for Health and Care Excellence; 2022.",
       "Bannuru RR, et al. OARSI guidelines for the non-surgical management of knee, hip, and polyarticular osteoarthritis. Osteoarthritis Cartilage. 2019;27(11):1578–1589.",
       "Kolasinski SL, et al. 2019 American College of Rheumatology/Arthritis Foundation Guideline for the Management of Osteoarthritis of the Hand, Hip, and Knee. Arthritis Care Res. 2020;72(2):149–162.",
       "Skou ST, Roos EM. Good Life with osteoArthritis in Denmark (GLA:D™): evidence-based education and supervised neuromuscular exercise delivered by certified physiotherapists nationwide. BMC Musculoskelet Disord. 2017;18:72.",
@@ -165,12 +170,13 @@ export const kneeProtocols: Protocol[] = [
     hypotheses: ["k_meniscus"],
     title: L("Meniscal lesion (non-operative)", "ضایعه منیسک (درمان غیرجراحی)"),
     summary: L(
-      "For degenerative and most non-locking tears, supervised exercise therapy is the first choice; a truly locked knee needs orthopaedic review.",
-      "برای پارگی‌های دژنراتیو و بیشتر پارگی‌های بدون قفل شدن، تمرین‌درمانی تحت نظارت انتخاب اول است؛ زانوی واقعاً قفل‌شده نیاز به ارزیابی ارتوپدی دارد."
+      "For degenerative lesions, non-operative care including supervised exercise therapy plus a home program is the first approach (2024 EU-US meniscus consensus); surgery is considered only if symptoms persist despite it. A truly locked knee needs orthopaedic review.",
+      "برای ضایعات دژنراتیو، درمان غیرجراحی شامل تمرین‌درمانی تحت نظارت همراه برنامه خانگی، رویکرد اول است (اجماع منیسک اروپا-آمریکا ۲۰۲۴)؛ جراحی فقط در صورت ماندگاری علائم با وجود این درمان بررسی می‌شود. زانوی واقعاً قفل‌شده نیاز به ارزیابی ارتوپدی دارد."
     ),
     principles: [
       L("Restore range, reduce effusion, then build strength and control.", "ابتدا دامنه حرکتی و کاهش افیوژن، سپس قدرت و کنترل."),
       L("Avoid deep loaded flexion with twisting early on.", "در ابتدا از خم شدن عمیق همراه با چرخش و بار خودداری شود."),
+      L("Give non-operative care a fair trial, typically at least 3 months, before a surgical opinion for persistent symptoms.", "پیش از نظر جراحی برای علائم ماندگار، درمان غیرجراحی به اندازه کافی امتحان شود؛ معمولاً دست‌کم ۳ ماه."),
     ],
     phases: [
       {
@@ -217,6 +223,8 @@ export const kneeProtocols: Protocol[] = [
     ],
     references: [
       "Logerstedt DS, et al. Knee Pain and Mobility Impairments: Meniscal and Articular Cartilage Lesions Revision 2018. J Orthop Sports Phys Ther. 2018;48(2):A1–A50.",
+      "Prill R, et al. The formal EU-US Meniscus Rehabilitation 2024 Consensus: an ESSKA-AOSSM-AASPT initiative. Part II — Prevention, non-operative treatment and return to sport. Knee Surg Sports Traumatol Arthrosc. 2025. doi:10.1002/ksa.12689.",
+      "Noorduyn JCA, et al. Effect of physical therapy vs arthroscopic partial meniscectomy in people with degenerative meniscal tears: five-year follow-up of the ESCAPE randomized clinical trial. JAMA Netw Open. 2022;5(7):e2220394.",
       "Kise NJ, et al. Exercise therapy versus arthroscopic partial meniscectomy for degenerative meniscal tear in middle aged patients: randomised controlled superiority trial with two year follow-up. BMJ. 2016;354:i3740.",
     ],
   },
@@ -232,7 +240,8 @@ export const kneeProtocols: Protocol[] = [
     principles: [
       L("Progress by criteria, not by time alone.", "پیشرفت بر اساس معیار، نه فقط زمان."),
       L("Return to pivoting sport after passing strength and hop criteria, and not before about 9 months after reconstruction.", "بازگشت به ورزش‌های چرخشی پس از گذراندن معیارهای قدرت و پرش و نه زودتر از حدود ۹ ماه پس از بازسازی."),
-      L("Shared decision on surgery versus rehabilitation alone, with orthopaedic input.", "تصمیم مشترک درباره جراحی یا توان‌بخشی تنها، با نظر ارتوپد."),
+      L("Shared decision on surgery versus rehabilitation alone, with orthopaedic input; rehabilitation with optional delayed reconstruction is a valid first option for many (KANON trial).", "تصمیم مشترک درباره جراحی یا توان‌بخشی تنها، با نظر ارتوپد؛ برای بسیاری، توان‌بخشی با امکان بازسازی تأخیری گزینه اول معتبری است (کارآزمایی KANON)."),
+      L("Return to running only after controlled jumping and landing are mastered (commonly around 12 weeks after reconstruction, range 8–16).", "بازگشت به دویدن فقط پس از تسلط بر پرش و فرود کنترل‌شده (معمولاً حدود ۱۲ هفته پس از بازسازی، بین ۸ تا ۱۶ هفته)."),
     ],
     phases: [
       {
@@ -272,7 +281,8 @@ export const kneeProtocols: Protocol[] = [
         typical: L("Usually from month 4–6; pivoting sport after passing criteria", "معمولاً از ماه ۴ تا ۶؛ ورزش‌های چرخشی پس از گذراندن معیارها"),
         goals: [
           L("Hop and change-of-direction capacity", "توانایی پرش و تغییر جهت"),
-          L("Psychological readiness", "آمادگی روانی"),
+          L("Psychological readiness (for example ACL-RSI)", "آمادگی روانی (مثلاً پرسشنامه ACL-RSI)"),
+          L("Quadriceps and hamstring strength symmetry close to 100% before high-demand pivoting sport", "تقارن قدرت چهارسر و همسترینگ نزدیک به ۱۰۰٪ پیش از ورزش‌های چرخشی پرتقاضا"),
         ],
         exercises: ["ex_single_leg_squat", "ex_hop_progression", "ex_copenhagen_short"],
         other: [
@@ -288,6 +298,8 @@ export const kneeProtocols: Protocol[] = [
       L("Calf pain or swelling after surgery (exclude DVT)", "درد یا ورم ساق پس از جراحی (رد ترومبوز ورید عمقی)"),
     ],
     references: [
+      "Kotsifaki R, et al. Aspetar clinical practice guideline on rehabilitation after anterior cruciate ligament reconstruction. Br J Sports Med. 2023;57(9):500–514.",
+      "Frobell RB, et al. A randomized trial of treatment for acute anterior cruciate ligament tears. N Engl J Med. 2010;363(4):331–342.",
       "van Melick N, et al. Evidence-based clinical practice update: practice guidelines for anterior cruciate ligament rehabilitation based on a systematic review and multidisciplinary consensus. Br J Sports Med. 2016;50(24):1506–1515.",
       "Grindem H, et al. Simple decision rules can reduce reinjury risk by 84% after ACL reconstruction: the Delaware-Oslo ACL cohort study. Br J Sports Med. 2016;50(13):804–808.",
     ],
@@ -353,6 +365,7 @@ export const kneeProtocols: Protocol[] = [
       L("Tendons respond to load; complete rest is not recommended.", "تاندون به بار پاسخ می‌دهد؛ استراحت کامل توصیه نمی‌شود."),
       L("Monitor pain on a provocation test (for example single-leg decline squat) the next day.", "درد را روز بعد با یک تست تحریکی (مثل اسکوات تک‌پا روی سطح شیبدار) پایش کنید."),
       L("Reduce jumping volume temporarily rather than stopping sport entirely.", "حجم پرش را موقتاً کم کنید به‌جای کنار گذاشتن کامل ورزش."),
+      L("Progressive tendon loading kept at pain of 3/10 or less was at least as effective as, and less painful than, eccentric decline squats (Breda 2021).", "بارگذاری پیشرونده تاندون با درد ۳ از ۱۰ یا کمتر دست‌کم به اندازه اسکوات اکسنتریک روی سطح شیبدار مؤثر و کم‌دردتر بود (Breda، ۲۰۲۱)."),
     ],
     phases: [
       {
@@ -389,6 +402,7 @@ export const kneeProtocols: Protocol[] = [
     outcomes: [NPRS, VISA_P, PSFS],
     watchFor: [L("Pain at rest or at night, or sudden loss of knee extension strength", "درد در حال استراحت یا شبانه، یا افت ناگهانی قدرت باز کردن زانو")],
     references: [
+      "Breda SJ, et al. Effectiveness of progressive tendon-loading exercise therapy in patients with patellar tendinopathy: a randomised clinical trial. Br J Sports Med. 2021;55(9):501–509.",
       "Malliaras P, et al. Patellar Tendinopathy: Clinical Diagnosis, Load Management, and Advice for Challenging Case Presentations. J Orthop Sports Phys Ther. 2015;45(11):887–898.",
     ],
   },

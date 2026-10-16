@@ -1,13 +1,19 @@
 import type { TreatmentPlan, TreatmentPlanInput } from "@/lib/types";
 import { bodyRegionsFa } from "@/lib/data/bodyRegionsFa";
 import { buildTreatmentPlan } from "@/lib/ai/engine";
+import {
+  applyPlanGuide,
+  regionBalance,
+  regionMotorControl,
+  type PlanGuide,
+} from "@/lib/ai/planGuide";
 
 /*
  * Persian rendering of the deterministic treatment-plan template.
  * buildTreatmentPlan runs first so the same safety and post-operative
  * gates throw before any Persian text is produced.
  */
-export function buildTreatmentPlanFa(input: TreatmentPlanInput): TreatmentPlan {
+export function buildTreatmentPlanFa(input: TreatmentPlanInput, guide?: PlanGuide): TreatmentPlan {
   buildTreatmentPlan(input);
 
   const region = bodyRegionsFa[input.region];
@@ -45,8 +51,8 @@ export function buildTreatmentPlanFa(input: TreatmentPlanInput): TreatmentPlan {
         "اضافه‌بار پیشرونده ۲ تا ۳ بار در هفته",
       ];
 
-  const motorControl = ["تمرینات کنترل اختصاصی تکلیف", "بازآموزی کیفیت حرکت", "تمرین تنفس و آرام‌سازی در صورت نیاز"];
-  const balance = ["تعادل ایستا و پیشرفت به پویا", "تمرینات حس عمقی", "تمرین اغتشاش (Perturbation) در مراحل بعد"];
+  const motorControl = regionMotorControl(input.region, "fa");
+  const balance = regionBalance(input.region, "fa");
 
   const education = [
     ...(region?.educationPoints.slice(0, 2) ?? []),
@@ -60,7 +66,7 @@ export function buildTreatmentPlanFa(input: TreatmentPlanInput): TreatmentPlan {
 
   const homeProgram = [
     "۳ تا ۵ تمرین کلیدی که به‌وضوح نمایش داده شود.",
-    "راهنمای درد قابل قبول حین/پس از تمرین (مثلاً حداکثر ۳ از ۱۰ و برگشت طی ۲۴ ساعت).",
+    "درد قابل قبول برای هر تمرین در برنامه خانگی تعیین می‌شود (معمولاً حداکثر ۳ از ۱۰؛ در بارگذاری تاندون تا ۵ از ۱۰)، و تا صبح روز بعد برگردد.",
     "یک دفترچه ساده برای ثبت پایبندی و پیشرفت.",
   ];
 
@@ -76,8 +82,9 @@ export function buildTreatmentPlanFa(input: TreatmentPlanInput): TreatmentPlan {
       : "ابزارهای سنجش پیامد را هر ۲ تا ۳ هفته دوباره ارزیابی کنید.",
   ];
 
-  return {
+  const plan = {
     manualTherapy, exerciseTherapy, mobility, strengthening,
     motorControl, balance, education, homeProgram, frequency, progression,
   };
+  return guide ? applyPlanGuide(plan, guide, "fa") : plan;
 }

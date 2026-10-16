@@ -215,17 +215,30 @@ export interface Suggestion {
 
 export const MIN_REPORTS = 3;
 
+/** Default acceptable exercise pain when an item has no explicit limit. */
+export const DEFAULT_PAIN_LIMIT = 3;
+
+/**
+ * Rule-based suggestion for one exercise. `painLimit` is the acceptable pain
+ * the clinician set for this item (e.g. up to 5/10 for tendon loading); it
+ * moves the progress and "pain stays high" thresholds. Pain of 7/10 or more is
+ * always a review, whatever the item limit.
+ */
 export function suggestProgression(
   summary: AdherenceSummary,
-  programSuspended: boolean
+  programSuspended: boolean,
+  painLimit: number = DEFAULT_PAIN_LIMIT
 ): Suggestion {
+  const limit = Number.isFinite(painLimit)
+    ? Math.min(Math.max(Math.round(painLimit), 0), 6)
+    : DEFAULT_PAIN_LIMIT;
   if (programSuspended) return { kind: "review", reason: "suspended" };
   if ((summary.maxPain ?? 0) >= 7) return { kind: "review", reason: "highPain" };
   if (summary.reportedDays < MIN_REPORTS) return { kind: "insufficient", reason: "fewReports" };
 
   const recent = summary.pain.slice(-3).map((entry) => entry.level);
   if ((summary.painTrend ?? 0) >= 2) return { kind: "regress", reason: "painRising" };
-  if (recent.length === 3 && mean(recent) >= 5) return { kind: "regress", reason: "painHigh" };
+  if (recent.length === 3 && mean(recent) >= limit + 2) return { kind: "regress", reason: "painHigh" };
 
   const completion = summary.completeDays / summary.reportedDays;
   if (completion < 0.5) {
@@ -244,7 +257,7 @@ export function suggestProgression(
     summary.reportedDays >= 4 &&
     lastThree.length === 3 &&
     lastThree.every((status) => status === "complete") &&
-    (summary.latestPain ?? 10) <= 3 &&
+    (summary.latestPain ?? 10) <= limit &&
     (summary.painTrend ?? 0) <= 0
   ) {
     return { kind: "progress", reason: "consistentLowPain" };

@@ -543,7 +543,7 @@ function ClinicalDraftBubble({
             ? t.reviewStatus[aiMetadata.reviewStatus] ?? aiMetadata.reviewStatus
             : t.unreviewed}
         </Badge>
-        <span className="text-[10px] text-[var(--color-ink-faint)]">
+        <span className="text-xs text-[var(--color-ink-faint)]">
           {aiMetadata.model} · {aiMetadata.promptVersion}
         </span>
         <button
@@ -682,7 +682,7 @@ function DraftList({ title, items }: { title: string; items: string[] }) {
   if (items.length === 0) return null;
   return (
     <section>
-      <h4 className="text-[11px] font-semibold text-[var(--color-ink)]">
+      <h4 className="text-xs font-semibold text-[var(--color-ink)]">
         {title}
       </h4>
       <ul className="mt-1 list-disc space-y-1 ps-4 text-xs text-[var(--color-ink-soft)]">

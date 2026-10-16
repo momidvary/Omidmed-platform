@@ -219,7 +219,7 @@ export function HomeProgramFollowUp({
             })}
           </ul>
         )}
-        <p className="text-[11px] leading-relaxed text-[var(--color-ink-faint)]">{t.disclaimer}</p>
+        <p className="text-xs leading-relaxed text-[var(--color-ink-faint)]">{t.disclaimer}</p>
       </CardBody>
     </Card>
   );

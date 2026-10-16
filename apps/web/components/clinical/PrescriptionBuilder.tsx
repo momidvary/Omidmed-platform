@@ -444,7 +444,7 @@ export function PrescriptionBuilder({
           {items.map((item, index) => (
             <div
               key={item.rowId}
-              className="relative grid grid-cols-1 gap-3 rounded-xl border border-[var(--color-border)] p-3 pe-12 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_9rem]"
+              className="relative grid grid-cols-1 gap-3 rounded-xl border border-[var(--color-border)] p-3 pe-12 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_13rem]"
             >
               <Button
                 type="button"
@@ -506,12 +506,12 @@ export function PrescriptionBuilder({
                 {item.targetDurationSeconds !== undefined ? <Field label={t.totalSeconds} required>
                   <Input type="number" min={5} max={21600} value={item.targetDurationSeconds || ""} disabled={busy}
                     onChange={(event) => updateItem(item.rowId, { targetDurationSeconds: Number(event.target.value) })} />
-                </Field> : <>
+                </Field> : <div className="grid grid-cols-2 gap-2">
                   <Field label={t.sets} required><Input type="number" min={1} max={50} value={item.targetSets ?? ""} disabled={busy}
                     onChange={(event) => updateItem(item.rowId, { targetSets: Number(event.target.value) })} /></Field>
                   <Field label={t.reps} required><Input type="number" min={1} max={1000} value={item.targetReps ?? ""} disabled={busy}
                     onChange={(event) => updateItem(item.rowId, { targetReps: Number(event.target.value) })} /></Field>
-                </>}
+                </div>}
               </div>
               <fieldset className="sm:col-span-3">
                 <legend className="mb-1.5 text-sm font-medium text-[var(--color-ink)]">{t.days}</legend>

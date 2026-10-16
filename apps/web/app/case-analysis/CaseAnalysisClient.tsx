@@ -329,7 +329,7 @@ function ReasonCard({
       <CardBody>
         <BulletList items={items} tone={tone} />
         {footer && (
-          <p className="mt-3 rounded-lg bg-[var(--color-surface-muted)] px-3 py-2 text-[11px] text-[var(--color-ink-soft)]">
+          <p className="mt-3 rounded-lg bg-[var(--color-surface-muted)] px-3 py-2 text-xs text-[var(--color-ink-soft)]">
             {footer}
           </p>
         )}

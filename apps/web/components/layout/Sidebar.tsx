@@ -47,7 +47,7 @@ function NavLink({
       {count !== null && count > 0 && (
         <span
           className={cn(
-            "min-w-6 rounded-full px-1.5 py-0.5 text-center text-[11px] font-semibold",
+            "min-w-6 rounded-full px-1.5 py-0.5 text-center text-xs font-semibold",
             item.badge === "alerts"
               ? "bg-[var(--color-danger)] text-white"
               : "bg-[var(--color-warn-soft)] text-[var(--color-warn)]"
@@ -92,7 +92,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
         </span>
         <div className="leading-tight">
           <p className="text-[15px] font-semibold text-[var(--color-ink)]">PhysioAI</p>
-          <p className="text-[11px] text-[var(--color-ink-faint)]">
+          <p className="text-xs text-[var(--color-ink-faint)]">
             {t("shell.brand.sub")}
           </p>
         </div>
@@ -137,7 +137,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
           <Icon name="user" width={18} height={18} />
           {t("nav.patient-portal")}
         </Link>
-        <div className="flex items-start gap-2 rounded-xl bg-[var(--color-surface-muted)] p-3 text-[11px] leading-relaxed text-[var(--color-ink-soft)]">
+        <div className="flex items-start gap-2 rounded-xl bg-[var(--color-surface-muted)] p-3 text-xs leading-relaxed text-[var(--color-ink-soft)]">
           <span className="mt-0.5 text-[var(--color-warn)]">
             <Icon name="shield" width={16} height={16} />
           </span>

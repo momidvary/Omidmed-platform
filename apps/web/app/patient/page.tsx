@@ -421,7 +421,7 @@ function PatientAuth() {
             </div>
           </form>
         )}
-        <p className="text-[11px] leading-relaxed text-[var(--color-ink-faint)]">
+        <p className="text-xs leading-relaxed text-[var(--color-ink-faint)]">
           حساب پرتال را کلینیک با شماره همراه شما فعال می‌کند؛ ثبت‌نام جداگانه لازم نیست.
           کد ملی برای ورود استفاده نمی‌شود.
         </p>
@@ -448,7 +448,7 @@ function PatientDashboard({ patient }: { patient: Patient }) {
           <Icon name="sparkle" width={20} height={20} />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="text-[11px] text-[var(--color-ink-faint)]">پرتال بیمار</p>
+          <p className="text-xs text-[var(--color-ink-faint)]">پرتال بیمار</p>
           <h1 className="truncate text-[15px] font-bold text-[var(--color-ink)]">
             سلام، {patient.nameFa} 👋
           </h1>
@@ -527,7 +527,7 @@ function PatientDashboard({ patient }: { patient: Patient }) {
             {t.id === "tickets" && openTickets > 0 && (
               <span
                 className={cn(
-                  "grid h-5 w-5 place-items-center rounded-full text-[10px]",
+                  "grid h-5 w-5 place-items-center rounded-full text-xs",
                   tab === t.id
                     ? "bg-white/25 text-white"
                     : "bg-[var(--color-danger-soft)] text-[var(--color-danger)]"
@@ -791,13 +791,13 @@ function ProgramTab({ patient }: { patient: Patient }) {
                   <p className="mt-1 text-xs text-[var(--color-ink-soft)]">
                     {content.purpose}
                   </p>
-                  <p className="mt-2 inline-block rounded-full bg-[var(--color-primary-soft)] px-3 py-1 text-[11px] font-medium text-[var(--color-primary-strong)]">
+                  <p className="mt-2 inline-block rounded-full bg-[var(--color-primary-soft)] px-3 py-1 text-xs font-medium text-[var(--color-primary-strong)]">
                     {item.dosageFa}
                   </p>
                   {details.length > 0 && (
                     <ul className="mt-2 flex flex-wrap gap-1.5" aria-label="جزئیات دوز">
                       {details.map((line) => (
-                        <li key={line} className="rounded-full border border-[var(--color-border)] px-2.5 py-0.5 text-[11px] text-[var(--color-ink-soft)]">
+                        <li key={line} className="rounded-full border border-[var(--color-border)] px-2.5 py-0.5 text-xs text-[var(--color-ink-soft)]">
                           {line}
                         </li>
                       ))}
@@ -952,7 +952,7 @@ function ProgressTab({ patient }: { patient: Patient }) {
                 key={e.date}
                 title={`${faDate(e.date)} — ${e.completed ? "انجام شد" : "انجام نشد"}`}
                 className={cn(
-                  "grid h-8 w-8 place-items-center rounded-full text-[11px]",
+                  "grid h-8 w-8 place-items-center rounded-full text-xs",
                   e.completed
                     ? "bg-[var(--color-primary)] text-white"
                     : "border-2 border-dashed border-[var(--color-ink-faint)] text-[var(--color-ink-faint)]"
@@ -988,7 +988,7 @@ function StatTile({
         >
           {value}
         </p>
-        <p className="mt-1 text-[11px] leading-snug text-[var(--color-ink-faint)]">
+        <p className="mt-1 text-xs leading-snug text-[var(--color-ink-faint)]">
           {label}
         </p>
       </CardBody>
@@ -1278,7 +1278,7 @@ function TicketsTab({ patient }: { patient: Patient }) {
                   <h4 className="text-sm font-bold text-[var(--color-ink)]">
                     {t.subject}
                   </h4>
-                  <p className="mt-0.5 text-[11px] text-[var(--color-ink-faint)]">
+                  <p className="mt-0.5 text-xs text-[var(--color-ink-faint)]">
                     {faDate(t.createdAt)}
                     {t.exerciseId && exerciseFa[t.exerciseId]
                       ? ` · ${exerciseFa[t.exerciseId].name}`
@@ -1287,7 +1287,7 @@ function TicketsTab({ patient }: { patient: Patient }) {
                 </div>
                 <span
                   className={cn(
-                    "shrink-0 rounded-full px-2.5 py-1 text-[10px] font-medium",
+                    "shrink-0 rounded-full px-2.5 py-1 text-xs font-medium",
                     t.status === "answered" || t.status === "closed"
                       ? "bg-[var(--color-success-soft)] text-[var(--color-success)]"
                       : "bg-[var(--color-warn-soft)] text-[var(--color-warn)]"
@@ -1315,7 +1315,7 @@ function TicketsTab({ patient }: { patient: Patient }) {
                       : "border-[var(--color-accent)]/20 bg-[var(--color-accent-soft)]/40 text-[var(--color-ink-soft)]"
                   )}
                 >
-                  <p className="mb-1 text-[10px] font-bold text-[var(--color-ink-faint)]">
+                  <p className="mb-1 text-xs font-bold text-[var(--color-ink-faint)]">
                     {r.from === "therapist"
                       ? "🩺 فیزیوتراپیست"
                       : r.from === "patient"

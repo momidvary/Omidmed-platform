@@ -305,7 +305,7 @@ export default function RedFlagCheckerPage() {
               {dispositionCopy[displayedDisposition].detail}
             </p>
             {completedAt && (
-              <p className="mt-2 text-[11px] text-[var(--color-ink-faint)]">
+              <p className="mt-2 text-xs text-[var(--color-ink-faint)]">
                 {t.completed(when(completedAt))}
               </p>
             )}
@@ -323,7 +323,7 @@ export default function RedFlagCheckerPage() {
             )}
             {selectedRisks.length > 0 && (
               <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                <span className="text-[11px] text-[var(--color-ink-soft)]">{t.risksRecorded}</span>
+                <span className="text-xs text-[var(--color-ink-soft)]">{t.risksRecorded}</span>
                 {selectedRisks.map((item) => (
                   <Badge key={item.id} tone="warn">{item.label}</Badge>
                 ))}

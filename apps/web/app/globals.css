@@ -13,7 +13,8 @@
 
   --color-ink: #0f172a;
   --color-ink-soft: #475569;
-  --color-ink-faint: #94a3b8;
+  /* Secondary text must stay readable (≥4.5:1 on white). */
+  --color-ink-faint: #64748b;
 
   --color-primary: #0d9488;
   --color-primary-strong: #0f766e;
@@ -33,6 +34,15 @@
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
 
   --radius-lg: 1rem;
+
+  /* Larger reading sizes: Persian script needs more size and line height
+     than Latin at the same nominal pixel size. */
+  --text-xs: 0.8125rem;
+  --text-xs--line-height: 1.6;
+  --text-sm: 0.9375rem;
+  --text-sm--line-height: 1.75;
+  --text-base: 1.0625rem;
+  --text-base--line-height: 1.75;
 }
 
 * {
@@ -49,6 +59,19 @@ body {
   color: var(--color-ink);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+}
+
+/* Dropdowns show an arrow on the reading-direction end. */
+select.select-chevron {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  padding-right: 2.25rem;
+}
+[dir="rtl"] select.select-chevron {
+  background-position: left 0.75rem center;
+  padding-right: 0.75rem;
+  padding-left: 2.25rem;
 }
 
 /* Subtle scrollbar for a premium feel */

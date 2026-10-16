@@ -48,3 +48,17 @@ export function assessOutcomeChange(
     mcid,
   };
 }
+
+const LABELS_FA: Record<string, string> = {
+  nrs_pain: "مقیاس عددی درد (NPRS)",
+  lefs: "مقیاس عملکردی اندام تحتانی (LEFS)",
+  odi: "شاخص ناتوانی اوسوستری (ODI)",
+  ndi: "شاخص ناتوانی گردن (NDI)",
+  quickdash: "QuickDASH (ناتوانی بازو، شانه و دست)",
+  psfs: "مقیاس عملکرد اختصاصی بیمار (PSFS)",
+};
+
+/** Instrument name in the interface language; the catalog name otherwise. */
+export function instrumentLabel(key: string, catalogName: string, locale: string): string {
+  return locale === "fa" ? (LABELS_FA[key] ?? catalogName) : catalogName;
+}

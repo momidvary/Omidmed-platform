@@ -1,7 +1,8 @@
 "use client";
 
+import { useClinicExerciseReviews } from "@/lib/store/useClinicExercises";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { ExerciseFigureSvg } from "@/components/clinical/ExerciseAnimation";
 import { describeDosage } from "@/lib/clinical/dosage";
 import { motionFor } from "@/lib/animation/motions";
@@ -32,6 +33,12 @@ export default function ExerciseLibraryPage() {
   const [review, setReview] = useState<Exercise["review"] | "">("");
   const [difficulty, setDifficulty] = useState<Difficulty | "">("");
   const [stage, setStage] = useState<Stage | "">("");
+  // Approved for this clinic by its owner (migration 033) counts as reviewed here.
+  const { approvedIds } = useClinicExerciseReviews();
+  const statusOf = useCallback(
+    (ex: Exercise): Exercise["review"] => (ex.review === "approved" || approvedIds.has(ex.id) ? "approved" : "pending"),
+    [approvedIds]
+  );
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -41,18 +48,18 @@ export default function ExerciseLibraryPage() {
       if (q && !haystack.toLowerCase().includes(q)) return false;
       if (region && ex.region !== region) return false;
       if (category && ex.category !== category) return false;
-      if (review && ex.review !== review) return false;
+      if (review && statusOf(ex) !== review) return false;
       if (difficulty && ex.difficulty !== difficulty) return false;
       if (stage && !ex.stage.includes(stage)) return false;
       return true;
     });
-  }, [query, region, category, review, difficulty, stage, locale]);
+  }, [query, region, category, review, difficulty, stage, locale, statusOf]);
 
   const hasFilters = query || region || category || review || difficulty || stage;
   const clearFilters = () => {
     setQuery(""); setRegion(""); setCategory(""); setReview(""); setDifficulty(""); setStage("");
   };
-  const approvedCount = exercises.filter((ex) => ex.review === "approved").length;
+  const approvedCount = exercises.filter((ex) => statusOf(ex) === "approved").length;
 
   return (
     <div className="space-y-5">
@@ -133,7 +140,7 @@ export default function ExerciseLibraryPage() {
         <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {filtered.map((ex) => (
             <li key={ex.id}>
-              <ExerciseTile exercise={ex} />
+              <ExerciseTile exercise={ex} pending={statusOf(ex) === "pending"} />
             </li>
           ))}
         </ul>
@@ -142,7 +149,7 @@ export default function ExerciseLibraryPage() {
   );
 }
 
-function ExerciseTile({ exercise }: { exercise: Exercise }) {
+function ExerciseTile({ exercise, pending }: { exercise: Exercise; pending: boolean }) {
   const { locale } = useLocale();
   const t = useText(exerciseLibraryText);
   const ex = localizeExercise(exercise, locale);
@@ -161,7 +168,7 @@ function ExerciseTile({ exercise }: { exercise: Exercise }) {
         <span className="absolute start-2.5 top-2.5 rounded-full bg-[#14211D]/80 px-2.5 py-1 text-xs font-semibold text-white">
           {t.animated}
         </span>
-        {ex.review === "pending" && (
+        {pending && (
           <span className="absolute end-2.5 top-2.5 rounded-full bg-[var(--color-warn-soft)] px-2.5 py-1 text-xs font-semibold text-[var(--color-warn)]">
             {t.pendingBadge}
           </span>

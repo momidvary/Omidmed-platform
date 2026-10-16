@@ -2516,6 +2516,92 @@ end $$;
 reset role;
 select set_config('request.jwt.claims', '{}', true);
 
+-- Migration 033: a clinic owner approves library exercises for their own
+-- clinic only; therapists cannot, and another clinic is never affected.
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"10000000-0000-4000-8000-000000000003","role":"authenticated"}', true);
+do $$
+begin
+  begin
+    perform public.review_clinic_exercise('20000000-0000-4000-8000-000000000001', 'ex_slr', 'approved');
+    raise exception 'FAIL: a therapist approved an exercise for the clinic';
+  exception when insufficient_privilege then null;
+  end;
+  begin
+    insert into public.clinic_exercise_reviews (clinic_id, exercise_id, catalog_version, decision, reviewed_by)
+    values ('20000000-0000-4000-8000-000000000001', 'ex_slr', 1, 'approved', '10000000-0000-4000-8000-000000000003');
+    raise exception 'FAIL: a direct insert bypassed the review RPC';
+  exception when insufficient_privilege then null;
+  end;
+end $$;
+select set_config('request.jwt.claims', '{"sub":"10000000-0000-4000-8000-000000000007","role":"authenticated"}', true);
+do $$
+begin
+  begin
+    perform public.review_clinic_exercise('20000000-0000-4000-8000-000000000001', 'ex_slr', 'approved');
+    raise exception 'FAIL: another clinic''s owner approved an exercise for clinic A';
+  exception when insufficient_privilege then null;
+  end;
+  if exists (select 1 from public.clinic_exercise_reviews where clinic_id = '20000000-0000-4000-8000-000000000001') then
+    raise exception 'FAIL: clinic B can read clinic A exercise reviews';
+  end if;
+end $$;
+select set_config('request.jwt.claims', '{"sub":"10000000-0000-4000-8000-000000000001","role":"authenticated"}', true);
+do $$
+declare
+  v_row record;
+begin
+  begin
+    perform public.review_clinic_exercise('20000000-0000-4000-8000-000000000001', 'ex_not_in_catalog', 'approved');
+    raise exception 'FAIL: an unknown exercise was approved';
+  exception when invalid_parameter_value then null;
+  end;
+  begin
+    perform public.review_clinic_exercise('20000000-0000-4000-8000-000000000001', 'ex_slr', 'activate');
+    raise exception 'FAIL: an invalid review decision was accepted';
+  exception when invalid_parameter_value then null;
+  end;
+  select * into v_row from public.review_clinic_exercise(
+    '20000000-0000-4000-8000-000000000001', 'ex_slr', 'approved', 'Content reviewed'
+  );
+  if v_row.decision <> 'approved' or v_row.catalog_version <> 1 then
+    raise exception 'FAIL: the owner''s exercise approval was not recorded';
+  end if;
+  begin
+    update public.clinic_exercise_reviews set decision = 'revoked';
+    raise exception 'FAIL: an exercise review was rewritten';
+  exception when insufficient_privilege then null;
+  end;
+end $$;
+reset role;
+select set_config('request.jwt.claims', '{}', true);
+do $$
+begin
+  if (private.clinic_exercise_catalog('ex_slr', '20000000-0000-4000-8000-000000000001')).exercise_id is distinct from 'ex_slr' then
+    raise exception 'FAIL: an approved exercise is not prescribable in its clinic';
+  end if;
+  if (private.clinic_exercise_catalog('ex_slr', '20000000-0000-4000-8000-000000000002')).exercise_id is not null then
+    raise exception 'FAIL: one clinic''s approval made an exercise prescribable in another clinic';
+  end if;
+  if (private.clinic_exercise_catalog('ex_quad_sets', '20000000-0000-4000-8000-000000000002')).exercise_id is distinct from 'ex_quad_sets' then
+    raise exception 'FAIL: a globally active exercise stopped being prescribable';
+  end if;
+  if exists (select 1 from public.exercise_catalog_versions where exercise_id = 'ex_slr' and active) then
+    raise exception 'FAIL: a clinic approval changed the global catalog';
+  end if;
+end $$;
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"10000000-0000-4000-8000-000000000001","role":"authenticated"}', true);
+select public.review_clinic_exercise('20000000-0000-4000-8000-000000000001', 'ex_slr', 'revoked');
+reset role;
+select set_config('request.jwt.claims', '{}', true);
+do $$
+begin
+  if (private.clinic_exercise_catalog('ex_slr', '20000000-0000-4000-8000-000000000001')).exercise_id is not null then
+    raise exception 'FAIL: a revoked approval still allows prescribing';
+  end if;
+end $$;
+
 \ir adherence_retry_tests.sql
 rollback;
 

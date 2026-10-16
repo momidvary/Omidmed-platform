@@ -29,7 +29,7 @@ import {
   fetchPrescriptionHistory,
   fetchTreatmentPlans,
 } from "@/lib/supabase/db";
-import { assessOutcomeChange } from "@/lib/clinical/outcomeChange";
+import { assessOutcomeChange, instrumentLabel } from "@/lib/clinical/outcomeChange";
 import type { OutcomeMeasurement, PatientCase } from "@/lib/types";
 import { cn, isUuid } from "@/lib/utils";
 import { workspaceText } from "./text";
@@ -622,7 +622,7 @@ export function WorkspaceClient() {
           endedAt={record.latestEpisode.endedAt}
           noteCount={noteCount}
           trends={trends.map(({ first, last, count, better, meaningful }) => ({
-            name: last.instrumentName,
+            name: instrumentLabel(last.instrumentKey, last.instrumentName, locale),
             first: first.score,
             last: last.score,
             unit: last.unit,
@@ -635,7 +635,7 @@ export function WorkspaceClient() {
         />
       )}
 
-      <div className="grid gap-5 xl:grid-cols-2">
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-2 [&>*]:min-w-0">
         <Card>
           <CardHeader title={t.assessmentsTitle} icon={<Icon name="analysis" />} />
           <CardBody>
@@ -727,7 +727,7 @@ export function WorkspaceClient() {
                     <ul className="space-y-1.5 text-sm">
                       {trends.map(({ first, last, count, better, meaningful }) => (
                         <li key={last.instrumentKey} className="flex flex-wrap items-center justify-between gap-2">
-                          <span className="text-[var(--color-ink)]">{last.instrumentName}</span>
+                          <span className="text-[var(--color-ink)]">{instrumentLabel(last.instrumentKey, last.instrumentName, locale)}</span>
                           <span className="flex items-center gap-1.5 text-xs text-[var(--color-ink-soft)]">
                             {count > 1 ? t.change(first.score, last.score) : last.score} {last.unit}
                             {count > 1 && (

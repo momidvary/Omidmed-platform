@@ -2522,3 +2522,71 @@ export async function fetchClinicFollowUpData(
     return null;
   }
 }
+
+/* ── Clinic-level review of library exercises (migration 033) ── */
+
+export interface ClinicExerciseReview {
+  exerciseId: string;
+  catalogVersion: number;
+  decision: "approved" | "revoked";
+  note: string | null;
+  reviewedAt: string;
+}
+
+/**
+ * The current (latest) review per exercise in a clinic. RLS limits rows to
+ * members of that clinic. null = could not load.
+ */
+export async function fetchClinicExerciseReviews(
+  clinicId: string
+): Promise<Map<string, ClinicExerciseReview> | null> {
+  const supabase = getSupabase();
+  if (!supabase || !clinicId) return null;
+  try {
+    const result = await withTimeout(
+      supabase
+        .from("clinic_exercise_reviews")
+        .select("clinic_id, exercise_id, catalog_version, decision, note, reviewed_at, seq")
+        .eq("clinic_id", clinicId)
+        .order("seq", { ascending: false })
+        .limit(2000)
+    );
+    if (!result || result.error || !result.data) return null;
+    const latest = new Map<string, ClinicExerciseReview>();
+    for (const row of result.data as Record<string, unknown>[]) {
+      if (row.clinic_id !== clinicId) continue;
+      const id = row.exercise_id as string;
+      if (latest.has(id)) continue;
+      latest.set(id, {
+        exerciseId: id,
+        catalogVersion: Number(row.catalog_version),
+        decision: row.decision as ClinicExerciseReview["decision"],
+        note: (row.note as string | null) ?? null,
+        reviewedAt: row.reviewed_at as string,
+      });
+    }
+    return latest;
+  } catch {
+    return null;
+  }
+}
+
+/** Clinic owner only (enforced by the RPC): approve or revoke for this clinic. */
+export async function reviewClinicExercise(input: {
+  clinicId: string;
+  exerciseId: string;
+  decision: "approved" | "revoked";
+  note?: string;
+}): Promise<boolean> {
+  return trackedWrite(async () => {
+    const supabase = getSupabase();
+    if (!supabase) return false;
+    const { error } = await supabase.rpc("review_clinic_exercise", {
+      p_clinic_id: input.clinicId,
+      p_exercise_id: input.exerciseId,
+      p_decision: input.decision,
+      p_note: input.note?.trim() || null,
+    });
+    return !error;
+  });
+}

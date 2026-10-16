@@ -1,5 +1,6 @@
 "use client";
 
+import { useClinicExerciseReviews } from "@/lib/store/useClinicExercises";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { ExerciseAnimation } from "@/components/clinical/ExerciseAnimation";
@@ -40,6 +41,7 @@ export default function ExerciseDetailPage() {
   const params = useParams<{ id: string }>();
   const { locale } = useLocale();
   const t = useText(exerciseLibraryText);
+  const { approvedIds } = useClinicExerciseReviews();
   const source = exercises.find((exercise) => exercise.id === params.id);
 
   if (!source) {
@@ -54,7 +56,8 @@ export default function ExerciseDetailPage() {
 
   const ex = localizeExercise(source, locale);
   const lang = locale === "fa" ? "fa" : "en";
-  const pending = ex.review === "pending";
+  // Approved by this clinic's owner (migration 033) counts as reviewed here.
+  const pending = ex.review === "pending" && !approvedIds.has(ex.id);
   const d = ex.defaultDosage;
 
   return (

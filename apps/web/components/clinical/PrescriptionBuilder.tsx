@@ -10,7 +10,7 @@ import { Card, CardBody, CardHeader } from "@/components/ui/Card";
 import { Field, Input, Select, Textarea } from "@/components/ui/Form";
 import { Icon } from "@/components/ui/Icon";
 import { Spinner } from "@/components/ui/Misc";
-import { exerciseFa } from "@/lib/data/exerciseFa";
+import { isPrescribable, useClinicExerciseReviews } from "@/lib/store/useClinicExercises";
 import { exercises } from "@/lib/data/exercises";
 import { withExercise, withPatch } from "@/lib/clinical/exercisePrefill";
 import { addPhaseExercises, type PhasePrefillResult } from "@/lib/clinical/protocolPrefill";
@@ -76,31 +76,41 @@ function withDefaultDays(item: DraftItem): DraftItem {
   return { ...item, scheduledWeekdays: days, daysPerWeek: days.length };
 }
 
-export function PrescriptionBuilder({
-  treatmentPlanId,
-  episodeId,
-  region,
-  safetyCleared,
-}: {
+interface BuilderProps {
   treatmentPlanId: string;
   episodeId: string;
   region?: BodyRegionId;
   safetyCleared: boolean;
-}) {
+}
+
+/** Waits for the clinic's exercise approvals so the first draft offers them. */
+export function PrescriptionBuilder(props: BuilderProps) {
+  const { approvedIds, loading } = useClinicExerciseReviews();
+  if (loading) return <Spinner label="…" />;
+  return <PrescriptionBuilderForm {...props} clinicApproved={approvedIds} />;
+}
+
+function PrescriptionBuilderForm({
+  treatmentPlanId,
+  episodeId,
+  region,
+  safetyCleared,
+  clinicApproved,
+}: BuilderProps & { clinicApproved: ReadonlySet<string> }) {
   const t = useText(prescriptionText);
   const { locale } = useLocale();
   const when = (value: string) => new Date(value).toLocaleString(intlLocale(locale));
   const patientReadyExercises = useMemo(
     () =>
       exercises
-        // Only reviewed exercises with an active catalog row can be prescribed.
-        .filter((exercise) => exercise.review === "approved" && Boolean(exerciseFa[exercise.id]))
+        // Reviewed globally (active catalog row) or approved by this clinic's owner.
+        .filter((exercise) => isPrescribable(exercise, clinicApproved))
         .sort((a, b) => {
           const aRegion = a.region === region ? 0 : 1;
           const bRegion = b.region === region ? 0 : 1;
           return aRegion - bRegion || a.name.localeCompare(b.name);
         }),
-    [region]
+    [region, clinicApproved]
   );
   const [startDate, setStartDate] = useState(localDateValue());
   const [endDate, setEndDate] = useState(plusDays(42));
@@ -478,8 +488,8 @@ export function PrescriptionBuilder({
                   {patientReadyExercises.map((exercise) => (
                     <option key={exercise.id} value={exercise.id}>
                       {locale === "fa"
-                        ? `${exerciseFa[exercise.id].name} · ${exercise.name}`
-                        : `${exercise.name} · ${exerciseFa[exercise.id].name}`}
+                        ? `${localizeExercise(exercise, "fa").name} · ${exercise.name}`
+                        : `${exercise.name} · ${localizeExercise(exercise, "fa").name}`}
                     </option>
                   ))}
                 </Select>

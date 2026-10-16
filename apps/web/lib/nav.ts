@@ -38,6 +38,7 @@ export const navItems: NavItem[] = [
   { href: "/clinical-records", key: "clinical-records", icon: "edit", section: "workflow", parent: "/patients" },
   { href: "/exercise-library", key: "exercise-library", icon: "exercise", section: "main" },
   { href: "/protocols", key: "protocols", icon: "treatment", section: "main" },
+  { href: "/exercise-review", key: "exercise-review", icon: "check", section: "tools" },
   { href: "/ai-assistant", key: "ai-assistant", icon: "search", section: "tools" },
   { href: "/red-flags", key: "red-flags", icon: "flag", section: "tools" },
   { href: "/patient-education", key: "patient-education", icon: "education", section: "tools" },

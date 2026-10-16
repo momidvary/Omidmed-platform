@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { usePatient } from "@/lib/store/PatientContext";
 import { exerciseFa } from "@/lib/data/exerciseFa";
+import { exerciseLibraryFa } from "@/lib/data/exerciseLibraryFa";
 import { ExerciseAnimation } from "@/components/clinical/ExerciseAnimation";
 import { describeDosage } from "@/lib/clinical/dosage";
 import {
@@ -1218,7 +1219,7 @@ function TicketsTab({ patient }: { patient: Patient }) {
                   <option value="">— انتخاب تمرین —</option>
                   {patient.program.map((item) => (
                     <option key={item.exerciseId} value={item.exerciseId}>
-                      {exerciseFa[item.exerciseId]?.name ?? item.exerciseId}
+                      {item.contentSnapshot?.name ?? exerciseLibraryFa(item.exerciseId)?.name ?? item.exerciseId}
                     </option>
                   ))}
                 </Select>
@@ -1282,8 +1283,8 @@ function TicketsTab({ patient }: { patient: Patient }) {
                   </h4>
                   <p className="mt-0.5 text-xs text-[var(--color-ink-faint)]">
                     {faDate(t.createdAt)}
-                    {t.exerciseId && exerciseFa[t.exerciseId]
-                      ? ` · ${exerciseFa[t.exerciseId].name}`
+                    {t.exerciseId && exerciseLibraryFa(t.exerciseId)
+                      ? ` · ${exerciseLibraryFa(t.exerciseId)!.name}`
                       : ""}
                   </p>
                 </div>

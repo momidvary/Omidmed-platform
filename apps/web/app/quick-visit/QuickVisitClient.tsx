@@ -37,7 +37,6 @@ import {
 } from "@/lib/clinical/scheduleDefaults";
 import { isMockMode } from "@/lib/config";
 import { regionLabel } from "@/lib/data/bodyRegionsFa";
-import { exerciseFa } from "@/lib/data/exerciseFa";
 import { exercises } from "@/lib/data/exercises";
 import { localizeExercise } from "@/lib/data/exerciseLibraryFa";
 import { localizedRedFlag } from "@/lib/data/redFlags";
@@ -45,6 +44,7 @@ import { useText } from "@/lib/i18n/text";
 import { formatJalali } from "@/lib/jalali";
 import { useAuth } from "@/lib/store/AuthContext";
 import { useCases } from "@/lib/store/CaseContext";
+import { isPrescribable, useClinicExerciseReviews } from "@/lib/store/useClinicExercises";
 import { useLocale } from "@/lib/store/LocaleContext";
 import {
   createPatientEpisode,
@@ -148,6 +148,7 @@ function QuickVisitSteps({ onRestart }: { onRestart: () => void }) {
   const patientParam = useSearchParams().get("patient");
   const { profile, activeClinicId } = useAuth();
   const { addCase, setCurrentCase } = useCases();
+  const { approvedIds: clinicApproved } = useClinicExerciseReviews();
 
   const [step, setStep] = useState<Step>("patient");
   const [error, setError] = useState<string | null>(null);
@@ -427,8 +428,8 @@ function QuickVisitSteps({ onRestart }: { onRestart: () => void }) {
   /* ── Review: plan and program drafts ──────────────────────────── */
 
   const patientReady = useMemo(
-    () => exercises.filter((exercise) => exercise.review === "approved" && Boolean(exerciseFa[exercise.id])),
-    []
+    () => exercises.filter((exercise) => isPrescribable(exercise, clinicApproved)),
+    [clinicApproved]
   );
 
   function buildReview(protocol: Protocol) {

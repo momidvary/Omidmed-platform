@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { protocolById, protocolForHypothesis, protocolLinkFor, protocols, protocolsUsingExercise } from "@/lib/clinical/protocols";
+import {
+  phaseForWeeks,
+  postOpProtocolsFor,
+  protocolById,
+  protocolForHypothesis,
+  protocolLinkFor,
+  protocols,
+  protocolsUsingExercise,
+  weeksSince,
+} from "@/lib/clinical/protocols";
 import { regionKnowledge } from "@/lib/clinical/reasoning/knowledge";
 import { exercises } from "@/lib/data/exercises";
 
@@ -12,7 +21,7 @@ const exerciseIds = new Set(exercises.map((exercise) => exercise.id));
 describe("condition protocols", () => {
   it("have unique ids and link only to real hypotheses in their own region", () => {
     expect(new Set(protocols.map((p) => p.id)).size).toBe(protocols.length);
-    for (const protocol of protocols) {
+    for (const protocol of protocols.filter((candidate) => !candidate.postOp)) {
       expect(protocol.hypotheses.length, protocol.id).toBeGreaterThan(0);
       for (const id of protocol.hypotheses) {
         const hypothesis = hypotheses.find((h) => h.id === id);
@@ -72,6 +81,45 @@ describe("condition protocols", () => {
     expect(protocolForHypothesis("n_wad")?.id).toBe("neck_mechanical");
     expect(protocolsUsingExercise("ex_eccentric_heel_drop").map((p) => p.id)).toContain("achilles_tendinopathy");
     expect(protocolById("missing")).toBeUndefined();
+  });
+});
+
+describe("post-operative protocols", () => {
+  const postOp = protocols.filter((protocol) => protocol.postOp);
+
+  it("cover the common operations and never link to a diagnostic hypothesis", () => {
+    expect(postOp.map((protocol) => protocol.id).sort()).toEqual(["ankle_fracture", "rc_repair", "tha", "tka"]);
+    for (const protocol of postOp) expect(protocol.hypotheses).toEqual([]);
+  });
+
+  it("put the surgeon's protocol first and give each phase a contiguous week window", () => {
+    for (const protocol of postOp) {
+      expect(protocol.principles[0].en, protocol.id).toMatch(/surgeon/i);
+      let expectedFrom = 0;
+      protocol.phases.forEach((phase, index) => {
+        expect(phase.weeks, `${protocol.id}/${phase.id}`).toBeDefined();
+        expect(phase.weeks!.from).toBe(expectedFrom);
+        const last = index === protocol.phases.length - 1;
+        expect(phase.weeks!.to === null, `${protocol.id}/${phase.id}`).toBe(last);
+        if (phase.weeks!.to !== null) expectedFrom = phase.weeks!.to;
+      });
+    }
+  });
+
+  it("suggests a phase from the weeks since surgery", () => {
+    const tka = protocolById("tka")!;
+    expect(phaseForWeeks(tka, 0)).toBe("early");
+    expect(phaseForWeeks(tka, 3)).toBe("strength");
+    expect(phaseForWeeks(tka, 20)).toBe("function");
+    expect(phaseForWeeks(protocolById("pfp")!, 3)).toBeNull();
+    expect(weeksSince("2026-09-01", "2026-10-16")).toBe(6);
+    expect(weeksSince("2026-10-20", "2026-10-16")).toBeNull();
+  });
+
+  it("are offered by region, and all of them for a general post-op case", () => {
+    expect(postOpProtocolsFor("knee").map((protocol) => protocol.id)).toEqual(["tka", "acl"]);
+    expect(postOpProtocolsFor("post-op")).toHaveLength(5);
+    expect(postOpProtocolsFor("neck")).toEqual([]);
   });
 });
 

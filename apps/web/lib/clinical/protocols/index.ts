@@ -1,6 +1,7 @@
 import { kneeProtocols } from "@/lib/clinical/protocols/knee";
 import { hipProtocols, lowBackProtocols } from "@/lib/clinical/protocols/hipBack";
 import { ankleProtocols, neckProtocols, shoulderProtocols } from "@/lib/clinical/protocols/upperAnkle";
+import { postOpProtocols } from "@/lib/clinical/protocols/postOp";
 import type { Protocol } from "@/lib/clinical/protocols/types";
 import { regionKnowledge, type LocalizedText } from "@/lib/clinical/reasoning/knowledge";
 
@@ -14,7 +15,22 @@ export const protocols: readonly Protocol[] = [
   ...hipProtocols,
   ...kneeProtocols,
   ...ankleProtocols,
+  ...postOpProtocols,
 ];
+
+export { phaseForWeeks, weeksSince } from "@/lib/clinical/protocols/postOp";
+
+/**
+ * Post-operative protocols for a body region, or all of them for a case
+ * recorded under the general "post-op" region.
+ */
+export function postOpProtocolsFor(region: string | null | undefined): Protocol[] {
+  const all = !region || region === "post-op";
+  const list = postOpProtocols.filter((protocol) => all || protocol.region === region);
+  // The ACL protocol also covers rehabilitation after reconstruction.
+  if (all || region === "knee") list.push(byId.get("acl")!);
+  return list;
+}
 
 const byId = new Map(protocols.map((protocol) => [protocol.id, protocol]));
 

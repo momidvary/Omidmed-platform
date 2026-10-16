@@ -89,3 +89,18 @@ select.select-chevron {
   background: #94a3b8;
   background-clip: content-box;
 }
+
+/* Free text can be Persian, English or mixed: each paragraph takes the
+   direction of its first letter, so "4 weeks" is not shown as "weeks 4". */
+textarea {
+  unicode-bidi: plaintext;
+}
+
+@media print {
+  @page {
+    margin: 14mm;
+  }
+  body {
+    background: #fff;
+  }
+}

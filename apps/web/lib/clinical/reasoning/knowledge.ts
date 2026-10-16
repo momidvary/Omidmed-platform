@@ -19,7 +19,7 @@ import type { BodyRegionId } from "@/lib/types";
  * findings record the version they were captured with.
  */
 
-export const KNOWLEDGE_VERSION = "physio-kb-2";
+export const KNOWLEDGE_VERSION = "physio-kb-3";
 
 export type Answer = "yes" | "no" | "unknown";
 export type TestResult = "positive" | "negative" | "equivocal";

@@ -52,12 +52,20 @@ export default function ProtocolDetailPage() {
       <header className="space-y-3">
         <h1 className="text-2xl font-extrabold tracking-tight text-[var(--color-ink)]">{protocol.title[lang]}</h1>
         <p className="max-w-3xl text-sm leading-relaxed text-[var(--color-ink-soft)]">{protocol.summary[lang]}</p>
-        <div className="flex flex-wrap items-center gap-1.5">
-          <span className="text-xs text-[var(--color-ink-faint)]">{t.linked}:</span>
-          {protocol.hypotheses.map((id) => (
-            <Badge key={id} tone="primary">{hypothesisLabel(id)?.[lang] ?? id}</Badge>
-          ))}
-        </div>
+        {protocol.postOp ? (
+          <div className="flex flex-wrap items-center gap-1.5">
+            <Badge tone="warn">{t.postOpBadge}</Badge>
+            <span className="text-xs text-[var(--color-ink-faint)]">{t.procedure}:</span>
+            <span className="text-sm text-[var(--color-ink)]">{protocol.postOp.procedure[lang]}</span>
+          </div>
+        ) : (
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-xs text-[var(--color-ink-faint)]">{t.linked}:</span>
+            {protocol.hypotheses.map((id) => (
+              <Badge key={id} tone="primary">{hypothesisLabel(id)?.[lang] ?? id}</Badge>
+            ))}
+          </div>
+        )}
         <p role="note" className="rounded-xl bg-[var(--color-warn-soft)] px-4 py-3 text-sm text-[var(--color-warn)]">
           <span className="font-semibold">{t.draft}. </span>{t.draftNote}
         </p>

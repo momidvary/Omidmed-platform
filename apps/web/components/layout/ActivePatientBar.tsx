@@ -56,7 +56,7 @@ export function ActivePatientBar() {
 
   if (!currentCase) {
     return (
-      <div className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-dashed border-[var(--color-border)] px-4 py-2 text-xs text-[var(--color-ink-soft)]">
+      <div className="mb-4 flex flex-wrap items-center gap-2 print:hidden rounded-xl border border-dashed border-[var(--color-border)] px-4 py-2 text-xs text-[var(--color-ink-soft)]">
         <Icon name="users" width={14} height={14} />
         <span>{t.none}</span>
         {!isMockMode && (
@@ -74,12 +74,12 @@ export function ActivePatientBar() {
   return (
     <section
       aria-label={t.label}
-      className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-xl border border-[var(--color-primary)]/25 bg-[var(--color-primary-tint)] px-4 py-2 text-sm"
+      className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-1.5 print:hidden rounded-xl border border-[var(--color-primary)]/25 bg-[var(--color-primary-tint)] px-4 py-2 text-sm"
     >
       <span className="text-xs text-[var(--color-ink-soft)]">{t.label}:</span>
-      <span className="font-semibold text-[var(--color-ink)]">{currentCase.name}</span>
+      <span className="font-semibold text-[var(--color-ink)]" dir="auto">{currentCase.name}</span>
       {currentCase.mainComplaint && (
-        <span className="max-w-xs truncate text-xs text-[var(--color-ink-soft)]">{currentCase.mainComplaint}</span>
+        <span className="max-w-xs truncate text-xs text-[var(--color-ink-soft)]" dir="auto">{currentCase.mainComplaint}</span>
       )}
       <Badge tone={cleared ? "success" : disposition === "not-screened" ? "warn" : "danger"}>
         {t.dispositions[disposition]}

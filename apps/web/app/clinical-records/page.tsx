@@ -98,9 +98,21 @@ export default function ClinicalRecordsPage() {
 
 function ClinicalRecords() {
   const { profile, activeClinicId } = useAuth();
-  const { cases } = useCases();
-  const patientParam = useSearchParams().get("patient");
-  const preselectedPatientId = isUuid(patientParam) ? patientParam : null;
+  const { cases, currentCase, hydrated, setCurrentCase } = useCases();
+  const searchParams = useSearchParams();
+  const patientParam = searchParams.get("patient");
+  const templateParam = searchParams.get("template");
+  // Without a link, start with the active patient. Read once, so choosing
+  // another patient here (which updates the active patient) does not reload.
+  const [rememberedPatientId, setRememberedPatientId] = useState<string | null>(null);
+  if (hydrated && rememberedPatientId === null) {
+    setRememberedPatientId(currentCase?.patientId ?? "");
+  }
+  const preselectedPatientId = isUuid(patientParam)
+    ? patientParam
+    : isUuid(rememberedPatientId)
+      ? rememberedPatientId
+      : null;
   const t = useText(clinicalRecordsText);
   const { locale } = useLocale();
   const canAccess =
@@ -380,6 +392,28 @@ function ClinicalRecords() {
       ) ?? null
     : null;
 
+  // Keep the active-patient bar on the patient whose notes are open.
+  useEffect(() => {
+    if (!selectedPatient) return;
+    if (episodeCase) {
+      if (currentCase?.id !== episodeCase.id) setCurrentCase(episodeCase.id);
+    } else if (currentCase && currentCase.patientId !== selectedPatient.id) {
+      setCurrentCase(null);
+    }
+  }, [selectedPatient, episodeCase, currentCase, setCurrentCase]);
+
+  // A link such as "Open the discharge note" starts the note from a template,
+  // once, for the patient it was opened for.
+  const templateApplied = useRef(false);
+  useEffect(() => {
+    if (templateApplied.current || !selectedPatient || selectedPatient.id !== preselectedPatientId) return;
+    if (!SESSION_TEMPLATE_IDS.includes(templateParam as SessionTemplateId)) return;
+    templateApplied.current = true;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- applied once after the linked patient loads
+    setSessionForm((current) => ({ ...current, ...sessionTemplate(templateParam as SessionTemplateId, locale) }));
+    document.getElementById("session-note")?.scrollIntoView({ block: "start" });
+  }, [selectedPatient, preselectedPatientId, templateParam, locale]);
+
   function sessionHasText(): boolean {
     return SOAP_FIELDS.some((field) => sessionForm[field].trim().length > 0);
   }
@@ -622,7 +656,7 @@ function ClinicalRecords() {
           )}
 
           <div className="grid gap-5 xl:grid-cols-2">
-            <Card>
+            <Card id="session-note" className="scroll-mt-24">
               <CardHeader
                 title={sessionForm.supersedesId ? t.correctSession : t.signSession}
                 subtitle={t.sessionSubtitle}

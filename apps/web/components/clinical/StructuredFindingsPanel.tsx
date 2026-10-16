@@ -3,13 +3,14 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { protocolLinkFor } from "@/lib/clinical/protocols";
+import { postOpProtocolsFor, protocolLinkFor, type Protocol } from "@/lib/clinical/protocols";
 import { isMockMode } from "@/lib/config";
 import { intlLocale, useText } from "@/lib/i18n/text";
 import { useLocale } from "@/lib/store/LocaleContext";
 import { hasClinicalSafetyClearance } from "@/lib/clinical/safety";
 import {
   EXAM_NOTE_KEYS,
+  POST_OP_QUESTION,
   emptyFindings,
   normalizeFindings,
   type CaseFindingsVersion,
@@ -60,6 +61,53 @@ const LEVEL_TONE: Record<SupportLevel, "success" | "primary" | "neutral" | "dang
   against: "danger",
 };
 
+/** Words in the complaint or surgical history that suggest recent surgery. */
+const SURGERY_WORDS =
+  /(replacement|arthroplasty|repair|reconstruction|surgery|surgical|operat|fixation|orif|post-?op|تعویض|جراحی|عمل|ترمیم|بازسازی|پلاتین|پیچ|فیکساسیون)/i;
+
+/** Post-operative pathway: protocol links that defer to the surgeon. */
+function PostOpLinks({
+  protocols,
+  onContinue,
+}: {
+  protocols: Protocol[];
+  onContinue: (href: string) => void;
+}) {
+  const n = useText(nextText);
+  const { locale } = useLocale();
+  const lang = locale === "fa" ? "fa" : "en";
+  return (
+    <section
+      aria-labelledby="post-op-step"
+      className="space-y-3 rounded-xl border border-[var(--color-warn)]/40 bg-[var(--color-warn-soft)] p-4"
+    >
+      <h4 id="post-op-step" className="text-base font-bold text-[var(--color-warn)]">
+        {n.postOpTitle}
+      </h4>
+      <p className="text-sm text-[var(--color-ink)]">{n.postOpBody}</p>
+      <div className="flex flex-col gap-2">
+        {protocols.map((protocol) => (
+          <Button
+            key={protocol.id}
+            variant="secondary"
+            className="justify-start"
+            onClick={() =>
+              onContinue(
+                `/treatment-planner?protocol=${protocol.id}&phase=${protocol.phases[0].id}&stage=post-op#home-program`
+              )
+            }
+          >
+            {protocol.title[lang]}
+          </Button>
+        ))}
+        <Button variant="ghost" className="justify-start" onClick={() => onContinue("/treatment-planner?stage=post-op")}>
+          {n.postOpOther}
+        </Button>
+      </div>
+    </section>
+  );
+}
+
 function sameFindings(a: ClinicalFindings, b: ClinicalFindings): boolean {
   return JSON.stringify(a) === JSON.stringify(b);
 }
@@ -76,6 +124,7 @@ function startingFindings(
 export function StructuredFindingsPanel({ patientCase }: { patientCase: PatientCase }) {
   const { locale } = useLocale();
   const s = reasoningStrings[locale];
+  const postOpQuestion = useText(postOpQuestionText);
   const router = useRouter();
   const knowledge = getRegionKnowledge(patientCase.region);
   const safetyCleared = hasClinicalSafetyClearance(patientCase.safetyScreen);
@@ -142,8 +191,11 @@ export function StructuredFindingsPanel({ patientCase }: { patientCase: PatientC
           title={s.title}
           icon={<Icon name="analysis" width={18} height={18} />}
         />
-        <CardBody>
+        <CardBody className="space-y-4">
           <p className="text-sm text-[var(--color-ink-soft)]">{s.noModule}</p>
+          {patientCase.region === "post-op" && safetyCleared && (
+            <PostOpLinks protocols={postOpProtocolsFor("post-op")} onContinue={(href) => router.push(href)} />
+          )}
         </CardBody>
       </Card>
     );
@@ -230,6 +282,11 @@ export function StructuredFindingsPanel({ patientCase }: { patientCase: PatientC
     router.push(href);
   }
 
+  const postOpAnswer: Answer = draft.intake.answers[POST_OP_QUESTION] ?? "unknown";
+  const mentionsSurgery = SURGERY_WORDS.test(
+    `${patientCase.mainComplaint ?? ""} ${patientCase.surgicalHistory ?? ""}`
+  );
+
   const savedLabel = current
     ? s.savedVersion(current.version, formatWhen(current.createdAt, locale))
     : s.nothingSaved;
@@ -255,6 +312,26 @@ export function StructuredFindingsPanel({ patientCase }: { patientCase: PatientC
                 {s.history}
               </h3>
               <p className="text-xs text-[var(--color-ink-faint)]">{s.historyHint}</p>
+            </div>
+            <div className="rounded-xl border border-[var(--color-warn)]/30 bg-[var(--color-warn-soft)]/50 px-3 py-2.5">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <span id="q-post-op" className="text-sm font-medium text-[var(--color-ink)]">
+                  {postOpQuestion.question}
+                </span>
+                <Segmented
+                  labelledBy="q-post-op"
+                  value={postOpAnswer}
+                  onChange={(value) => setAnswer(POST_OP_QUESTION, value as Answer)}
+                  options={[
+                    { value: "yes", label: s.yes, tone: "primary" },
+                    { value: "no", label: s.no, tone: "neutral" },
+                    { value: "unknown", label: s.notAsked, tone: "muted" },
+                  ]}
+                />
+              </div>
+              {postOpAnswer === "unknown" && mentionsSurgery && (
+                <p className="mt-1.5 text-xs text-[var(--color-warn)]">{postOpQuestion.mentioned}</p>
+              )}
             </div>
             <ul className="divide-y divide-[var(--color-border)] rounded-xl border border-[var(--color-border)]">
               {knowledge.questions.map((question) => (
@@ -403,6 +480,7 @@ export function StructuredFindingsPanel({ patientCase }: { patientCase: PatientC
 
       <div className="xl:col-span-2">
         <RankingCard
+          postOpProtocols={postOpAnswer === "yes" ? postOpProtocolsFor(patientCase.region) : null}
           reasoning={reasoning}
           safetyCleared={safetyCleared}
           dirty={dirty && !isMockMode}
@@ -422,6 +500,17 @@ export function StructuredFindingsPanel({ patientCase }: { patientCase: PatientC
   );
 }
 
+const postOpQuestionText = {
+  en: {
+    question: "Surgery on this region in the last 12 months?",
+    mentioned: "The complaint or surgical history mentions surgery — answer “Yes” if this is a post-operative patient.",
+  },
+  fa: {
+    question: "آیا بیمار در ۱۲ ماه گذشته روی همین ناحیه جراحی شده است؟",
+    mentioned: "در شکایت یا سابقه جراحی به عمل اشاره شده — اگر بیمار پس از جراحی است «بله» را انتخاب کنید.",
+  },
+};
+
 const nextText = {
   en: {
     title: "Next step",
@@ -433,6 +522,11 @@ const nextText = {
     planOnly: "Plan without a protocol",
     plan: "Go to the treatment plan",
     savesFirst: "Your unsaved findings are saved first.",
+    postOpTitle: "After surgery: start from the operation",
+    postOpBody:
+      "The hypotheses below are built for problems without surgery and can mislead after an operation. Choose the post-operative protocol for this operation; the surgeon's protocol and restrictions come first.",
+    postOpOther: "Another operation — plan without a protocol",
+    postOpHypotheses: "Diagnostic hypotheses (for comparison only)",
   },
   fa: {
     title: "قدم بعد",
@@ -444,10 +538,16 @@ const nextText = {
     planOnly: "برنامه درمان بدون پروتکل",
     plan: "رفتن به برنامه درمان",
     savesFirst: "یافته‌های ذخیره‌نشده ابتدا ذخیره می‌شوند.",
+    postOpTitle: "بیمار پس از جراحی: درمان را از نوع عمل شروع کنید",
+    postOpBody:
+      "فرضیه‌های زیر برای مشکلات بدون جراحی طراحی شده‌اند و پس از عمل ممکن است گمراه‌کننده باشند. پروتکل پس از جراحی مربوط به این عمل را انتخاب کنید؛ پروتکل و محدودیت‌های جراح مقدم است.",
+    postOpOther: "عمل دیگر — برنامه درمان بدون پروتکل",
+    postOpHypotheses: "فرضیه‌های تشخیصی (فقط برای مقایسه)",
   },
 };
 
 function RankingCard({
+  postOpProtocols,
   reasoning,
   safetyCleared,
   dirty,
@@ -455,6 +555,8 @@ function RankingCard({
   aiReady,
   screeningRules,
 }: {
+  /** Set when the patient had surgery on this region: the post-op pathway replaces the next step. */
+  postOpProtocols: Protocol[] | null;
   reasoning: ReasoningResult | null;
   safetyCleared: boolean;
   dirty: boolean;
@@ -468,6 +570,7 @@ function RankingCard({
   const lang = locale === "fa" ? "fa" : "en";
   const leading = reasoning?.hypotheses[0];
   const showNext =
+    !postOpProtocols &&
     safetyCleared &&
     reasoning &&
     !reasoning.limitedData &&
@@ -504,6 +607,7 @@ function RankingCard({
           </p>
         ) : (
           <>
+            {postOpProtocols && <PostOpLinks protocols={postOpProtocols} onContinue={onContinue} />}
             {showNext && leading && (
               <section
                 aria-labelledby="next-step"
@@ -563,16 +667,30 @@ function RankingCard({
               </p>
             )}
 
-            <ol className="space-y-2">
-              {reasoning.hypotheses.map((hypothesis, index) => (
-                <HypothesisRow
-                  key={hypothesis.id}
-                  hypothesis={hypothesis}
-                  rank={index + 1}
-                  maxScore={Math.max(1, ...reasoning.hypotheses.map((h) => h.score))}
-                />
-              ))}
-            </ol>
+            {(() => {
+              const list = (
+                <ol className="space-y-2">
+                  {reasoning.hypotheses.map((hypothesis, index) => (
+                    <HypothesisRow
+                      key={hypothesis.id}
+                      hypothesis={hypothesis}
+                      rank={index + 1}
+                      maxScore={Math.max(1, ...reasoning.hypotheses.map((h) => h.score))}
+                    />
+                  ))}
+                </ol>
+              );
+              return postOpProtocols ? (
+                <details className="rounded-xl border border-[var(--color-border)] px-3 py-2">
+                  <summary className="cursor-pointer text-xs font-semibold text-[var(--color-ink-soft)]">
+                    {n.postOpHypotheses}
+                  </summary>
+                  <div className="mt-2">{list}</div>
+                </details>
+              ) : (
+                list
+              );
+            })()}
 
             {reasoning.nextTests.length > 0 && (
               <div>

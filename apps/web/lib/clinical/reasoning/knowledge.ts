@@ -62,6 +62,28 @@ export interface HypothesisRule {
 
 export interface ScreeningRule extends LocalizedText {
   source: string;
+  /**
+   * Show the rule only for a traumatic presentation: any listed intake answer
+   * is "yes", or the recorded mechanism describes an injury. Rules without
+   * this condition are always shown.
+   */
+  traumaOnly?: { questions: string[] };
+}
+
+const traumaMechanism =
+  /\b(?:trauma|injur(?:y|ed)|fall|fell|twist(?:ed|ing)?|sprain(?:ed)?|blow|collision|accident|tackle|landed)\b|ضربه|زمین\s*خورد|پیچ\s*خورد|آسیب|تصادف|افتاد|سقوط|إصابة|سقط|التواء|حادث/i;
+
+/** Whether a screening rule applies to the current presentation. */
+export function screeningRuleApplies(
+  rule: ScreeningRule,
+  answers: Record<string, string | undefined>,
+  mechanism: string
+): boolean {
+  if (!rule.traumaOnly) return true;
+  return (
+    rule.traumaOnly.questions.some((id) => answers[id] === "yes") ||
+    traumaMechanism.test(mechanism)
+  );
 }
 
 export interface RegionKnowledge {
@@ -126,7 +148,9 @@ const knee: RegionKnowledge = {
         { question: "k_pop_rapid_swelling", when: "yes", weight: -1 },
       ],
       tests: [],
-      age: [{ atLeast: 50, weight: 2 }, { below: 40, weight: -2 }],
+      // NICE NG226 (2022): clinical diagnosis from age 45 with activity-related
+      // pain and no or short (≤30 min) morning stiffness.
+      age: [{ atLeast: 45, weight: 2 }, { below: 40, weight: -2 }],
     },
     {
       id: "k_meniscus",
@@ -181,6 +205,7 @@ const knee: RegionKnowledge = {
       en: "After acute knee trauma apply the Ottawa knee rule (age ≥55, isolated patellar tenderness, fibular head tenderness, cannot flex to 90°, cannot bear weight 4 steps) — any positive item → refer for radiography.",
       fa: "پس از ضربه حاد زانو قانون اتاوا را اجرا کنید (سن ۵۵ سال یا بیشتر، حساسیت فقط روی کشکک، حساسیت سر نازک‌نی، ناتوانی در خم کردن تا ۹۰ درجه، ناتوانی در تحمل وزن برای ۴ قدم) — هر مورد مثبت ← ارجاع برای رادیوگرافی.",
       source: "Stiell et al., JAMA 1996; Bachmann et al., Ann Intern Med 2004",
+      traumaOnly: { questions: ["k_twisting", "k_pop_rapid_swelling", "k_valgus_blow"] },
     },
   ],
 };
@@ -316,7 +341,7 @@ const lowBack: RegionKnowledge = {
     { id: "lb_crossed_slr", en: "Crossed straight leg raise", fa: "SLR متقاطع", accuracy: { target: "Disc herniation with radiculopathy", sensitivity: 0.29, specificity: 0.88, source: "Devillé et al., Spine 2000 (meta-analysis)" } },
     { id: "lb_slump", en: "Slump test", fa: "تست اسلامپ", accuracy: { target: "Lumbar disc herniation", sensitivity: 0.84, specificity: 0.83, source: "Majlesi et al., J Clin Rheumatol 2008" } },
     { id: "lb_neuro_deficit", en: "Myotomal/dermatomal/reflex deficit matching one root", fa: "نقص میوتوم/درماتوم/رفلکس منطبق با یک ریشه" },
-    { id: "lb_sij_cluster", en: "SIJ provocation cluster (≥3 of 5 positive)", fa: "کلاستر تحریک مفصل ساکروایلیاک (۳ از ۵ مثبت)", accuracy: { target: "SIJ pain (diagnostic block)", sensitivity: 0.91, specificity: 0.78, source: "Laslett et al., Man Ther 2005" } },
+    { id: "lb_sij_cluster", en: "SIJ provocation cluster: ≥2 of 4 (distraction, thigh thrust, compression, sacral thrust) — or ≥3 of 6 with Gaenslen both sides; interpret only when symptoms do not centralise", fa: "کلاستر تحریک مفصل ساکروایلیاک: حداقل ۲ از ۴ تست (دیستراکشن، تای‌تراست، کمپرشن، ساکرال تراست) — یا حداقل ۳ از ۶ با گنسلن دو طرف؛ فقط وقتی علائم مرکزی نمی‌شوند تفسیر شود", accuracy: { target: "SIJ pain (diagnostic block)", sensitivity: 0.88, specificity: 0.78, source: "Laslett et al., Man Ther 2005" } },
     { id: "lb_centralisation", en: "Centralisation with repeated movements", fa: "مرکزی شدن علائم با حرکات تکراری" },
   ],
   hypotheses: [
@@ -363,7 +388,12 @@ const lowBack: RegionKnowledge = {
       id: "lb_sij",
       label: { en: "Sacroiliac joint pain", fa: "درد مفصل ساکروایلیاک" },
       features: [{ question: "lb_below_l5", when: "yes", weight: 2 }],
-      tests: [{ test: "lb_sij_cluster", positive: 3, negative: -3 }],
+      // Laslett: the cluster is applied after excluding a centralising
+      // (discogenic) presentation.
+      tests: [
+        { test: "lb_sij_cluster", positive: 3, negative: -3 },
+        { test: "lb_centralisation", positive: -3, negative: 0 },
+      ],
     },
     {
       id: "lb_axspa",
@@ -644,6 +674,7 @@ const ankleFoot: RegionKnowledge = {
       en: "Apply the Ottawa ankle and foot rules after acute injury (bone tenderness at the posterior malleolar edge/tip, navicular or 5th metatarsal base, or inability to bear weight 4 steps) → refer for radiography.",
       fa: "پس از آسیب حاد، قوانین اتاوای مچ و پا را اجرا کنید (حساسیت استخوانی در لبه/نوک خلفی قوزک، استخوان ناویکولار یا قاعده متاتارس پنجم، یا ناتوانی در تحمل وزن برای ۴ قدم) ← ارجاع برای رادیوگرافی.",
       source: "Stiell et al., JAMA 1993; Bachmann et al., BMJ 2003",
+      traumaOnly: { questions: ["a_inversion", "a_external_rotation"] },
     },
   ],
 };

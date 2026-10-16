@@ -17,6 +17,7 @@ import {
 import {
   KNOWLEDGE_VERSION,
   getRegionKnowledge,
+  screeningRuleApplies,
   type Answer,
   type ExamTest,
   type TestResult,
@@ -391,7 +392,11 @@ export function StructuredFindingsPanel({ patientCase }: { patientCase: PatientC
           reasoning={reasoning}
           safetyCleared={safetyCleared}
           aiReady={CLINICAL_AI_ENABLED && !isMockMode && !dirty && current !== null}
-          screeningRules={knowledge.screeningRules.map((rule) => ({
+          screeningRules={knowledge.screeningRules
+            .filter((rule) =>
+              screeningRuleApplies(rule, draft.intake.answers, patientCase.mechanism ?? "")
+            )
+            .map((rule) => ({
             text: localized(rule, locale),
             source: rule.source,
           }))}

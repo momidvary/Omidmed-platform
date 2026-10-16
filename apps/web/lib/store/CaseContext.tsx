@@ -51,7 +51,8 @@ interface CaseContextValue {
 
 const CaseContext = createContext<CaseContextValue | null>(null);
 
-const STORAGE_KEY = "physioai:cases:v1";
+// v2: Persian demo cases and safety risk factors.
+const STORAGE_KEY = "physioai:cases:v2";
 
 interface CaseState {
   cases: PatientCase[];

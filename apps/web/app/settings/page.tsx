@@ -77,6 +77,7 @@ export default function SettingsPage() {
 
   function clearData() {
     localStorage.removeItem("physioai:cases:v1");
+    localStorage.removeItem("physioai:cases:v2");
     localStorage.removeItem("physioai:patients:v2");
     localStorage.removeItem("physioai:settings:v1");
     setCleared(true);
@@ -173,21 +174,8 @@ export default function SettingsPage() {
         </div>
       </Card>
 
-      <details className="group rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]">
-        <summary className="cursor-pointer list-none px-5 py-4 text-sm font-semibold text-[var(--color-ink-soft)] marker:hidden">
-          <span className="inline-flex items-center gap-2">
-            <Icon name="settings" width={16} height={16} />
-            {s.techTitle}
-          </span>
-        </summary>
-        <div className="space-y-4 border-t border-[var(--color-border)] p-4">
-      <Card>
-        <CardHeader
-          title={s.dbTitle}
-          subtitle={s.dbSubtitle}
-          icon={<Icon name="shield" width={18} height={18} />}
-        />
-        <CardBody className="space-y-3">
+      {/* Storage status stays visible: the demo must never look like a saved record. */}
+      <div role="status" className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-5 py-3">
           <div className="flex items-center gap-2">
             <span
               className={
@@ -206,6 +194,23 @@ export default function SettingsPage() {
                     : s.cloudUnavailable}
             </p>
           </div>
+      </div>
+
+      <details className="group rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]">
+        <summary className="cursor-pointer list-none px-5 py-4 text-sm font-semibold text-[var(--color-ink-soft)] marker:hidden">
+          <span className="inline-flex items-center gap-2">
+            <Icon name="settings" width={16} height={16} />
+            {s.techTitle}
+          </span>
+        </summary>
+        <div className="space-y-4 border-t border-[var(--color-border)] p-4">
+      <Card>
+        <CardHeader
+          title={s.dbTitle}
+          subtitle={s.dbSubtitle}
+          icon={<Icon name="shield" width={18} height={18} />}
+        />
+        <CardBody className="space-y-3">
           <p className="text-sm text-[var(--color-ink-soft)]">
             {isMockMode ? s.dbDemoBody : s.dbRealBody}
             <span className="sr-only">{s.configFile}</span>

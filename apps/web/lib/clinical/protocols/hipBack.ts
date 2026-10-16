@@ -1,4 +1,4 @@
-import { HOOS, NPRS, OARSI_TESTS, ODI, PSFS, STARTBACK } from "@/lib/clinical/protocols/outcomes";
+import { HOOS, IHOT_HAGOS, NPRS, OARSI_TESTS, ODI, PSFS, STARTBACK } from "@/lib/clinical/protocols/outcomes";
 import { L, type Protocol } from "@/lib/clinical/protocols/types";
 
 export const hipProtocols: Protocol[] = [
@@ -8,12 +8,13 @@ export const hipProtocols: Protocol[] = [
     hypotheses: ["h_oa"],
     title: L("Hip osteoarthritis", "آرتروز لگن (هیپ)"),
     summary: L(
-      "Education, strengthening, mobility and aerobic exercise are first-line; manual therapy can be added for pain and mobility.",
-      "آموزش، تقویت، تحرک و ورزش هوازی درمان خط اول است؛ برای درد و تحرک می‌توان درمان دستی را اضافه کرد."
+      "Exercise therapy and manual therapy form the core of care (2025 hip OA guideline, strongest grade), with education, gait and balance training and weight management where relevant. Typical exercise dose: 1–5 sessions a week for 5–16 weeks.",
+      "تمرین‌درمانی و درمان دستی هسته اصلی درمان است (راهنمای آرتروز لگن ۲۰۲۵، قوی‌ترین درجه توصیه)، همراه با آموزش، تمرین راه رفتن و تعادل و در صورت لزوم مدیریت وزن. دوز معمول تمرین: ۱ تا ۵ جلسه در هفته به مدت ۵ تا ۱۶ هفته."
     ),
     principles: [
       L("Exercise is recommended for everyone with hip OA, regardless of imaging.", "تمرین برای همه بیماران آرتروز لگن توصیه می‌شود، صرف‌نظر از تصویربرداری."),
       L("Combine strength, range of motion and walking or cycling.", "ترکیب تقویت، دامنه حرکتی و پیاده‌روی یا دوچرخه."),
+      L("Therapeutic ultrasound is not recommended.", "اولتراسوند درمانی توصیه نمی‌شود."),
     ],
     phases: [
       {
@@ -22,7 +23,10 @@ export const hipProtocols: Protocol[] = [
         typical: L("Usually 2–3 weeks", "معمولاً ۲ تا ۳ هفته"),
         goals: [L("Understand the condition and pacing", "شناخت عارضه و تنظیم فعالیت"), L("Improve hip range of motion", "بهبود دامنه حرکتی لگن")],
         exercises: ["ex_hip_mobility", "ex_hip_90_90", "ex_glute_bridge", "ex_glute_med_sidelying", "ex_walking_program"],
-        other: [L("Manual therapy for pain and stiffness if helpful", "درمان دستی برای درد و خشکی در صورت اثربخشی"), L("Walking aid if needed", "وسیله کمکی راه رفتن در صورت نیاز")],
+        other: [
+          L("Manual therapy with exercise: hip mobilisation, long-axis distraction or mobilisation with movement, dosed to tolerance", "درمان دستی همراه تمرین: موبیلیزاسیون هیپ، دیستراکشن در محور طولی یا موبیلیزاسیون همراه حرکت، در حد تحمل"),
+          L("Walking aid and gait training if needed", "وسیله کمکی و آموزش راه رفتن در صورت نیاز"),
+        ],
         progressWhen: [L("Exercise pain settles within 24 hours", "درد تمرین ظرف ۲۴ ساعت فروکش می‌کند")],
       },
       {
@@ -47,7 +51,8 @@ export const hipProtocols: Protocol[] = [
     outcomes: [NPRS, HOOS, OARSI_TESTS],
     watchFor: [L("Night pain, fever or rapid loss of function", "درد شبانه، تب یا افت سریع عملکرد"), L("Groin pain on loading in a runner (exclude stress fracture)", "درد کشاله با بارگذاری در دونده (رد شکستگی استرسی)")],
     references: [
-      "Cibulka MT, et al. Hip Pain and Mobility Deficits—Hip Osteoarthritis: Revision 2017. J Orthop Sports Phys Ther. 2017;47(6):A1–A37.",
+      "Koc TA Jr, et al. Hip Pain and Mobility Deficits—Hip Osteoarthritis: Revision 2025. J Orthop Sports Phys Ther. 2025;55(11):CPG1–CPG31.",
+      "NICE. Osteoarthritis in over 16s: diagnosis and management (NG226). National Institute for Health and Care Excellence; 2022.",
       "Bannuru RR, et al. OARSI guidelines for the non-surgical management of knee, hip, and polyarticular osteoarthritis. Osteoarthritis Cartilage. 2019;27(11):1578–1589.",
     ],
   },
@@ -143,9 +148,10 @@ export const hipProtocols: Protocol[] = [
         progressWhen: [],
       },
     ],
-    outcomes: [NPRS, HOOS, PSFS],
+    outcomes: [NPRS, IHOT_HAGOS, PSFS],
     watchFor: [L("Mechanical locking or no improvement after 3 months: orthopaedic opinion", "قفل مکانیکی یا عدم بهبود پس از ۳ ماه: نظر ارتوپد")],
     references: [
+      "Enseki KR, et al. Hip Pain and Movement Dysfunction Associated With Nonarthritic Hip Joint Pain: A Revision. J Orthop Sports Phys Ther. 2023;53(7):CPG1–CPG70.",
       "Griffin DR, et al. The 2016 Warwick Agreement on femoroacetabular impingement syndrome (FAI syndrome): an international consensus statement. Br J Sports Med. 2016;50(19):1169–1176.",
       "Kemp JL, et al. Physiotherapist-led treatment for young to middle-aged active adults with hip-related pain: consensus recommendations from the International Hip-related Pain Research Network, Zurich 2018. Br J Sports Med. 2020;54(9):504–511.",
     ],
@@ -166,6 +172,7 @@ export const lowBackProtocols: Protocol[] = [
       L("No single exercise type is clearly superior; choose what the patient will do.", "هیچ نوع تمرینی به‌وضوح برتر نیست؛ تمرینی را انتخاب کنید که بیمار انجام می‌دهد."),
       L("Avoid bed rest; encourage normal activity and work.", "پرهیز از استراحت در بستر؛ تشویق به فعالیت و کار عادی."),
       L("Address fear, beliefs and sleep where relevant (higher-risk patients).", "در بیماران پرخطر، به ترس، باورها و خواب پرداخته شود."),
+      L("Do not use TENS, traction, therapeutic ultrasound or lumbar braces as routine care (WHO 2023).", "TENS، کشش (تراکشن)، اولتراسوند درمانی و کمربند طبی به‌عنوان درمان روتین استفاده نشود (سازمان جهانی بهداشت، ۲۰۲۳)."),
     ],
     phases: [
       {
@@ -207,6 +214,7 @@ export const lowBackProtocols: Protocol[] = [
     references: [
       "NICE. Low back pain and sciatica in over 16s: assessment and management (NG59). National Institute for Health and Care Excellence; 2016 (updated 2020).",
       "George SZ, et al. Interventions for the Management of Acute and Chronic Low Back Pain: Revision 2021. J Orthop Sports Phys Ther. 2021;51(11):CPG1–CPG60.",
+      "World Health Organization. WHO guideline for non-surgical management of chronic primary low back pain in adults in primary and community care settings. Geneva: WHO; 2023.",
       "Hill JC, et al. Comparison of stratified primary care management for low back pain with current best practice (STarT Back): a randomised controlled trial. Lancet. 2011;378(9802):1560–1571.",
     ],
   },
@@ -222,6 +230,7 @@ export const lowBackProtocols: Protocol[] = [
     principles: [
       L("Prefer movements that centralise or ease leg symptoms.", "حرکاتی ترجیح داده شوند که علائم پا را متمرکز یا کم می‌کنند."),
       L("Re-check strength, sensation and reflexes at each visit.", "قدرت، حس و رفلکس‌ها در هر جلسه دوباره بررسی شوند."),
+      L("Do not offer traction or lumbar supports (NICE NG59).", "کشش (تراکشن) یا کمربند کمری پیشنهاد نشود (NICE NG59)."),
     ],
     phases: [
       {
@@ -311,6 +320,7 @@ export const lowBackProtocols: Protocol[] = [
       L("Calf pain on walking relieved by standing still (exclude vascular claudication)", "درد ساق با راه رفتن که با ایستادن آرام می‌شود (رد لنگش عروقی)"),
     ],
     references: [
+      "Bussières A, et al. Non-surgical interventions for lumbar spinal stenosis leading to neurogenic claudication: a clinical practice guideline. J Pain. 2021;22(9):1015–1039.",
       "Delitto A, et al. Surgery Versus Nonsurgical Treatment of Lumbar Spinal Stenosis: A Randomized Trial. Ann Intern Med. 2015;162(7):465–473.",
       "Schneider MJ, et al. Comparative Clinical Effectiveness of Nonsurgical Treatment Methods in Patients With Lumbar Spinal Stenosis: A Randomized Clinical Trial. JAMA Netw Open. 2019;2(1):e186828.",
     ],

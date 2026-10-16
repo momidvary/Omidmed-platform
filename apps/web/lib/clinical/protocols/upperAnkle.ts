@@ -161,12 +161,13 @@ export const shoulderProtocols: Protocol[] = [
     hypotheses: ["s_rcrsp"],
     title: L("Rotator cuff related shoulder pain", "درد شانه مرتبط با روتاتور کاف"),
     summary: L(
-      "Progressive exercise for the rotator cuff and scapular muscles over at least 12 weeks is the core treatment; surgery offers no clear advantage over exercise for most.",
-      "تمرین پیشرونده روتاتور کاف و عضلات کتف دست‌کم به مدت ۱۲ هفته درمان اصلی است؛ برای بیشتر بیماران جراحی برتری واضحی بر تمرین ندارد."
+      "An active rehabilitation program (motor control and/or resistance exercise with various loads) plus education is the initial treatment (2025 rotator cuff tendinopathy guideline, grade A), for at least 12 weeks; manual therapy can add short-term pain relief. Subacromial decompression offers no clear advantage (CSAW).",
+      "برنامه توان‌بخشی فعال (کنترل حرکتی و/یا تمرین مقاومتی با بارهای مختلف) همراه آموزش، درمان اولیه است (راهنمای تاندینوپاتی روتاتور کاف ۲۰۲۵، درجه A)، دست‌کم به مدت ۱۲ هفته؛ درمان دستی می‌تواند کاهش کوتاه‌مدت درد اضافه کند. جراحی دکمپرشن ساب‌آکرومیال برتری واضحی ندارد (کارآزمایی CSAW)."
     ),
     principles: [
       L("Some pain during exercise is acceptable if it settles by the next day.", "کمی درد حین تمرین قابل قبول است اگر تا روز بعد برطرف شود."),
       L("Progress load and range gradually toward overhead tasks.", "بار و دامنه به تدریج به سمت فعالیت‌های بالای سر افزایش یابد."),
+      L("Imaging is not routine; therapeutic ultrasound is not recommended.", "تصویربرداری روتین نیست؛ اولتراسوند درمانی توصیه نمی‌شود."),
     ],
     phases: [
       {
@@ -175,7 +176,10 @@ export const shoulderProtocols: Protocol[] = [
         typical: L("Usually 2–4 weeks", "معمولاً ۲ تا ۴ هفته"),
         goals: [L("Reduce pain", "کاهش درد"), L("Start rotator cuff loading below shoulder height", "شروع بارگذاری روتاتور کاف زیر سطح شانه")],
         exercises: ["ex_ext_rotation", "ex_scap_retraction", "ex_shoulder_flexion_aaro", "ex_pendulum"],
-        other: [L("Modify provocative overhead activity", "تعدیل فعالیت‌های بالای سر که درد ایجاد می‌کنند")],
+        other: [
+          L("Modify provocative overhead activity", "تعدیل فعالیت‌های بالای سر که درد ایجاد می‌کنند"),
+          L("Spinal or shoulder manual therapy as a short-term adjunct to exercise", "درمان دستی ستون فقرات یا شانه به‌عنوان مکمل کوتاه‌مدت تمرین"),
+        ],
         progressWhen: [L("Pain-free isometric rotation", "چرخش ایزومتریک بدون درد")],
       },
       {
@@ -203,6 +207,8 @@ export const shoulderProtocols: Protocol[] = [
       L("Neck-related arm symptoms", "علائم دست با منشأ گردنی"),
     ],
     references: [
+      "Desmeules F, et al. Rotator Cuff Tendinopathy Diagnosis, Nonsurgical Medical Care, and Rehabilitation: A Clinical Practice Guideline. J Orthop Sports Phys Ther. 2025;55(4):235–274.",
+      "Beard DJ, et al. Arthroscopic subacromial decompression for subacromial shoulder pain (CSAW): a multicentre, pragmatic, parallel group, placebo-controlled, three-group, randomised surgical trial. Lancet. 2018;391(10118):329–338.",
       "Lewis J. Rotator cuff related shoulder pain: Assessment, management and uncertainties. Man Ther. 2016;23:57–68.",
       "Pieters L, et al. An Update of Systematic Reviews Examining the Effectiveness of Conservative Physical Therapy Interventions for Subacromial Shoulder Pain. J Orthop Sports Phys Ther. 2020;50(3):131–141.",
     ],
@@ -213,8 +219,8 @@ export const shoulderProtocols: Protocol[] = [
     hypotheses: ["s_frozen"],
     title: L("Frozen shoulder (adhesive capsulitis)", "شانه منجمد (کپسولیت چسبنده)"),
     summary: L(
-      "Education about the natural course, stretching matched to irritability, and mobilisation; an intra-articular corticosteroid injection combined with exercise can help in the painful phase.",
-      "آموزش درباره سیر طبیعی، کشش متناسب با تحریک‌پذیری و موبیلیزاسیون؛ در مرحله دردناک، تزریق کورتون داخل مفصلی همراه با تمرین می‌تواند کمک کند."
+      "Education about the natural course and in-person physiotherapy with stretching matched to irritability; a glenohumeral corticosteroid injection should be considered early for short-term relief, followed by physiotherapy (BESS 2025). In UK FROST, surgery was not superior to a structured physiotherapy pathway with injection.",
+      "آموزش درباره سیر طبیعی و فیزیوتراپی حضوری با کشش متناسب با تحریک‌پذیری؛ تزریق کورتون داخل مفصل شانه برای تسکین کوتاه‌مدت باید زود بررسی شود و پس از آن فیزیوتراپی انجام شود (BESS ۲۰۲۵). در کارآزمایی UK FROST، جراحی بر مسیر ساختاریافته فیزیوتراپی همراه تزریق برتری نداشت."
     ),
     principles: [
       L("Match stretching intensity to irritability: gentle in the painful phase.", "شدت کشش متناسب با تحریک‌پذیری: در مرحله دردناک ملایم."),
@@ -227,7 +233,10 @@ export const shoulderProtocols: Protocol[] = [
         typical: L("Often weeks to months", "اغلب چند هفته تا چند ماه"),
         goals: [L("Pain relief and sleep", "کاهش درد و خواب بهتر"), L("Maintain available range", "حفظ دامنه موجود")],
         exercises: ["ex_pendulum", "ex_shoulder_flexion_aaro", "ex_scap_retraction"],
-        other: [L("Discuss injection with the medical team if pain is severe", "در صورت درد شدید، گفت‌وگو درباره تزریق با تیم پزشکی")],
+        other: [
+          L("Refer to discuss a glenohumeral corticosteroid injection early in the painful phase", "ارجاع برای بررسی تزریق کورتون داخل مفصل شانه در اوایل مرحله دردناک"),
+          L("Prefer in-person physiotherapy over a home-exercise sheet alone", "فیزیوتراپی حضوری بر صرفاً برگه تمرین خانگی ترجیح دارد"),
+        ],
         progressWhen: [L("Night pain easing", "کاهش درد شبانه")],
       },
       {
@@ -250,8 +259,13 @@ export const shoulderProtocols: Protocol[] = [
       },
     ],
     outcomes: [NPRS, SPADI, SHOULDER_ROM],
-    watchFor: [L("Uncontrolled diabetes or thyroid disease (coordinate with the physician)", "دیابت یا بیماری تیروئید کنترل‌نشده (هماهنگی با پزشک)")],
+    watchFor: [
+      L("Uncontrolled diabetes or thyroid disease (coordinate with the physician)", "دیابت یا بیماری تیروئید کنترل‌نشده (هماهنگی با پزشک)"),
+      L("Loss of external rotation after trauma or with suspected arthritis: X-ray to exclude locked dislocation or glenohumeral arthritis", "از دست رفتن چرخش خارجی پس از ضربه یا با شک به آرتروز: رادیوگرافی برای رد دررفتگی قفل‌شده یا آرتروز گلنوهومرال"),
+    ],
     references: [
+      "British Elbow and Shoulder Society. BESS patient care pathway: Frozen shoulder (update). Shoulder Elbow. 2025. doi:10.1177/17585732251335955.",
+      "Rangan A, et al. Management of adults with primary frozen shoulder in secondary care (UK FROST): a multicentre, pragmatic, three-arm, superiority randomised clinical trial. Lancet. 2020;396(10256):977–989.",
       "Kelley MJ, et al. Shoulder Pain and Mobility Deficits: Adhesive Capsulitis. J Orthop Sports Phys Ther. 2013;43(5):A1–A31.",
     ],
   },
@@ -278,7 +292,10 @@ export const ankleProtocols: Protocol[] = [
         typical: L("Usually up to 1–2 weeks", "معمولاً تا ۱ تا ۲ هفته"),
         goals: [L("Control swelling", "کنترل ورم"), L("Restore motion and weight bearing", "بازگرداندن حرکت و تحمل وزن")],
         exercises: ["ex_ankle_pumps", "ex_ankle_alphabet", "ex_ankle_band_4way"],
-        other: [L("Elevation, compression and a brace or tape as needed", "بالا نگه‌داشتن، بانداژ و بریس یا تیپ در صورت نیاز")],
+        other: [
+          L("Elevation, compression and a brace or tape as needed", "بالا نگه‌داشتن، بانداژ و بریس یا تیپ در صورت نیاز"),
+          L("Joint mobilisation to restore dorsiflexion, combined with exercise", "موبیلیزاسیون مفصلی برای بازگرداندن دورسی‌فلکشن، همراه با تمرین"),
+        ],
         progressWhen: [L("Walking without a limp", "راه رفتن بدون لنگیدن")],
       },
       {
@@ -316,12 +333,13 @@ export const ankleProtocols: Protocol[] = [
     hypotheses: ["a_achilles_tendinopathy"],
     title: L("Mid-portion Achilles tendinopathy", "تاندینوپاتی بخش میانی آشیل"),
     summary: L(
-      "Progressive calf loading (eccentric or heavy slow resistance) for at least 12 weeks with a pain-monitoring model; activity can usually continue.",
-      "بارگذاری پیشرونده ساق (اکسنتریک یا مقاومتی سنگین و آهسته) دست‌کم ۱۲ هفته با مدل پایش درد؛ معمولاً می‌توان فعالیت را ادامه داد."
+      "Tendon loading with loads as high as tolerated, at least 3 times a week, is first-line (2024 Achilles guideline, grade A). Any loading type can be used (isometric, eccentric, heavy slow resistance, plyometric); none is clearly superior. Continue activity with a pain-monitoring model for at least 12 weeks.",
+      "بارگذاری تاندون با بیشترین بار قابل تحمل، دست‌کم ۳ بار در هفته، درمان خط اول است (راهنمای آشیل ۲۰۲۴، درجه A). هر نوع بارگذاری قابل استفاده است (ایزومتریک، اکسنتریک، مقاومتی سنگین و آهسته، پلایومتریک) و هیچ‌کدام برتری واضح ندارد. فعالیت با مدل پایش درد دست‌کم ۱۲ هفته ادامه یابد."
     ),
     principles: [
       L("Pain up to 5/10 during exercise is acceptable if it settles by the next morning.", "درد تا ۵ از ۱۰ حین تمرین قابل قبول است اگر تا صبح روز بعد برطرف شود."),
       L("Train both straight-knee (gastrocnemius) and bent-knee (soleus) positions.", "تمرین در هر دو حالت زانوی صاف (دوقلو) و زانوی خم (نعلی)."),
+      L("Educate on load management and the expected course; do not use therapeutic ultrasound alone or night splints.", "آموزش مدیریت بار و سیر مورد انتظار؛ از اولتراسوند درمانی به‌تنهایی یا آتل شبانه استفاده نشود."),
     ],
     phases: [
       {
@@ -330,7 +348,10 @@ export const ankleProtocols: Protocol[] = [
         typical: L("Usually 1–3 weeks", "معمولاً ۱ تا ۳ هفته"),
         goals: [L("Settle reactive pain", "آرام کردن درد واکنشی"), L("Start calf loading", "شروع بارگذاری ساق")],
         exercises: ["ex_calf_raise", "ex_soleus_raise", "ex_ankle_band_4way"],
-        other: [L("Reduce running volume and hills temporarily", "کاهش موقت حجم دویدن و سربالایی")],
+        other: [
+          L("Reduce running volume and hills temporarily", "کاهش موقت حجم دویدن و سربالایی"),
+          L("Heel lifts may temporarily reduce tendon strain during activity", "بالشتک پاشنه ممکن است موقتاً فشار روی تاندون را در فعالیت کم کند"),
+        ],
         progressWhen: [L("Morning stiffness settling", "کاهش خشکی صبحگاهی")],
       },
       {
@@ -355,7 +376,8 @@ export const ankleProtocols: Protocol[] = [
     outcomes: [NPRS, VISA_A, HEEL_RAISE],
     watchFor: [L("Sudden pain with a snap and loss of push-off (possible rupture): urgent review", "درد ناگهانی همراه صدا و از دست رفتن قدرت هل دادن (احتمال پارگی): ارجاع فوری")],
     references: [
-      "Martin RL, et al. Achilles Pain, Stiffness, and Muscle Power Deficits: Midportion Achilles Tendinopathy Revision 2018. J Orthop Sports Phys Ther. 2018;48(5):A1–A38.",
+      "Chimenti RL, et al. Achilles Pain, Stiffness, and Muscle Power Deficits: Midportion Achilles Tendinopathy Revision — 2024. J Orthop Sports Phys Ther. 2024;54(12):CPG1–CPG32.",
+      "Beyer R, et al. Heavy slow resistance versus eccentric training as treatment for Achilles tendinopathy: a randomized controlled trial. Am J Sports Med. 2015;43(7):1704–1711.",
       "Silbernagel KG, et al. Continued sports activity, using a pain-monitoring model, during rehabilitation in patients with Achilles tendinopathy: a randomized controlled study. Am J Sports Med. 2007;35(6):897–906.",
       "Alfredson H, et al. Heavy-load eccentric calf muscle training for the treatment of chronic Achilles tendinosis. Am J Sports Med. 1998;26(3):360–366.",
     ],
@@ -366,12 +388,13 @@ export const ankleProtocols: Protocol[] = [
     hypotheses: ["a_plantar_heel"],
     title: L("Plantar heel pain", "درد کف پاشنه"),
     summary: L(
-      "Plantar fascia and calf stretching, education, foot orthoses or taping in the short term, and progressive strengthening including high-load heel raises.",
-      "کشش فاسیای کف پا و ساق، آموزش، کفی یا تیپینگ در کوتاه‌مدت و تقویت پیشرونده از جمله بالا رفتن روی پنجه با بار زیاد."
+      "Strongest recommendations (2023 heel pain guideline, grade A): manual therapy to lower-limb joints and soft tissues, plantar fascia and calf stretching, taping for short-term relief, and night splints for persistent first-step pain. Foot orthoses (combined with other care, not alone), resistance training and dry needling are also supported.",
+      "قوی‌ترین توصیه‌ها (راهنمای درد پاشنه ۲۰۲۳، درجه A): درمان دستی مفاصل و بافت نرم اندام تحتانی، کشش فاسیای کف پا و ساق، تیپینگ برای تسکین کوتاه‌مدت و آتل شبانه برای درد ماندگار قدم‌های اول. کفی طبی (همراه سایر درمان‌ها، نه به‌تنهایی)، تمرین مقاومتی و سوزن خشک نیز پشتیبانی می‌شوند."
     ),
     principles: [
       L("Stretch before the first steps in the morning.", "کشش پیش از اولین قدم‌های صبح."),
       L("Manage standing and walking load; supportive footwear.", "مدیریت بار ایستادن و راه رفتن؛ کفش مناسب."),
+      L("Do not use therapeutic ultrasound to add to stretching.", "از اولتراسوند درمانی برای تقویت اثر کشش استفاده نشود."),
     ],
     phases: [
       {
@@ -380,7 +403,12 @@ export const ankleProtocols: Protocol[] = [
         typical: L("Usually 2–4 weeks", "معمولاً ۲ تا ۴ هفته"),
         goals: [L("Reduce first-step pain", "کاهش درد قدم‌های اول")],
         exercises: ["ex_plantar_fascia_stretch", "ex_calf_raise", "ex_short_foot"],
-        other: [L("Taping or prefabricated orthoses in the short term", "تیپینگ یا کفی پیش‌ساخته در کوتاه‌مدت"), L("Night splint if morning pain persists", "آتل شبانه در صورت ماندگاری درد صبحگاهی")],
+        other: [
+          L("Manual therapy to the ankle, foot and calf soft tissues", "درمان دستی مچ، پا و بافت نرم ساق"),
+          L("Rigid or elastic taping for short-term relief (1–6 weeks)", "تیپینگ سخت یا کشی برای تسکین کوتاه‌مدت (۱ تا ۶ هفته)"),
+          L("Night splint for 1–3 months if first-step pain persists", "آتل شبانه به مدت ۱ تا ۳ ماه در صورت ماندگاری درد قدم‌های اول"),
+          L("Prefabricated or custom orthoses combined with other treatment, not alone", "کفی پیش‌ساخته یا سفارشی همراه سایر درمان‌ها، نه به‌تنهایی"),
+        ],
         progressWhen: [L("First-step pain clearly reducing", "کاهش واضح درد قدم‌های اول")],
       },
       {
@@ -405,7 +433,8 @@ export const ankleProtocols: Protocol[] = [
     outcomes: [NPRS, FAAM, LEFS],
     watchFor: [L("Burning or numb heel (nerve entrapment) or pain at rest and night (other pathology)", "سوزش یا بی‌حسی پاشنه (گیر افتادن عصب) یا درد در استراحت و شب (پاتولوژی دیگر)")],
     references: [
-      "Martin RL, et al. Heel Pain—Plantar Fasciitis: Revision 2014. J Orthop Sports Phys Ther. 2014;44(11):A1–A33.",
+      "Koc TA Jr, et al. Heel Pain — Plantar Fasciitis: Revision 2023. J Orthop Sports Phys Ther. 2023;53(12):CPG1–CPG39.",
+      "DiGiovanni BF, et al. Tissue-specific plantar fascia-stretching exercise enhances outcomes in patients with chronic heel pain: a prospective, randomized study. J Bone Joint Surg Am. 2003;85(7):1270–1277.",
       "Rathleff MS, et al. High-load strength training improves outcome in patients with plantar fasciitis: A randomized controlled trial with 12-month follow-up. Scand J Med Sci Sports. 2015;25(3):e292–e300.",
     ],
   },

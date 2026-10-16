@@ -13,7 +13,7 @@ import type { BodyRegionId } from "@/lib/types";
  * the home-program builder.
  */
 
-export const PROTOCOLS_VERSION = "physio-protocols-1";
+export const PROTOCOLS_VERSION = "physio-protocols-2";
 
 export interface ProtocolPhase {
   id: string;

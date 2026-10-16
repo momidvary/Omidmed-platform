@@ -763,8 +763,10 @@
         "fa": "بارگذاری تاندون کشکک"
       },
       "defaultDosage": {
-        "targetDurationSeconds": 45,
-        "restSeconds": 60,
+        "targetSets": 5,
+        "targetReps": 1,
+        "holdSeconds": 45,
+        "restSeconds": 120,
         "loadType": "assisted",
         "painLimit": 3
       },
@@ -3079,10 +3081,10 @@
         "fa": "انعطاف فاسیای کف پا"
       },
       "defaultDosage": {
-        "targetSets": 3,
-        "targetReps": 1,
-        "holdSeconds": 30,
-        "timesPerDay": 2
+        "targetSets": 1,
+        "targetReps": 10,
+        "holdSeconds": 10,
+        "timesPerDay": 3
       },
       "en": {
         "name": "Plantar Fascia Stretch",

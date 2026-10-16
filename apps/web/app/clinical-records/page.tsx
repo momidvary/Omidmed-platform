@@ -127,6 +127,9 @@ function ClinicalRecords() {
   );
   const [feedback, setFeedback] = useState<string | null>(null);
   const [findingsBusy, setFindingsBusy] = useState(false);
+  // The timeline shows the latest signed notes; corrections and older
+  // entries stay one click away.
+  const [showAllDocs, setShowAllDocs] = useState(false);
   const scopeRef = useRef(`${profile?.id ?? "none"}:${activeClinicId ?? "none"}`);
 
   useEffect(() => {
@@ -884,7 +887,10 @@ function ClinicalRecords() {
                   <section>
                     <h2 className="mb-3 text-sm font-bold text-[var(--color-ink)]">{t.sessionNotes}</h2>
                     <ol className="space-y-3">
-                      {documentation.sessionNotes.map((note) => (
+                      {(showAllDocs
+                        ? documentation.sessionNotes
+                        : documentation.sessionNotes.filter((note) => note.isCurrent).slice(0, 3)
+                      ).map((note) => (
                         <li key={note.id} className="rounded-xl border border-[var(--color-border)] p-4">
                           <div className="flex flex-wrap items-center justify-between gap-2">
                             <time className="text-xs text-[var(--color-ink-soft)]">{formatDateTime(note.occurredAt, intlLocale(locale), t.unknownDate)}</time>
@@ -911,7 +917,10 @@ function ClinicalRecords() {
                   <section>
                     <h2 className="mb-3 text-sm font-bold text-[var(--color-ink)]">{t.outcomes}</h2>
                     <ol className="space-y-3">
-                      {documentation.outcomeMeasurements.map((measurement) => (
+                      {(showAllDocs
+                        ? documentation.outcomeMeasurements
+                        : documentation.outcomeMeasurements.filter((measurement) => measurement.isCurrent).slice(0, 5)
+                      ).map((measurement) => (
                         <li key={measurement.id} className="rounded-xl border border-[var(--color-border)] p-4">
                           <div className="flex flex-wrap items-center justify-between gap-2">
                             <div>
@@ -932,6 +941,18 @@ function ClinicalRecords() {
                       ))}
                     </ol>
                   </section>
+                  {(documentation.sessionNotes.length > 3 ||
+                    documentation.outcomeMeasurements.length > 5 ||
+                    documentation.sessionNotes.some((note) => !note.isCurrent) ||
+                    documentation.outcomeMeasurements.some((measurement) => !measurement.isCurrent)) && (
+                    <div className="lg:col-span-2">
+                      <Button variant="secondary" size="sm" onClick={() => setShowAllDocs((value) => !value)}>
+                        {showAllDocs
+                          ? t.showLatest
+                          : t.showAll(documentation.sessionNotes.length + documentation.outcomeMeasurements.length)}
+                      </Button>
+                    </div>
+                  )}
                 </div>
               )}
             </CardBody>

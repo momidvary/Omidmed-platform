@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card, CardBody, CardHeader } from "@/components/ui/Card";
@@ -12,6 +13,15 @@ import { exerciseFa } from "@/lib/data/exerciseFa";
 import { exercises } from "@/lib/data/exercises";
 import { withExercise, withPatch } from "@/lib/clinical/exercisePrefill";
 import { addPhaseExercises, type PhasePrefillResult } from "@/lib/clinical/protocolPrefill";
+import {
+  ALTERNATE_DAYS,
+  EVERY_DAY,
+  WEEK_ORDER_EN,
+  WEEK_ORDER_FA,
+  defaultPrecautions,
+  defaultStopRules,
+  defaultWeekdays,
+} from "@/lib/clinical/scheduleDefaults";
 import { protocolById, protocols } from "@/lib/clinical/protocols";
 import { localizeExercise } from "@/lib/data/exerciseLibraryFa";
 import {
@@ -57,6 +67,14 @@ function emptyItem(): DraftItem {
   return { rowId: uid("rx"), exerciseId: "", dosageFa: "", daysPerWeek: 0, scheduledWeekdays: [] };
 }
 
+/** A newly chosen exercise gets a starting schedule if it has none yet. */
+function withDefaultDays(item: DraftItem): DraftItem {
+  if (!item.exerciseId || item.scheduledWeekdays.length > 0) return item;
+  const exercise = exercises.find((candidate) => candidate.id === item.exerciseId);
+  const days = defaultWeekdays(exercise?.category);
+  return { ...item, scheduledWeekdays: days, daysPerWeek: days.length };
+}
+
 export function PrescriptionBuilder({
   treatmentPlanId,
   episodeId,
@@ -86,25 +104,32 @@ export function PrescriptionBuilder({
   const [startDate, setStartDate] = useState(localDateValue());
   const [endDate, setEndDate] = useState(plusDays(42));
   const [reviewDate, setReviewDate] = useState(plusDays(14));
-  const [precautions, setPrecautions] = useState("");
+  // Patient-facing text is Persian; the defaults are editable starting text.
+  const [precautions, setPrecautions] = useState(() => defaultPrecautions("fa"));
   // Rendered only after client-side data loads, so the browser timezone is a
   // safe, editable default (Asia/Tehran for clinics in Iran).
   const [scheduleTimezone, setScheduleTimezone] = useState(() =>
     typeof Intl !== "undefined" ? Intl.DateTimeFormat().resolvedOptions().timeZone ?? "" : ""
   );
-  const [stopRules, setStopRules] = useState("");
-  const [items, setItems] = useState<DraftItem[]>([emptyItem()]);
+  const [stopRules, setStopRules] = useState(() => defaultStopRules("fa"));
   // "Start from this phase" on a protocol page links here with ?protocol=&phase=.
-  // The builder renders only after client-side data loads, so reading the URL
-  // in the initial state is safe.
+  const searchParams = useSearchParams();
   const [protocolChoice, setProtocolChoice] = useState(() => {
-    if (typeof window === "undefined") return { protocol: "", phase: "" };
-    const query = new URLSearchParams(window.location.search);
-    const protocol = protocolById(query.get("protocol") ?? "");
-    const phase = protocol?.phases.find((candidate) => candidate.id === query.get("phase"));
+    const protocol = protocolById(searchParams.get("protocol") ?? "");
+    const phase = protocol?.phases.find((candidate) => candidate.id === searchParams.get("phase"));
     return { protocol: protocol?.id ?? "", phase: phase?.id ?? "" };
   });
-  const [phaseResult, setPhaseResult] = useState<PhasePrefillResult<DraftItem> | null>(null);
+  // Arriving from a protocol phase, its reviewed exercises are already in the
+  // draft with their starting dose and schedule; nothing is saved yet.
+  const [initialPrefill] = useState(() => {
+    const protocol = protocolById(protocolChoice.protocol);
+    const phase = protocol?.phases.find((candidate) => candidate.id === protocolChoice.phase);
+    if (!phase) return null;
+    const result = addPhaseExercises([emptyItem()], phase.exercises, patientReadyExercises, emptyItem);
+    return { ...result, items: result.items.map(withDefaultDays) };
+  });
+  const [items, setItems] = useState<DraftItem[]>(() => initialPrefill?.items ?? [emptyItem()]);
+  const [phaseResult, setPhaseResult] = useState<PhasePrefillResult<DraftItem> | null>(initialPrefill);
   const protocolOptions = useMemo(
     () => [...protocols].sort((a, b) => Number(b.region === region) - Number(a.region === region)),
     [region]
@@ -161,7 +186,7 @@ export function PrescriptionBuilder({
   function applyPhase() {
     if (!chosenPhase) return;
     const result = addPhaseExercises(items, chosenPhase.exercises, patientReadyExercises, emptyItem);
-    setItems(result.items);
+    setItems(result.items.map(withDefaultDays));
     setPhaseResult(result);
     invalidateStored();
   }
@@ -270,6 +295,27 @@ export function PrescriptionBuilder({
     }
     setStored(result);
     setHistoryRetry((value) => value + 1);
+    return result;
+  }
+
+  // Usual case in one step: the clinician ticks the publish statement, then
+  // the version is saved and published. The database steps stay separate, so
+  // a failed publish leaves a saved draft that can be published later.
+  async function saveAndPublish() {
+    if (busy || !publishConfirmed) return;
+    const saved = stored?.status === "draft" ? stored : await saveDraft();
+    if (!saved) return;
+    setBusy(true);
+    setError(null);
+    const result = await publishPrescription(saved.id);
+    setBusy(false);
+    if (!result) {
+      setError(t.publishBlocked);
+      return;
+    }
+    setStored(result);
+    setPublishConfirmed(false);
+    setHistoryRetry((value) => value + 1);
   }
 
   // Load a saved draft back into the form so it can be checked and
@@ -301,20 +347,6 @@ export function PrescriptionBuilder({
     setError(null);
   }
 
-  async function publish() {
-    if (busy || !stored || stored.status !== "draft" || !publishConfirmed) return;
-    setBusy(true);
-    setError(null);
-    const result = await publishPrescription(stored.id);
-    setBusy(false);
-    if (!result) {
-      setError(t.publishBlocked);
-      return;
-    }
-    setStored(result);
-    setHistoryRetry((value) => value + 1);
-  }
-
   async function revokeCurrent() {
     if (busy || !currentlyPublished || !revokeConfirmed) return;
     setBusy(true);
@@ -338,79 +370,6 @@ export function PrescriptionBuilder({
         icon={<Icon name="exercise" width={18} height={18} />}
       />
       <CardBody className="space-y-5">
-        <Field label={t.timezone} required hint={t.timezoneHint}>
-          <Input value={scheduleTimezone} disabled={busy} placeholder="Asia/Tehran" dir="ltr"
-            onChange={(event) => { setScheduleTimezone(event.target.value); invalidateStored(); }} />
-        </Field>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <Field label={t.startDate} required>
-            <Input
-              type="date"
-              value={startDate}
-              disabled={busy}
-              onChange={(event) => {
-                setStartDate(event.target.value);
-                invalidateStored();
-              }}
-            />
-          </Field>
-          <Field label={t.endDate}>
-            <Input
-              type="date"
-              min={startDate}
-              value={endDate}
-              disabled={busy}
-              onChange={(event) => {
-                setEndDate(event.target.value);
-                invalidateStored();
-              }}
-            />
-          </Field>
-          <Field label={t.reviewDate} required>
-            <Input
-              type="date"
-              min={startDate}
-              value={reviewDate}
-              disabled={busy}
-              onChange={(event) => {
-                setReviewDate(event.target.value);
-                invalidateStored();
-              }}
-            />
-          </Field>
-        </div>
-
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Field
-            label={t.precautions}
-            required
-            hint={t.precautionsHint}
-          >
-            <Textarea
-              value={precautions}
-              maxLength={4000}
-              disabled={busy}
-              onChange={(event) => {
-                setPrecautions(event.target.value);
-                invalidateStored();
-              }}
-              className="min-h-24"
-            />
-          </Field>
-          <Field label={t.stopRules} required hint={t.stopRulesHint}>
-            <Textarea
-              value={stopRules}
-              maxLength={4000}
-              disabled={busy}
-              onChange={(event) => {
-                setStopRules(event.target.value);
-                invalidateStored();
-              }}
-              className="min-h-24"
-            />
-          </Field>
-        </div>
-
         <section
           aria-labelledby="from-protocol"
           className="space-y-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-3"
@@ -485,8 +444,23 @@ export function PrescriptionBuilder({
           {items.map((item, index) => (
             <div
               key={item.rowId}
-              className="grid grid-cols-1 gap-3 rounded-xl border border-[var(--color-border)] p-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_8rem_auto]"
+              className="relative grid grid-cols-1 gap-3 rounded-xl border border-[var(--color-border)] p-3 pe-12 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_9rem]"
             >
+              <Button
+                type="button"
+                variant="ghost"
+                className="absolute end-2 top-2 h-9 w-9 !p-0"
+                disabled={busy || items.length === 1}
+                onClick={() => {
+                  setItems((previous) =>
+                    previous.filter((candidate) => candidate.rowId !== item.rowId)
+                  );
+                  invalidateStored();
+                }}
+                aria-label={t.remove(index + 1)}
+              >
+                <Icon name="close" width={16} height={16} />
+              </Button>
               <Field label={t.exercise(index + 1)} required>
                 <Select
                   value={item.exerciseId}
@@ -494,7 +468,7 @@ export function PrescriptionBuilder({
                   onChange={(event) => {
                     const exercise = patientReadyExercises.find((candidate) => candidate.id === event.target.value);
                     setItems((previous) =>
-                      previous.map((row) => (row.rowId === item.rowId ? withExercise(row, exercise) : row))
+                      previous.map((row) => (row.rowId === item.rowId ? withDefaultDays(withExercise(row, exercise)) : row))
                     );
                     invalidateStored();
                   }}
@@ -539,33 +513,50 @@ export function PrescriptionBuilder({
                     onChange={(event) => updateItem(item.rowId, { targetReps: Number(event.target.value) })} /></Field>
                 </>}
               </div>
-              <fieldset className="space-y-1">
-                <legend>{t.days}</legend>
-                {t.weekdays.map((label, day) => (
-                  <label key={day} className="flex items-center gap-2 text-xs">
-                    <input type="checkbox" checked={item.scheduledWeekdays.includes(day)} disabled={busy}
-                      onChange={(event) => {
-                        const days = event.target.checked ? [...item.scheduledWeekdays, day].sort() : item.scheduledWeekdays.filter((value) => value !== day);
-                        updateItem(item.rowId, { scheduledWeekdays: days, daysPerWeek: days.length });
-                      }} />{label}
-                  </label>
-                ))}
+              <fieldset className="sm:col-span-3">
+                <legend className="mb-1.5 text-sm font-medium text-[var(--color-ink)]">{t.days}</legend>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {(locale === "fa" ? WEEK_ORDER_FA : WEEK_ORDER_EN).map((day) => {
+                    const on = item.scheduledWeekdays.includes(day);
+                    return (
+                      <button
+                        key={day}
+                        type="button"
+                        aria-pressed={on}
+                        disabled={busy}
+                        onClick={() => {
+                          const days = on
+                            ? item.scheduledWeekdays.filter((value) => value !== day)
+                            : [...item.scheduledWeekdays, day].sort();
+                          updateItem(item.rowId, { scheduledWeekdays: days, daysPerWeek: days.length });
+                        }}
+                        className={`min-h-9 rounded-full border px-3 text-sm transition-colors ${
+                          on
+                            ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-white"
+                            : "border-[var(--color-border)] bg-white text-[var(--color-ink-soft)] hover:border-[var(--color-primary)]"
+                        }`}
+                      >
+                        {t.weekdays[day]}
+                      </button>
+                    );
+                  })}
+                  <span className="mx-1 h-5 w-px bg-[var(--color-border)]" aria-hidden="true" />
+                  {[
+                    { label: t.everyDay, days: EVERY_DAY },
+                    { label: t.alternateDays, days: ALTERNATE_DAYS },
+                  ].map((preset) => (
+                    <button
+                      key={preset.label}
+                      type="button"
+                      disabled={busy}
+                      onClick={() => updateItem(item.rowId, { scheduledWeekdays: [...preset.days], daysPerWeek: preset.days.length })}
+                      className="min-h-9 rounded-full px-3 text-sm font-medium text-[var(--color-primary-strong)] hover:bg-[var(--color-primary-tint)]"
+                    >
+                      {preset.label}
+                    </button>
+                  ))}
+                </div>
               </fieldset>
-              <Button
-                type="button"
-                variant="ghost"
-                className="self-end"
-                disabled={busy || items.length === 1}
-                onClick={() => {
-                  setItems((previous) =>
-                    previous.filter((candidate) => candidate.rowId !== item.rowId)
-                  );
-                  invalidateStored();
-                }}
-                aria-label={t.remove(index + 1)}
-              >
-                <Icon name="close" width={16} height={16} />
-              </Button>
               <DosageDetailsFields
                 item={item}
                 busy={busy}
@@ -587,7 +578,88 @@ export function PrescriptionBuilder({
           </Button>
         </div>
 
-        <div className="space-y-3 rounded-xl border border-[var(--color-border)] p-4">
+        <section aria-labelledby="rx-schedule" className="space-y-4 border-t border-[var(--color-border)] pt-5">
+          <h3 id="rx-schedule" className="text-sm font-semibold text-[var(--color-ink)]">{t.scheduleSafety}</h3>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Field label={t.startDate} required>
+            <Input
+              type="date"
+              value={startDate}
+              disabled={busy}
+              onChange={(event) => {
+                setStartDate(event.target.value);
+                invalidateStored();
+              }}
+            />
+          </Field>
+          <Field label={t.reviewDate} required>
+            <Input
+              type="date"
+              min={startDate}
+              value={reviewDate}
+              disabled={busy}
+              onChange={(event) => {
+                setReviewDate(event.target.value);
+                invalidateStored();
+              }}
+            />
+          </Field>
+          </div>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Field
+            label={t.precautions}
+            required
+            hint={t.defaultTextHint}
+          >
+            <Textarea
+              value={precautions}
+              maxLength={4000}
+              disabled={busy}
+              onChange={(event) => {
+                setPrecautions(event.target.value);
+                invalidateStored();
+              }}
+              className="min-h-24"
+            />
+          </Field>
+          <Field label={t.stopRules} required hint={t.defaultTextHint}>
+            <Textarea
+              value={stopRules}
+              maxLength={4000}
+              disabled={busy}
+              onChange={(event) => {
+                setStopRules(event.target.value);
+                invalidateStored();
+              }}
+              className="min-h-24"
+            />
+          </Field>
+        </div>
+
+          <details className="rounded-xl bg-[var(--color-surface-muted)] px-3 py-2">
+            <summary className="cursor-pointer text-sm font-medium text-[var(--color-ink)]">{t.moreSettings}</summary>
+            <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Field label={t.endDate}>
+            <Input
+              type="date"
+              min={startDate}
+              value={endDate}
+              disabled={busy}
+              onChange={(event) => {
+                setEndDate(event.target.value);
+                invalidateStored();
+              }}
+            />
+          </Field>
+        <Field label={t.timezone} required hint={t.timezoneHint}>
+          <Input value={scheduleTimezone} disabled={busy} placeholder="Asia/Tehran" dir="ltr"
+            onChange={(event) => { setScheduleTimezone(event.target.value); invalidateStored(); }} />
+        </Field>
+            </div>
+          </details>
+        </section>
+
+        <div className="space-y-3 rounded-xl border border-[var(--color-primary)]/30 bg-[var(--color-primary-tint)] p-4">
           <div className="flex flex-wrap items-center gap-2">
             <Badge tone={stored?.status === "published" ? "success" : "warn"}>
               {stored
@@ -600,11 +672,11 @@ export function PrescriptionBuilder({
               </Badge>
             )}
           </div>
-          {!stored ? (
-            <Button onClick={saveDraft} disabled={busy || !safetyCleared}>
-              {busy ? t.saving : t.save}
-            </Button>
-          ) : stored.status === "draft" ? (
+          {stored?.status === "published" ? (
+            <p role="status" className="text-sm font-medium text-[var(--color-success)]">
+              {t.published}
+            </p>
+          ) : (
             <div className="space-y-3">
               <label className="flex items-start gap-3 text-sm text-[var(--color-ink-soft)]">
                 <input
@@ -614,21 +686,23 @@ export function PrescriptionBuilder({
                   disabled={busy}
                   onChange={(event) => setPublishConfirmed(event.target.checked)}
                 />
-                <span>
-                  {t.publishAttest}
-                </span>
+                <span>{t.publishAttest}</span>
               </label>
-              <Button
-                onClick={publish}
-                disabled={busy || !publishConfirmed || !safetyCleared}
-              >
-                {busy ? t.publishing : t.publish}
-              </Button>
+              <div className="flex flex-wrap items-center gap-3">
+                <Button
+                  onClick={saveAndPublish}
+                  disabled={busy || !publishConfirmed || !safetyCleared}
+                >
+                  <Icon name="check" width={16} height={16} />
+                  {busy ? t.publishing : t.publishNow}
+                </Button>
+                {!stored && (
+                  <Button variant="ghost" onClick={() => void saveDraft()} disabled={busy || !safetyCleared}>
+                    {t.saveDraftOnly}
+                  </Button>
+                )}
+              </div>
             </div>
-          ) : (
-            <p role="status" className="text-sm text-[var(--color-success)]">
-              {t.published}
-            </p>
           )}
           {error && (
             <p role="alert" className="text-sm text-[var(--color-danger)]">
@@ -637,6 +711,11 @@ export function PrescriptionBuilder({
           )}
         </div>
 
+        <details className="rounded-xl border border-[var(--color-border)] px-3 py-2">
+          <summary className="cursor-pointer text-sm font-medium text-[var(--color-ink)]">
+            {historyLoading ? t.history : t.historyCount(scopedHistory.records.length)}
+          </summary>
+          <div className="mt-2">
         {historyLoading ? (
           <Spinner label={t.loadingHistory} />
         ) : scopedHistory.error ? (
@@ -651,10 +730,7 @@ export function PrescriptionBuilder({
             </Button>
           </div>
         ) : scopedHistory.records.length > 0 ? (
-          <div className="space-y-3 border-t border-[var(--color-border)] pt-4">
-            <h4 className="text-sm font-semibold text-[var(--color-ink)]">
-              {t.history}
-            </h4>
+          <div className="space-y-3">
             {scopedHistory.records.map((record) => (
               <div key={record.id} className="flex flex-wrap items-center gap-2 text-xs">
                 <span>{t.version(record.version)}</span>
@@ -714,6 +790,8 @@ export function PrescriptionBuilder({
             )}
           </div>
         ) : null}
+          </div>
+        </details>
       </CardBody>
     </Card>
   );
@@ -762,7 +840,7 @@ function DosageDetailsFields({
     </Field>
   );
   return (
-    <details className="rounded-lg bg-[var(--color-surface-muted)] px-3 py-2 sm:col-span-4" open={hasDetails || undefined}>
+    <details className="rounded-lg bg-[var(--color-surface-muted)] px-3 py-2 sm:col-span-3" open={hasDetails || undefined}>
       <summary className="cursor-pointer text-sm font-medium text-[var(--color-ink)]">
         {t.details} <span className="text-xs font-normal text-[var(--color-ink-faint)]">({t.detailsHint})</span>
       </summary>

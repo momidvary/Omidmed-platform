@@ -1,9 +1,14 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   detectSafetySignals,
   evaluateSafetyScreen,
   hasClinicalSafetyClearance,
+  redFlagDisposition,
+  splitSafetySelection,
 } from "@/lib/clinical/safety";
+import { redFlagFa, redFlags, riskFactors, warningSigns } from "@/lib/data/redFlags";
 
 describe("evaluateSafetyScreen", () => {
   it("keeps an incomplete screen in the not-screened state", () => {
@@ -25,6 +30,53 @@ describe("evaluateSafetyScreen", () => {
 
   it("falls back to medical review for an unknown selected flag", () => {
     expect(evaluateSafetyScreen(["unknown-flag"], true)).toBe("medical-review");
+  });
+});
+
+describe("risk factors versus warning signs", () => {
+  it("does not let a risk factor on its own block treatment", () => {
+    expect(evaluateSafetyScreen(["rf_dvt_risk", "rf_steroids", "rf_cancer"], true)).toBe("clear");
+    expect(evaluateSafetyScreen(["rf_dvt_risk", "rf_dvt_calf"], true)).toBe("urgent");
+  });
+
+  it("routes the added warning signs", () => {
+    expect(evaluateSafetyScreen(["rf_cad"], true)).toBe("emergency");
+    expect(evaluateSafetyScreen(["rf_aaa"], true)).toBe("emergency");
+    expect(evaluateSafetyScreen(["rf_umn"], true)).toBe("urgent");
+    expect(evaluateSafetyScreen(["rf_gca"], true)).toBe("urgent");
+    expect(evaluateSafetyScreen(["rf_cancer_spinal"], true)).toBe("urgent");
+  });
+
+  it("splits a mixed selection", () => {
+    expect(splitSafetySelection(["rf_fever", "rf_immuno", "rf_fever"])).toEqual({
+      warningIds: ["rf_fever"],
+      riskFactorIds: ["rf_immuno"],
+    });
+  });
+
+  it("gives every item a disposition or a risk-factor role, and Persian text", () => {
+    for (const flag of warningSigns) expect(redFlagDisposition[flag.id], flag.id).toBeDefined();
+    for (const flag of riskFactors) expect(redFlagDisposition[flag.id], flag.id).toBeUndefined();
+    for (const flag of redFlags) expect(redFlagFa[flag.id], flag.id).toBeDefined();
+  });
+
+  it("matches the database catalogs (migrations 013 and 032)", () => {
+    const migrations = join(__dirname, "..", "..", "..", "database", "migrations");
+    const sql =
+      readFileSync(join(migrations, "013_clinical_safety_and_portal_controls.sql"), "utf8") +
+      readFileSync(join(migrations, "032_safety_risk_factors.sql"), "utf8");
+    const catalog = new Map<string, string>();
+    for (const match of sql.matchAll(/\('(rf_[a-z0-9_]+)', '(medical-review|urgent|emergency)', \d\)/g)) {
+      catalog.set(match[1], match[2]);
+    }
+    const migration032 = readFileSync(join(migrations, "032_safety_risk_factors.sql"), "utf8");
+    const deactivated = /where id in \(([^)]+)\)/.exec(migration032)![1];
+    for (const id of deactivated.match(/rf_[a-z0-9_]+/g)!) catalog.delete(id);
+    const riskBlock = /insert into public\.safety_risk_factor_catalog \(id\)\s*values([^;]+);/.exec(migration032)![1];
+    const dbRisks = new Set(riskBlock.match(/rf_[a-z0-9_]+/g));
+
+    expect(Object.fromEntries(catalog)).toEqual(redFlagDisposition);
+    expect(dbRisks).toEqual(new Set(riskFactors.map((flag) => flag.id)));
   });
 });
 

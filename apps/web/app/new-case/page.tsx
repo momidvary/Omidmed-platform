@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useCases } from "@/lib/store/CaseContext";
 import { useAuth } from "@/lib/store/AuthContext";
 import type {
+  RedFlagItem,
   BodyRegionId,
   Gender,
   PatientCase,
@@ -21,9 +22,10 @@ import {
   localizedRedFlag,
   redFlagCategories,
   redFlagCategoryLabel,
-  redFlags,
+  riskFactors,
+  warningSigns,
 } from "@/lib/data/redFlags";
-import { evaluateSafetyScreen } from "@/lib/clinical/safety";
+import { evaluateSafetyScreen, splitSafetySelection } from "@/lib/clinical/safety";
 import { isMockMode } from "@/lib/config";
 import { fetchPatientRegistry } from "@/lib/supabase/db";
 import { useLocale } from "@/lib/store/LocaleContext";
@@ -149,6 +151,8 @@ function NewCaseForm() {
   const draftIsCurrent = isMockMode || draftClinicId === activeClinicId;
   const form = draftIsCurrent ? storedForm : emptyForm;
   const selectedRedFlags = draftIsCurrent ? storedRedFlags : emptyFlags;
+  const { warningIds: selectedWarnings, riskFactorIds: selectedRisks } =
+    splitSafetySelection(selectedRedFlags);
   const safetyScreenCompleted = draftIsCurrent
     ? storedSafetyCompleted
     : false;
@@ -450,8 +454,9 @@ function NewCaseForm() {
         : selectedRegistryPatient?.activeEpisode?.id,
       safetyScreen: {
         screenedAt: new Date().toISOString(),
-        selectedFlagIds: [...selectedRedFlags],
-        disposition: evaluateSafetyScreen([...selectedRedFlags], true),
+        selectedFlagIds: selectedWarnings,
+        riskFactorIds: selectedRisks,
+        disposition: evaluateSafetyScreen(selectedWarnings, true),
       },
     };
 
@@ -867,64 +872,91 @@ function NewCaseForm() {
                 icon={<Icon name="shield" width={18} height={18} />}
               />
               <CardBody className="space-y-5">
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                  {redFlagCategories.map((category) => (
-                    <fieldset key={category} className="rounded-xl border border-[var(--color-border)] p-3">
-                      <legend className="px-1 text-xs font-semibold text-[var(--color-ink)]">
-                        {redFlagCategoryLabel(category, locale)}
-                      </legend>
-                      <div className="space-y-1.5">
-                        {redFlags
-                          .filter((flag) => flag.category === category)
-                          .map((source) => localizedRedFlag(source, locale))
-                          .map((flag) => {
-                            const selected = selectedRedFlags.has(flag.id);
-                            return (
-                              <button
-                                key={flag.id}
-                                type="button"
-                                aria-pressed={selected}
-                                onClick={() => {
-                                  updateRedFlags((previous) => {
-                                    const next = new Set(previous);
-                                    if (next.has(flag.id)) next.delete(flag.id);
-                                    else next.add(flag.id);
-                                    return next;
-                                  });
-                                  updateSafetyCompleted(false);
-                                  updateSafetyError(null);
-                                }}
-                                className={`flex w-full items-start gap-2 rounded-lg px-2 py-2 text-start text-xs ${
-                                  selected
-                                    ? "bg-[var(--color-danger-soft)] text-[var(--color-danger)]"
-                                    : "hover:bg-[var(--color-surface-muted)] text-[var(--color-ink-soft)]"
-                                }`}
-                              >
-                                <span
-                                  aria-hidden="true"
-                                  className={`mt-0.5 h-4 w-4 shrink-0 rounded border ${
-                                    selected
-                                      ? "border-[var(--color-danger)] bg-[var(--color-danger)]"
-                                      : "border-[var(--color-border)]"
-                                  }`}
-                                />
-                                <span>
-                                  <span className="block font-medium">{flag.label}</span>
-                                  <span className="block text-[11px] opacity-80">{flag.detail}</span>
-                                </span>
-                              </button>
-                            );
-                          })}
-                      </div>
-                    </fieldset>
-                  ))}
-                </div>
+                {(() => {
+                  const toggleItem = (id: string) => {
+                    updateRedFlags((previous) => {
+                      const next = new Set(previous);
+                      if (next.has(id)) next.delete(id);
+                      else next.add(id);
+                      return next;
+                    });
+                    updateSafetyCompleted(false);
+                    updateSafetyError(null);
+                  };
+                  const renderItem = (source: RedFlagItem, tone: "danger" | "warn") => {
+                    const flag = localizedRedFlag(source, locale);
+                    const selected = selectedRedFlags.has(flag.id);
+                    return (
+                      <button
+                        key={flag.id}
+                        type="button"
+                        aria-pressed={selected}
+                        onClick={() => toggleItem(flag.id)}
+                        className={`flex w-full items-start gap-2 rounded-lg px-2 py-2 text-start text-xs ${
+                          selected
+                            ? tone === "danger"
+                              ? "bg-[var(--color-danger-soft)] text-[var(--color-danger)]"
+                              : "bg-[var(--color-warn-soft)] text-[var(--color-warn)]"
+                            : "hover:bg-[var(--color-surface-muted)] text-[var(--color-ink-soft)]"
+                        }`}
+                      >
+                        <span
+                          aria-hidden="true"
+                          className={`mt-0.5 h-4 w-4 shrink-0 rounded border ${
+                            selected
+                              ? tone === "danger"
+                                ? "border-[var(--color-danger)] bg-[var(--color-danger)]"
+                                : "border-[var(--color-warn)] bg-[var(--color-warn)]"
+                              : "border-[var(--color-border)]"
+                          }`}
+                        />
+                        <span>
+                          <span className="block font-medium">{flag.label}</span>
+                          <span className="block text-[11px] opacity-80">{flag.detail}</span>
+                        </span>
+                      </button>
+                    );
+                  };
+                  return (
+                    <>
+                      <section aria-labelledby="warning-signs" className="space-y-2">
+                        <h3 id="warning-signs" className="text-sm font-bold text-[var(--color-danger)]">{t.warningHeading}</h3>
+                        <p className="text-xs text-[var(--color-ink-soft)]">{t.warningHint}</p>
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                          {redFlagCategories.map((category) => (
+                            <fieldset key={category} className="rounded-xl border border-[var(--color-border)] p-3">
+                              <legend className="px-1 text-xs font-semibold text-[var(--color-ink)]">
+                                {redFlagCategoryLabel(category, locale)}
+                              </legend>
+                              <div className="space-y-1.5">
+                                {warningSigns
+                                  .filter((flag) => flag.category === category)
+                                  .map((flag) => renderItem(flag, "danger"))}
+                              </div>
+                            </fieldset>
+                          ))}
+                        </div>
+                      </section>
+                      <section aria-labelledby="risk-factors" className="space-y-2">
+                        <h3 id="risk-factors" className="text-sm font-bold text-[var(--color-warn)]">{t.riskHeading}</h3>
+                        <p className="text-xs text-[var(--color-ink-soft)]">{t.riskHint}</p>
+                        <div className="grid grid-cols-1 gap-1.5 rounded-xl border border-[var(--color-border)] p-3 md:grid-cols-2">
+                          {riskFactors.map((flag) => renderItem(flag, "warn"))}
+                        </div>
+                      </section>
+                    </>
+                  );
+                })()}
 
-                {selectedRedFlags.size > 0 && (
+                {selectedWarnings.length > 0 ? (
                   <p role="alert" className="rounded-xl bg-[var(--color-danger-soft)] px-4 py-3 text-sm text-[var(--color-danger)]">
                     {t.concernsPresent}
                   </p>
-                )}
+                ) : selectedRisks.length > 0 ? (
+                  <p role="status" className="rounded-xl bg-[var(--color-warn-soft)] px-4 py-3 text-sm text-[var(--color-warn)]">
+                    {t.risksRecorded(selectedRisks.length)}
+                  </p>
+                ) : null}
 
                 <label className="flex items-start gap-3 rounded-xl border border-[var(--color-border)] p-3 text-sm text-[var(--color-ink-soft)]">
                   <input

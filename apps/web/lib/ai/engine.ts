@@ -95,6 +95,12 @@ export function buildReasoning(c: PatientCase): ClinicalReasoning {
     );
   }
 
+  for (const label of safetyFlagLabels(c.safetyScreen?.riskFactorIds ?? [])) {
+    redFlags.push(
+      `Recorded risk factor: ${label}. Treatment may continue with heightened vigilance; re-check related warning signs at each visit.`
+    );
+  }
+
   for (const signal of detectSafetySignals(haystack)) {
     redFlags.push(
       `Supplemental text warning (${signal.disposition}): ${signal.id}. Verify immediately using the structured screen.`

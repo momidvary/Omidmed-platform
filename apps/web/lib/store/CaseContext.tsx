@@ -33,6 +33,7 @@ interface CaseContextValue {
     caseId: string,
     input: {
       selectedFlagIds: string[];
+      riskFactorIds?: string[];
       notes?: string;
       actionTaken?: string;
     }
@@ -188,6 +189,7 @@ export function CaseProvider({ children }: { children: React.ReactNode }) {
           ? {
               screenedAt: new Date().toISOString(),
               selectedFlagIds: [...new Set(input.selectedFlagIds)],
+              riskFactorIds: [...new Set(input.riskFactorIds ?? [])],
               disposition: evaluateSafetyScreen(input.selectedFlagIds, true),
               notes: input.notes?.trim() || undefined,
               actionTaken: input.actionTaken?.trim() || undefined,

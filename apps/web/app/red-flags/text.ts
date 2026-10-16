@@ -5,7 +5,7 @@ type Copy = { title: string; detail: string };
 const en = {
   copy: {
     clear: {
-      title: "Screen completed with no concerns selected",
+      title: "Screen completed with no warning signs selected",
       detail:
         "This does not rule out serious pathology. Continue the clinical examination and repeat screening if the presentation changes.",
     },
@@ -64,6 +64,10 @@ const en = {
     "I actively reviewed every item with the patient. Unselected items are absent based on the current assessment, and I understand that this checklist does not rule out serious pathology.",
   saving: "Saving…",
   save: "Complete and save safety screen",
+  warningHeading: "Warning signs — stop and refer",
+  riskHeading: "Risk factors — record and stay vigilant",
+  riskHint: "Risk factors do not block treatment on their own. They are recorded and shown as precautions.",
+  risksRecorded: "Risk factors recorded (precautions):",
   stored: "This result is stored in the case history. Use Clear draft to begin a new assessment.",
 };
 
@@ -72,7 +76,7 @@ export const redFlagsText: PageText<typeof en> = {
   fa: {
     copy: {
       clear: {
-        title: "غربالگری بدون هیچ نگرانی انتخاب‌شده کامل شد",
+        title: "غربالگری بدون هیچ علامت هشدار کامل شد",
         detail:
           "این به معنای رد پاتولوژی جدی نیست. معاینه بالینی را ادامه دهید و اگر تظاهر بیمار تغییر کرد، غربالگری را تکرار کنید.",
       },
@@ -129,6 +133,10 @@ export const redFlagsText: PageText<typeof en> = {
       "همه موارد را فعالانه با بیمار بررسی کردم. موارد انتخاب‌نشده بر اساس ارزیابی فعلی وجود ندارند و می‌دانم این چک‌لیست پاتولوژی جدی را رد نمی‌کند.",
     saving: "در حال ذخیره…",
     save: "تکمیل و ذخیره غربالگری ایمنی",
+    warningHeading: "علائم هشدار — توقف و ارجاع",
+    riskHeading: "عوامل خطر — ثبت و احتیاط بیشتر",
+    riskHint: "عامل خطر به‌تنهایی درمان را متوقف نمی‌کند؛ ثبت می‌شود و به‌عنوان احتیاط نمایش داده می‌شود.",
+    risksRecorded: "عوامل خطر ثبت‌شده (احتیاط):",
     stored: "این نتیجه در تاریخچه کیس ذخیره شد. برای شروع ارزیابی جدید «پاک کردن پیش‌نویس» را بزنید.",
   },
 };

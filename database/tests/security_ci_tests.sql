@@ -2458,6 +2458,64 @@ begin
   end if;
 end $$;
 
+-- Migration 032: risk factors are recorded without blocking treatment;
+-- warning signs still produce a non-clear disposition.
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"10000000-0000-4000-8000-000000000003","role":"authenticated"}', true);
+do $$
+declare
+  v_row record;
+begin
+  select * into v_row from public.record_case_safety_screen(
+    '50000000-0000-4000-8000-000000000001', '{}'::text[], 'Post-operative week 2',
+    null, array['rf_dvt_risk', 'rf_steroids']
+  );
+  if v_row.disposition <> 'clear'
+     or v_row.risk_factor_ids <> array['rf_dvt_risk', 'rf_steroids']
+     or (select risk_factor_ids from public.cases
+         where id = '50000000-0000-4000-8000-000000000001')
+        <> array['rf_dvt_risk', 'rf_steroids'] then
+    raise exception 'FAIL: risk factors changed the disposition or were not stored';
+  end if;
+  begin
+    perform public.record_case_safety_screen(
+      '50000000-0000-4000-8000-000000000001', array['rf_dvt_risk'], null,
+      'Risk factor sent as a warning sign'
+    );
+    raise exception 'FAIL: a risk factor was accepted as a warning sign';
+  exception when invalid_parameter_value then null;
+  end;
+  begin
+    perform public.record_case_safety_screen(
+      '50000000-0000-4000-8000-000000000001', '{}'::text[], null, null,
+      array['rf_cad']
+    );
+    raise exception 'FAIL: a warning sign was accepted as a risk factor';
+  exception when invalid_parameter_value then null;
+  end;
+  select * into v_row from public.record_case_safety_screen(
+    '50000000-0000-4000-8000-000000000001', array['rf_cad'], null,
+    'Emergency services contacted', array['rf_age_over50']
+  );
+  if v_row.disposition <> 'emergency' then
+    raise exception 'FAIL: cervical arterial dysfunction signs were not an emergency';
+  end if;
+  select * into v_row from public.record_case_safety_screen(
+    '50000000-0000-4000-8000-000000000001', '{}'::text[], null, null
+  );
+  if v_row.disposition <> 'clear' or cardinality(v_row.risk_factor_ids) <> 0 then
+    raise exception 'FAIL: four-argument safety screen call no longer works';
+  end if;
+  begin
+    update public.cases set risk_factor_ids = array['rf_cancer']
+    where id = '50000000-0000-4000-8000-000000000001';
+    raise exception 'FAIL: direct risk-factor update bypassed the RPC';
+  exception when insufficient_privilege then null;
+  end;
+end $$;
+reset role;
+select set_config('request.jwt.claims', '{}', true);
+
 \ir adherence_retry_tests.sql
 rollback;
 

@@ -9,6 +9,7 @@ import { Icon } from "@/components/ui/Icon";
 import { EmptyState, PageIntro, Spinner } from "@/components/ui/Misc";
 import { isMockMode } from "@/lib/config";
 import { hasClinicalSafetyClearance } from "@/lib/clinical/safety";
+import { RiskFactorNote } from "@/components/clinical/RiskFactorNote";
 import {
   carePathwayStates,
   type CareStep,
@@ -546,6 +547,7 @@ export function WorkspaceClient() {
                 </Badge>
               </p>
             )}
+            {latestCleared && <RiskFactorNote screen={latestCase?.safetyScreen} className="mt-2" />}
           </div>
           {patientAlerts.length > 0 && (
             <ButtonLink href="/alerts" size="sm" variant="danger">

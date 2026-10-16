@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { useCases } from "@/lib/store/CaseContext";
 import { buildReasoning, delay } from "@/lib/ai/engine";
 import { hasClinicalSafetyClearance } from "@/lib/clinical/safety";
+import { RiskFactorNote } from "@/components/clinical/RiskFactorNote";
 import { getRegion } from "@/lib/data/bodyRegions";
 import { localizeRegion, localizedRegions, regionLabel } from "@/lib/data/bodyRegionsFa";
 import { buildReasoningFa } from "@/lib/ai/reasoningFa";
@@ -159,6 +160,7 @@ export function CaseAnalysisClient() {
                     ""
                 )}
           </div>
+          <RiskFactorNote screen={currentCase.safetyScreen} />
 
           {/* Case summary strip */}
           <Card>

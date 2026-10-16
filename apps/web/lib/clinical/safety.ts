@@ -1,4 +1,4 @@
-import { redFlags } from "@/lib/data/redFlags";
+import { redFlags, riskFactorIdSet } from "@/lib/data/redFlags";
 import type {
   CaseSafetyScreen,
   SafetyDisposition,
@@ -12,37 +12,59 @@ const dispositionRank: Record<SafetyDisposition, number> = {
   emergency: 4,
 };
 
-/** Conservative routing level for each structured screening item. */
+/**
+ * Conservative routing level for each structured warning sign. Risk factors
+ * (see `riskFactorIdSet`) are deliberately absent: they are recorded for
+ * vigilance and do not change the disposition. Mirrors migrations 013/032.
+ */
 export const redFlagDisposition: Record<string, SafetyDisposition> = {
-  rf_cancer: "medical-review",
+  rf_cancer_spinal: "urgent",
   rf_weightloss: "medical-review",
   rf_nightpain: "medical-review",
   rf_fracture_trauma: "urgent",
   rf_fracture_osteo: "urgent",
-  rf_steroids: "medical-review",
   rf_fever: "urgent",
   rf_ivdu: "urgent",
-  rf_immuno: "medical-review",
   rf_ce_saddle: "emergency",
   rf_ce_bladder: "emergency",
   rf_ce_sexual: "emergency",
   rf_neuro_progressive: "urgent",
   rf_neuro_bilateral: "urgent",
+  rf_umn: "urgent",
+  rf_cad: "emergency",
+  rf_aaa: "emergency",
+  rf_gca: "urgent",
   rf_dvt_calf: "urgent",
-  rf_dvt_risk: "medical-review",
   rf_cardiac_chest: "emergency",
   rf_cardiac_breath: "emergency",
   rf_severe_pain: "urgent",
 };
 
+/** Separate a mixed checklist selection into warning signs and risk factors. */
+export function splitSafetySelection(ids: Iterable<string>): {
+  warningIds: string[];
+  riskFactorIds: string[];
+} {
+  const unique = [...new Set(ids)];
+  return {
+    warningIds: unique.filter((id) => !riskFactorIdSet.has(id)),
+    riskFactorIds: unique.filter((id) => riskFactorIdSet.has(id)),
+  };
+}
+
+/**
+ * Disposition from the selected items. Risk factors are ignored; any other
+ * unknown id is treated conservatively as needing medical review.
+ */
 export function evaluateSafetyScreen(
   selectedFlagIds: string[],
   completed: boolean
 ): SafetyDisposition {
   if (!completed) return "not-screened";
-  if (selectedFlagIds.length === 0) return "clear";
+  const { warningIds } = splitSafetySelection(selectedFlagIds);
+  if (warningIds.length === 0) return "clear";
 
-  return selectedFlagIds.reduce<SafetyDisposition>((highest, id) => {
+  return warningIds.reduce<SafetyDisposition>((highest, id) => {
     const next = redFlagDisposition[id] ?? "medical-review";
     return dispositionRank[next] > dispositionRank[highest] ? next : highest;
   }, "medical-review");

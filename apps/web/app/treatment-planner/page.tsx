@@ -9,6 +9,7 @@ import { useLocale } from "@/lib/store/LocaleContext";
 import { intlLocale, useText } from "@/lib/i18n/text";
 import { plannerText } from "./text";
 import { hasClinicalSafetyClearance } from "@/lib/clinical/safety";
+import { RiskFactorNote } from "@/components/clinical/RiskFactorNote";
 import type {
   BodyRegionId,
   Irritability,
@@ -488,6 +489,7 @@ function PlannerForm() {
               : t.selectOrCreate}
         </p>
       </div>
+      {safetyCleared && <RiskFactorNote screen={currentCase?.safetyScreen} />}
 
       <Card>
         <CardHeader

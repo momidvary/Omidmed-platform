@@ -66,6 +66,11 @@ export function buildReasoningFa(c: PatientCase): ClinicalReasoning {
     c.medications, c.functionalLimitations, c.imaging, c.aggravating,
     c.painLocation,
   ].join(" ");
+  for (const id of c.safetyScreen?.riskFactorIds ?? []) {
+    redFlags.push(
+      `عامل خطر ثبت‌شده: ${redFlagFa[id]?.label ?? id}. درمان با احتیاط بیشتر ادامه می‌یابد؛ علائم هشدار مرتبط را در هر جلسه بررسی کنید.`
+    );
+  }
   for (const signal of detectSafetySignals(haystack)) {
     const level = signal.disposition === "emergency" ? "اورژانسی" : signal.disposition === "urgent" ? "فوری" : "نیازمند بررسی پزشکی";
     redFlags.push(`هشدار تکمیلی از متن (${level}): ${signal.id}. فوراً با غربالگری ساختاریافته بررسی کنید.`);

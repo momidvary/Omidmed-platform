@@ -458,7 +458,7 @@ export default function RedFlagCheckerPage() {
                         (!currentCase || saving || phase === "completed") &&
                           "cursor-not-allowed opacity-60",
                         checked
-                          ? "border-[var(--color-danger)]/40 bg-[var(--color-danger-soft)]"
+                          ? "border-[var(--color-warn)]/40 bg-[var(--color-warn-soft)]"
                           : "border-transparent hover:bg-[var(--color-surface-muted)]"
                       )}
                     >
@@ -467,7 +467,7 @@ export default function RedFlagCheckerPage() {
                         className={cn(
                           "mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-md border",
                           checked
-                            ? "border-[var(--color-danger)] bg-[var(--color-danger)] text-white"
+                            ? "border-[var(--color-warn)] bg-[var(--color-warn)] text-white"
                             : "border-[var(--color-border)] bg-white"
                         )}
                       >

@@ -177,3 +177,27 @@ test("treatment protocols link phases to library exercises", async ({ page }) =>
   await expect(page).toHaveURL(/\/exercise-library\/ex_quad_sets$/);
   await expect(page.getByRole("link", { name: "Patellofemoral pain" })).toHaveAttribute("href", "/protocols/pfp");
 });
+
+test("a risk factor is recorded as a precaution and does not lock treatment", async ({ page }) => {
+  await page.goto("/red-flags");
+  await page.getByLabel("Patient case").selectOption({ index: 1 });
+  await page.getByRole("checkbox", { name: /Recent surgery \/ immobilisation/ }).click();
+  await page.getByRole("checkbox", { name: /I actively reviewed every item/ }).check();
+  await page.getByRole("button", { name: "Complete and save safety screen" }).click();
+  await expect(page.getByText("Screen completed with no warning signs selected")).toBeVisible();
+  await expect(page.getByText("Risk factors recorded (precautions):")).toBeVisible();
+
+  await page.goto("/treatment-planner");
+  await expect(page.getByText("Precautions — recorded risk factors")).toBeVisible();
+  await expect(page.getByRole("button", { name: /Generate/ })).toBeEnabled();
+
+  // A warning sign still locks the planner, and the locked form looks locked.
+  await page.goto("/red-flags");
+  await page.getByRole("checkbox", { name: /Signs of cervical arterial dysfunction/ }).click();
+  await page.getByLabel("Referral / escalation action").fill("Emergency services called");
+  await page.getByRole("checkbox", { name: /I actively reviewed every item/ }).check();
+  await page.getByRole("button", { name: "Complete and save safety screen" }).click();
+  await expect(page.getByText("Possible emergency — arrange immediate assessment")).toBeVisible();
+  await page.goto("/treatment-planner");
+  await expect(page.getByLabel("Body region")).toBeDisabled();
+});

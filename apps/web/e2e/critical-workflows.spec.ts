@@ -167,6 +167,9 @@ test("treatment protocols link phases to library exercises", async ({ page }) =>
   await expect(page.getByRole("heading", { name: "Settle symptoms and start loading" })).toBeVisible();
   await expect(page.getByText("Move to the next phase when").first()).toBeVisible();
   await expect(page.getByText(/Willy RW, et al\./)).toBeVisible();
+  // Home programs are built only in the live clinic workspace, never in the demo.
+  await expect(page.getByText(/not available in the demo/).first()).toBeVisible();
+  await expect(page.getByRole("link", { name: "Start a home program from this phase" })).toHaveCount(0);
 
   await page.getByRole("link", { name: /Quad Sets/ }).first().click();
   await expect(page).toHaveURL(/\/exercise-library\/ex_quad_sets$/);

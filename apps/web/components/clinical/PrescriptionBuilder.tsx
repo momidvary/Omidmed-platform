@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -10,6 +11,9 @@ import { Spinner } from "@/components/ui/Misc";
 import { exerciseFa } from "@/lib/data/exerciseFa";
 import { exercises } from "@/lib/data/exercises";
 import { withExercise, withPatch } from "@/lib/clinical/exercisePrefill";
+import { addPhaseExercises, type PhasePrefillResult } from "@/lib/clinical/protocolPrefill";
+import { protocolById, protocols } from "@/lib/clinical/protocols";
+import { localizeExercise } from "@/lib/data/exerciseLibraryFa";
 import {
   fetchPrescriptionHistory,
   publishPrescription,
@@ -90,6 +94,23 @@ export function PrescriptionBuilder({
   );
   const [stopRules, setStopRules] = useState("");
   const [items, setItems] = useState<DraftItem[]>([emptyItem()]);
+  // "Start from this phase" on a protocol page links here with ?protocol=&phase=.
+  // The builder renders only after client-side data loads, so reading the URL
+  // in the initial state is safe.
+  const [protocolChoice, setProtocolChoice] = useState(() => {
+    if (typeof window === "undefined") return { protocol: "", phase: "" };
+    const query = new URLSearchParams(window.location.search);
+    const protocol = protocolById(query.get("protocol") ?? "");
+    const phase = protocol?.phases.find((candidate) => candidate.id === query.get("phase"));
+    return { protocol: protocol?.id ?? "", phase: phase?.id ?? "" };
+  });
+  const [phaseResult, setPhaseResult] = useState<PhasePrefillResult<DraftItem> | null>(null);
+  const protocolOptions = useMemo(
+    () => [...protocols].sort((a, b) => Number(b.region === region) - Number(a.region === region)),
+    [region]
+  );
+  const chosenProtocol = protocolById(protocolChoice.protocol);
+  const chosenPhase = chosenProtocol?.phases.find((phase) => phase.id === protocolChoice.phase);
   const [stored, setStored] = useState<PrescriptionMutationResult | null>(null);
   const [publishConfirmed, setPublishConfirmed] = useState(false);
   const [revokeConfirmed, setRevokeConfirmed] = useState(false);
@@ -136,6 +157,22 @@ export function PrescriptionBuilder({
     setPublishConfirmed(false);
     setError(null);
   }
+
+  function applyPhase() {
+    if (!chosenPhase) return;
+    const result = addPhaseExercises(items, chosenPhase.exercises, patientReadyExercises, emptyItem);
+    setItems(result.items);
+    setPhaseResult(result);
+    invalidateStored();
+  }
+
+  const exerciseNames = (ids: string[]) =>
+    ids
+      .map((id) => {
+        const exercise = exercises.find((candidate) => candidate.id === id);
+        return exercise ? localizeExercise(exercise, locale).name : id;
+      })
+      .join(locale === "fa" ? "، " : ", ");
 
   function updateItem(rowId: string, patch: Partial<DraftItem>) {
     setItems((previous) =>
@@ -373,6 +410,76 @@ export function PrescriptionBuilder({
             />
           </Field>
         </div>
+
+        <section
+          aria-labelledby="from-protocol"
+          className="space-y-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-3"
+        >
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h3 id="from-protocol" className="text-sm font-semibold text-[var(--color-ink)]">{t.fromProtocol}</h3>
+            {chosenProtocol && (
+              <Link href={`/protocols/${chosenProtocol.id}`} className="text-xs font-medium text-[var(--color-primary-strong)] underline">
+                {t.viewProtocol}
+              </Link>
+            )}
+          </div>
+          <p className="text-xs leading-relaxed text-[var(--color-ink-soft)]">{t.fromProtocolHint}</p>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end">
+            <Field label={t.protocol}>
+              <Select
+                value={protocolChoice.protocol}
+                disabled={busy}
+                onChange={(event) => {
+                  setProtocolChoice({ protocol: event.target.value, phase: "" });
+                  setPhaseResult(null);
+                }}
+              >
+                <option value="">{t.choose}</option>
+                {protocolOptions.map((protocol) => (
+                  <option key={protocol.id} value={protocol.id}>
+                    {locale === "fa" ? protocol.title.fa : protocol.title.en}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <Field label={t.phase}>
+              <Select
+                value={protocolChoice.phase}
+                disabled={busy || !chosenProtocol}
+                onChange={(event) => {
+                  setProtocolChoice((previous) => ({ ...previous, phase: event.target.value }));
+                  setPhaseResult(null);
+                }}
+              >
+                <option value="">{t.choose}</option>
+                {chosenProtocol?.phases.map((phase, index) => (
+                  <option key={phase.id} value={phase.id}>
+                    {(index + 1).toLocaleString(intlLocale(locale))}. {locale === "fa" ? phase.name.fa : phase.name.en}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <Button type="button" variant="secondary" disabled={busy || !chosenPhase} onClick={applyPhase}>
+              {t.addPhase}
+            </Button>
+          </div>
+          {phaseResult && (
+            <div role="status" className="space-y-1 text-xs leading-relaxed">
+              <p className="font-medium text-[var(--color-ink)]">
+                {phaseResult.added.length > 0 ? t.phaseAdded(phaseResult.added.length) : t.phaseNoneAdded}
+              </p>
+              {phaseResult.pending.length > 0 && (
+                <p className="text-[var(--color-warn)]">{t.phasePending(exerciseNames(phaseResult.pending))}</p>
+              )}
+              {phaseResult.already.length > 0 && (
+                <p className="text-[var(--color-ink-soft)]">{t.phaseAlready(exerciseNames(phaseResult.already))}</p>
+              )}
+              {phaseResult.overLimit.length > 0 && (
+                <p className="text-[var(--color-warn)]">{t.phaseOverLimit(exerciseNames(phaseResult.overLimit))}</p>
+              )}
+            </div>
+          )}
+        </section>
 
         <div className="space-y-3">
           {items.map((item, index) => (

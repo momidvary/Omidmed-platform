@@ -89,10 +89,13 @@ test("sidebar keeps care steps inside the patient flow", async ({ page }) => {
   await expect(nav.locator('a[href="/patients"]')).toBeVisible();
   await expect(nav.locator('a[href="/new-case"]')).toHaveCount(0);
   await expect(nav.locator('a[href="/case-analysis"]')).toHaveCount(0);
-  await expect(nav.locator('a[href="/exercise-library"]')).toHaveCount(0);
+  // The library and protocols are everyday tools, listed without expanding.
+  await expect(nav.locator('a[href="/exercise-library"]')).toBeVisible();
+  await expect(nav.locator('a[href="/protocols"]')).toBeVisible();
+  await expect(nav.locator('a[href="/red-flags"]')).toHaveCount(0);
 
   await nav.getByRole("button", { name: "Tools" }).click();
-  await expect(nav.locator('a[href="/exercise-library"]')).toBeVisible();
+  await expect(nav.locator('a[href="/red-flags"]')).toBeVisible();
 
   await page.goto("/new-case");
   await expect(nav.locator('a[href="/patients"]')).toHaveAttribute(
@@ -156,7 +159,6 @@ test("expanded library marks unreviewed exercises and links progression ladders"
 test("treatment protocols link phases to library exercises", async ({ page }) => {
   await page.goto("/");
   const nav = page.locator("aside nav");
-  await nav.getByRole("button", { name: "Tools" }).click();
   await nav.locator('a[href="/protocols"]').click();
   await expect(page.getByRole("heading", { level: 2, name: "Treatment protocols" })).toBeVisible();
   await expect(page.getByText(/Draft · awaiting clinical review/)).toBeVisible();
@@ -167,8 +169,35 @@ test("treatment protocols link phases to library exercises", async ({ page }) =>
   await expect(page.getByRole("heading", { name: "Settle symptoms and start loading" })).toBeVisible();
   await expect(page.getByText("Move to the next phase when").first()).toBeVisible();
   await expect(page.getByText(/Willy RW, et al\./)).toBeVisible();
+  // Home programs are built only in the live clinic workspace, never in the demo.
+  await expect(page.getByText(/not available in the demo/).first()).toBeVisible();
+  await expect(page.getByRole("link", { name: "Start a home program from this phase" })).toHaveCount(0);
 
   await page.getByRole("link", { name: /Quad Sets/ }).first().click();
   await expect(page).toHaveURL(/\/exercise-library\/ex_quad_sets$/);
   await expect(page.getByRole("link", { name: "Patellofemoral pain" })).toHaveAttribute("href", "/protocols/pfp");
+});
+
+test("a risk factor is recorded as a precaution and does not lock treatment", async ({ page }) => {
+  await page.goto("/red-flags");
+  await page.getByLabel("Patient case").selectOption({ index: 1 });
+  await page.getByRole("checkbox", { name: /Recent surgery \/ immobilisation/ }).click();
+  await page.getByRole("checkbox", { name: /I actively reviewed every item/ }).check();
+  await page.getByRole("button", { name: "Complete and save safety screen" }).click();
+  await expect(page.getByText("Screen completed with no warning signs selected")).toBeVisible();
+  await expect(page.getByText("Risk factors recorded (precautions):")).toBeVisible();
+
+  await page.goto("/treatment-planner");
+  await expect(page.getByText("Precautions — recorded risk factors")).toBeVisible();
+  await expect(page.getByRole("button", { name: /Generate/ })).toBeEnabled();
+
+  // A warning sign still locks the planner, and the locked form looks locked.
+  await page.goto("/red-flags");
+  await page.getByRole("checkbox", { name: /Signs of cervical arterial dysfunction/ }).click();
+  await page.getByLabel("Referral / escalation action").fill("Emergency services called");
+  await page.getByRole("checkbox", { name: /I actively reviewed every item/ }).check();
+  await page.getByRole("button", { name: "Complete and save safety screen" }).click();
+  await expect(page.getByText("Possible emergency — arrange immediate assessment")).toBeVisible();
+  await page.goto("/treatment-planner");
+  await expect(page.getByLabel("Body region")).toBeDisabled();
 });

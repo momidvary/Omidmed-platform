@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { useCases } from "@/lib/store/CaseContext";
 import { buildReasoning, delay } from "@/lib/ai/engine";
 import { hasClinicalSafetyClearance } from "@/lib/clinical/safety";
+import { RiskFactorNote } from "@/components/clinical/RiskFactorNote";
 import { getRegion } from "@/lib/data/bodyRegions";
 import { localizeRegion, localizedRegions, regionLabel } from "@/lib/data/bodyRegionsFa";
 import { buildReasoningFa } from "@/lib/ai/reasoningFa";
@@ -56,6 +57,7 @@ export function CaseAnalysisClient() {
   const safetyCleared = hasClinicalSafetyClearance(
     currentCase?.safetyScreen
   );
+  const hasKnowledge = Boolean(getRegionKnowledge(currentCase?.region));
 
   // Region browser can be used stand-alone (from dashboard module links).
   // The URL param provides the default; a manual selection overrides it.
@@ -159,6 +161,7 @@ export function CaseAnalysisClient() {
                     ""
                 )}
           </div>
+          <RiskFactorNote screen={currentCase.safetyScreen} />
 
           {/* Case summary strip */}
           <Card>
@@ -170,7 +173,7 @@ export function CaseAnalysisClient() {
                 <div>
                   <p className="text-sm font-semibold text-[var(--color-ink)]">
                     {currentCase.name}
-                    {currentCase.age ? `, ${currentCase.age}` : ""}
+                    {currentCase.age ? (locale === "fa" ? `، ${currentCase.age.toLocaleString("fa-IR")} ساله` : `, ${currentCase.age}`) : ""}
                   </p>
                   <p className="text-xs text-[var(--color-ink-faint)]">
                     {currentCase.mainComplaint}
@@ -225,28 +228,30 @@ export function CaseAnalysisClient() {
           )}
 
           {!loading && reasoning && (
+            // With a region knowledge base, hypotheses, tests and outcome
+            // measures come from the structured ranking above and the linked
+            // protocols. The generic template only adds the intake summary and
+            // safety/psychosocial reminders, so the two never contradict.
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
               {safetyCleared && (
-                <>
-                  <ReasonCard title={t.subjective} icon="user" items={reasoning.data.subjective} />
-                  <ReasonCard title={t.objective} icon="analysis" items={reasoning.data.objective} />
-                  {!getRegionKnowledge(currentCase.region) && (
-                    <ReasonCard
-                      title={t.hypotheses}
-                      icon="sparkle"
-                      items={reasoning.data.hypotheses}
-                      tone="primary"
-                      footer={t.hypothesesFooter}
-                    />
-                  )}
-                  <ReasonCard title={t.differentials} icon="analysis" items={reasoning.data.differentials} />
-                  <ReasonCard title={t.yellowFlags} icon="flag" items={reasoning.data.yellowFlags} tone="warn" />
-                </>
+                <ReasonCard title={t.subjective} icon="user" items={reasoning.data.subjective} />
               )}
               <ReasonCard title={t.redFlags} icon="alert" items={reasoning.data.redFlags} tone="danger" footer={t.redFlagsFooter} />
-              <ReasonCard title={t.missing} icon="search" items={reasoning.data.missingInfo} />
               {safetyCleared && (
+                <ReasonCard title={t.yellowFlags} icon="flag" items={reasoning.data.yellowFlags} tone="warn" />
+              )}
+              <ReasonCard title={t.missing} icon="search" items={reasoning.data.missingInfo} />
+              {safetyCleared && !hasKnowledge && (
                 <>
+                  <ReasonCard title={t.objective} icon="analysis" items={reasoning.data.objective} />
+                  <ReasonCard
+                    title={t.hypotheses}
+                    icon="sparkle"
+                    items={reasoning.data.hypotheses}
+                    tone="primary"
+                    footer={t.hypothesesFooter}
+                  />
+                  <ReasonCard title={t.differentials} icon="analysis" items={reasoning.data.differentials} />
                   <ReasonCard title={t.tests} icon="check" items={reasoning.data.suggestedTests} tone="primary" />
                   <div className="lg:col-span-2">
                     <ReasonCard title={t.outcomes} icon="clock" items={reasoning.data.outcomeMeasures} />

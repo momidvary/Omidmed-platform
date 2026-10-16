@@ -29,6 +29,11 @@ const en = {
   watchFor: "Re-assess or refer if",
   references: "Guidelines and evidence",
   usedIn: "Used in protocols",
+  startPhase: "Start a home program from this phase",
+  startFor: (name: string) => `For ${name} — opens the home-program builder; you review and save.`,
+  startNeedsPatient: "Choose a patient first: open their assessment, then return to this protocol.",
+  startDemo: "Home programs are built in the live clinic workspace (not available in the demo).",
+  choosePatient: "Choose a patient",
 };
 
 export const protocolText: PageText<typeof en> = {
@@ -62,5 +67,10 @@ export const protocolText: PageText<typeof en> = {
     watchFor: "ارزیابی مجدد یا ارجاع اگر",
     references: "راهنماها و شواهد",
     usedIn: "استفاده در پروتکل‌ها",
+    startPhase: "شروع برنامه خانگی از این فاز",
+    startFor: (name) => `برای ${name} — نسخه‌نویس برنامه خانگی باز می‌شود؛ بررسی و ذخیره با شماست.`,
+    startNeedsPatient: "ابتدا بیمار را انتخاب کنید: ارزیابی او را باز کنید و سپس به این پروتکل برگردید.",
+    startDemo: "برنامه خانگی در محیط واقعی کلینیک ساخته می‌شود (در نسخه دمو در دسترس نیست).",
+    choosePatient: "انتخاب بیمار",
   },
 };

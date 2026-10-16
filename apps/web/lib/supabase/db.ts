@@ -1985,6 +1985,7 @@ export async function fetchCases(
         ? {
             screenedAt: row.safety_screened_at,
             selectedFlagIds: row.red_flag_ids ?? [],
+            riskFactorIds: row.risk_factor_ids ?? [],
             disposition: row.safety_disposition ?? "not-screened",
             notes: row.safety_notes ?? undefined,
             actionTaken: row.safety_action_taken ?? undefined,
@@ -2036,6 +2037,7 @@ export function insertCase(
       patient_goal: c.patientGoal,
       safety_screened_at: c.safetyScreen?.screenedAt ?? null,
       red_flag_ids: c.safetyScreen?.selectedFlagIds ?? [],
+      risk_factor_ids: c.safetyScreen?.riskFactorIds ?? [],
       safety_disposition:
         c.safetyScreen?.disposition ?? "not-screened",
       safety_notes: c.safetyScreen?.notes ?? null,
@@ -2053,11 +2055,13 @@ export function insertCase(
 export async function recordCaseSafetyScreen({
   caseId,
   selectedFlagIds,
+  riskFactorIds = [],
   notes,
   actionTaken,
 }: {
   caseId: string;
   selectedFlagIds: string[];
+  riskFactorIds?: string[];
   notes?: string;
   actionTaken?: string;
 }): Promise<CaseSafetyScreen | null> {
@@ -2066,6 +2070,7 @@ export async function recordCaseSafetyScreen({
   if (
     !caseId ||
     selectedFlagIds.length > 100 ||
+    riskFactorIds.length > 50 ||
     (normalizedNotes?.length ?? 0) > 10000 ||
     (normalizedAction?.length ?? 0) > 4000 ||
     (selectedFlagIds.length > 0 && (normalizedAction?.length ?? 0) < 3)
@@ -2083,6 +2088,7 @@ export async function recordCaseSafetyScreen({
       p_red_flag_ids: [...new Set(selectedFlagIds)],
       p_notes: normalizedNotes ?? null,
       p_action_taken: normalizedAction ?? null,
+      p_risk_factor_ids: [...new Set(riskFactorIds)],
     });
     const row = (Array.isArray(data) ? data[0] : data) as
       | Record<string, unknown>
@@ -2108,6 +2114,11 @@ export async function recordCaseSafetyScreen({
       selectedFlagIds: row.red_flag_ids.filter(
         (flag): flag is string => typeof flag === "string"
       ),
+      riskFactorIds: Array.isArray(row.risk_factor_ids)
+        ? row.risk_factor_ids.filter(
+            (risk): risk is string => typeof risk === "string"
+          )
+        : [],
       disposition: disposition as CaseSafetyScreen["disposition"],
       notes: typeof row.notes === "string" ? row.notes : undefined,
       actionTaken:

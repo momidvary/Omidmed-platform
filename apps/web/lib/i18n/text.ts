@@ -2,6 +2,9 @@
 
 import { useLocale } from "@/lib/store/LocaleContext";
 import type { Locale } from "@/lib/i18n/translations";
+import { withPersianNumbers } from "@/lib/i18n/numbers";
+
+export { persianNumber, withPersianNumbers } from "@/lib/i18n/numbers";
 
 /**
  * Page-level UI text. Each page keeps its strings beside a typed English
@@ -15,7 +18,7 @@ export interface PageText<T extends object> {
 }
 
 export function pickText<T extends object>(text: PageText<T>, locale: Locale): T {
-  if (locale === "fa") return text.fa;
+  if (locale === "fa") return withPersianNumbers(text.fa);
   if (locale === "ar") return { ...text.en, ...text.ar };
   return text.en;
 }

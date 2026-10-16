@@ -1,4 +1,5 @@
 import type { Locale } from "@/lib/i18n/translations";
+import { withPersianNumbers } from "@/lib/i18n/numbers";
 import type { LocalizedText } from "@/lib/clinical/reasoning/knowledge";
 import type { SupportLevel } from "@/lib/clinical/reasoning/rank";
 import type { ExamNoteKey } from "@/lib/clinical/reasoning/findings";
@@ -270,4 +271,4 @@ const ar: Strings = {
     `${answered}/${total} من بنود التاريخ · ${tests}/${totalTests} اختبارات مسجلة`,
 };
 
-export const reasoningStrings: Record<Locale, Strings> = { en, fa, ar };
+export const reasoningStrings: Record<Locale, Strings> = { en, fa: withPersianNumbers(fa), ar };

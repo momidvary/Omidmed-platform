@@ -7,7 +7,7 @@ import {
   normalizeFindings,
   type ClinicalFindings,
 } from "@/lib/clinical/reasoning/findings";
-import { regionKnowledge } from "@/lib/clinical/reasoning/knowledge";
+import { regionKnowledge, screeningRuleApplies } from "@/lib/clinical/reasoning/knowledge";
 import { rankHypotheses, supportLevel } from "@/lib/clinical/reasoning/rank";
 
 function findings(
@@ -232,5 +232,21 @@ describe("findings schema and normalisation", () => {
     });
     expect(hasAnyFinding(normalized)).toBe(true);
     expect(hasAnyFinding(emptyFindings())).toBe(false);
+  });
+});
+
+describe("screening rules", () => {
+  const ottawaKnee = regionKnowledge.knee!.screeningRules[0];
+
+  it("shows the Ottawa knee rule only for a traumatic presentation", () => {
+    expect(screeningRuleApplies(ottawaKnee, { k_gradual: "yes" }, "Gradual onset over months")).toBe(false);
+    expect(screeningRuleApplies(ottawaKnee, { k_twisting: "yes" }, "")).toBe(true);
+    expect(screeningRuleApplies(ottawaKnee, {}, "Fell on the knee playing football")).toBe(true);
+    expect(screeningRuleApplies(ottawaKnee, {}, "زمین خوردن هنگام دویدن")).toBe(true);
+  });
+
+  it("always shows rules without a trauma condition", () => {
+    const neckRule = regionKnowledge.neck!.screeningRules[0];
+    expect(screeningRuleApplies(neckRule, {}, "")).toBe(true);
   });
 });

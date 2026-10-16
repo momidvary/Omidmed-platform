@@ -2953,7 +2953,8 @@
         "restSeconds": 60,
         "painLimit": 5,
         "tempo": "1-0-3",
-        "side": "both"
+        "side": "both",
+        "timesPerDay": 2
       },
       "precautions": {
         "en": "Some tendon discomfort is acceptable if it settles by the next morning; reduce load if morning stiffness increases.",
@@ -2974,7 +2975,7 @@
           "Bouncing at the bottom"
         ],
         "whenToStop": "Stop with sharp pain or if pain and stiffness are worse the next morning.",
-        "progression": "Bent-knee version, then add weight in a backpack.",
+        "progression": "Alfredson protocol: 3×15 with the knee straight and 3×15 with the knee bent, twice daily; then add weight in a backpack.",
         "regression": "Double-leg lowering on the floor."
       },
       "fa": {
@@ -2992,7 +2993,7 @@
           "تکان دادن در پایین"
         ],
         "whenToStop": "با درد تیز یا اگر درد و خشکی صبح روز بعد بیشتر شد توقف کنید.",
-        "progression": "نسخه با زانوی خم، سپس وزنه در کوله.",
+        "progression": "پروتکل Alfredson: ۳×۱۵ با زانوی صاف و ۳×۱۵ با زانوی خم، دو بار در روز؛ سپس وزنه در کوله.",
         "regression": "پایین آوردن دوپا روی زمین."
       }
     },

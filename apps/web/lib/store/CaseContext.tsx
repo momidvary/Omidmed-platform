@@ -33,6 +33,7 @@ interface CaseContextValue {
     caseId: string,
     input: {
       selectedFlagIds: string[];
+      riskFactorIds?: string[];
       notes?: string;
       actionTaken?: string;
     }
@@ -50,7 +51,8 @@ interface CaseContextValue {
 
 const CaseContext = createContext<CaseContextValue | null>(null);
 
-const STORAGE_KEY = "physioai:cases:v1";
+// v2: Persian demo cases and safety risk factors.
+const STORAGE_KEY = "physioai:cases:v2";
 
 interface CaseState {
   cases: PatientCase[];
@@ -188,6 +190,7 @@ export function CaseProvider({ children }: { children: React.ReactNode }) {
           ? {
               screenedAt: new Date().toISOString(),
               selectedFlagIds: [...new Set(input.selectedFlagIds)],
+              riskFactorIds: [...new Set(input.riskFactorIds ?? [])],
               disposition: evaluateSafetyScreen(input.selectedFlagIds, true),
               notes: input.notes?.trim() || undefined,
               actionTaken: input.actionTaken?.trim() || undefined,

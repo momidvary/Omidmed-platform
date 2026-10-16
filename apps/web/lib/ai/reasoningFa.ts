@@ -15,7 +15,7 @@ export function buildReasoningFa(c: PatientCase): ClinicalReasoning {
 
   const subjective = [
     c.mainComplaint && `شکایت اصلی: ${c.mainComplaint}.`,
-    c.painLocation && `محل درد: ${c.painLocation}، شدت ${c.painIntensity} از ۱۰.`,
+    c.painLocation && `محل درد: ${c.painLocation}، شدت ${c.painIntensity.toLocaleString("fa-IR")} از ۱۰.`,
     c.duration && `مدت علائم: ${c.duration}.`,
     c.mechanism && `مکانیسم / نحوه شروع: ${c.mechanism}.`,
     c.aggravating && `عوامل تشدیدکننده: ${c.aggravating}.`,
@@ -66,6 +66,11 @@ export function buildReasoningFa(c: PatientCase): ClinicalReasoning {
     c.medications, c.functionalLimitations, c.imaging, c.aggravating,
     c.painLocation,
   ].join(" ");
+  for (const id of c.safetyScreen?.riskFactorIds ?? []) {
+    redFlags.push(
+      `عامل خطر ثبت‌شده: ${redFlagFa[id]?.label ?? id}. درمان با احتیاط بیشتر ادامه می‌یابد؛ علائم هشدار مرتبط را در هر جلسه بررسی کنید.`
+    );
+  }
   for (const signal of detectSafetySignals(haystack)) {
     const level = signal.disposition === "emergency" ? "اورژانسی" : signal.disposition === "urgent" ? "فوری" : "نیازمند بررسی پزشکی";
     redFlags.push(`هشدار تکمیلی از متن (${level}): ${signal.id}. فوراً با غربالگری ساختاریافته بررسی کنید.`);

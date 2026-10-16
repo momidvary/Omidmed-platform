@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { protocolLinkFor } from "@/lib/clinical/protocols";
 import { isMockMode } from "@/lib/config";
+import { intlLocale } from "@/lib/i18n/text";
 import { useLocale } from "@/lib/store/LocaleContext";
 import { hasClinicalSafetyClearance } from "@/lib/clinical/safety";
 import {
@@ -17,6 +18,7 @@ import {
 import {
   KNOWLEDGE_VERSION,
   getRegionKnowledge,
+  screeningRuleApplies,
   type Answer,
   type ExamTest,
   type TestResult,
@@ -304,7 +306,8 @@ export function StructuredFindingsPanel({ patientCase }: { patientCase: PatientC
                     <span id={`t-${test.id}`} className="text-sm text-[var(--color-ink)]">
                       {localized(test, locale)}
                     </span>
-                    <AccuracyLine test={test} sn={s.sensitivity} sp={s.specificity} />
+                    {/* Citation line stays in English (LTR): Sn/Sp as in the source. */}
+                    <AccuracyLine test={test} sn="Sn" sp="Sp" />
                   </div>
                   <Segmented
                     labelledBy={`t-${test.id}`}
@@ -391,7 +394,11 @@ export function StructuredFindingsPanel({ patientCase }: { patientCase: PatientC
           reasoning={reasoning}
           safetyCleared={safetyCleared}
           aiReady={CLINICAL_AI_ENABLED && !isMockMode && !dirty && current !== null}
-          screeningRules={knowledge.screeningRules.map((rule) => ({
+          screeningRules={knowledge.screeningRules
+            .filter((rule) =>
+              screeningRuleApplies(rule, draft.intake.answers, patientCase.mechanism ?? "")
+            )
+            .map((rule) => ({
             text: localized(rule, locale),
             source: rule.source,
           }))}
@@ -529,6 +536,7 @@ function HypothesisRow({
 }) {
   const { locale } = useLocale();
   const s = reasoningStrings[locale];
+  const num = (value: number) => value.toLocaleString(intlLocale(locale));
   const width = Math.max(4, Math.round((Math.max(0, hypothesis.score) / maxScore) * 100));
   const reasons = [...hypothesis.supporting, ...hypothesis.against];
   const protocol = protocolLinkFor(hypothesis);
@@ -537,7 +545,7 @@ function HypothesisRow({
     <li className="rounded-xl border border-[var(--color-border)] px-3 py-2.5">
       <div className="flex items-start justify-between gap-2">
         <span className="text-sm font-medium text-[var(--color-ink)]">
-          {rank}. {localized(hypothesis.label, locale)}
+          {num(rank)}. {localized(hypothesis.label, locale)}
           {hypothesis.requiresMedicalReview && (
             <Icon name="alert" width={14} height={14} className="ms-1 inline text-[var(--color-danger)]" />
           )}
@@ -568,7 +576,7 @@ function HypothesisRow({
       <details className="mt-1.5">
         <summary className="cursor-pointer text-[11px] text-[var(--color-primary-strong)]">
           {s.why} ({hypothesis.score > 0 ? "+" : ""}
-          {hypothesis.score})
+          {num(hypothesis.score)})
         </summary>
         {reasons.length === 0 ? (
           <p className="mt-1 text-[11px] text-[var(--color-ink-faint)]">{s.noReasons}</p>
@@ -583,7 +591,7 @@ function HypothesisRow({
                 )}
               >
                 {reason.weight > 0 ? "+" : ""}
-                {reason.weight} · {localized(reason.label, locale)} — {localized(reason.detail, locale)}
+                {num(reason.weight)} · {localized(reason.label, locale)} — {localized(reason.detail, locale)}
               </li>
             ))}
           </ul>

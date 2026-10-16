@@ -74,10 +74,16 @@ const en = {
   safetyTitle: "Clinical Safety Screen",
   safetySubtitle:
     "Record every item that is present. Unchecked is not considered a negative screen until you explicitly complete it.",
+  warningHeading: "Warning signs — stop and refer",
+  warningHint: "Any selected warning sign blocks treatment until the medical pathway is documented.",
+  riskHeading: "Risk factors — record and stay vigilant",
+  riskHint: "Risk factors do not block treatment on their own. They are recorded and shown as precautions in the plan.",
+  risksRecorded: (count: number) =>
+    `${count} risk factor(s) recorded. Treatment can continue; re-check related warning signs at each visit.`,
   concernsPresent:
-    "One or more safety concerns are present. Document and complete the appropriate medical referral before treatment advice is generated.",
+    "One or more warning signs are present. Document and complete the appropriate medical referral before treatment advice is generated.",
   screenAttest:
-    "I completed this structured screen and understand that selected concerns require medical escalation; an empty screen does not replace clinical judgement.",
+    "I completed this structured screen and understand that selected warning signs require medical escalation; an empty screen does not replace clinical judgement.",
   clear: "Clear form",
   creating: "Creating…",
   create: "Save and continue to examination",
@@ -169,10 +175,16 @@ export const newCaseText: PageText<NewCaseText> = {
     safetyTitle: "غربالگری ایمنی بالینی",
     safetySubtitle:
       "هر موردی را که وجود دارد علامت بزنید. تا وقتی غربالگری را صریحاً تکمیل نکنید، علامت نزدن به معنای منفی بودن نیست.",
+    warningHeading: "علائم هشدار — توقف و ارجاع",
+    warningHint: "انتخاب هر علامت هشدار، درمان را تا ثبت مسیر ارجاع پزشکی متوقف می‌کند.",
+    riskHeading: "عوامل خطر — ثبت و احتیاط بیشتر",
+    riskHint: "عامل خطر به‌تنهایی درمان را متوقف نمی‌کند؛ ثبت می‌شود و در برنامه درمان به‌عنوان احتیاط نمایش داده می‌شود.",
+    risksRecorded: (count: number) =>
+      `${count.toLocaleString("fa-IR")} عامل خطر ثبت شد. درمان می‌تواند ادامه یابد؛ علائم هشدار مرتبط را در هر جلسه دوباره بررسی کنید.`,
     concernsPresent:
-      "یک یا چند نگرانی ایمنی وجود دارد. پیش از ارائه هر توصیه درمانی، ارجاع پزشکی مناسب را ثبت و انجام دهید.",
+      "یک یا چند علامت هشدار وجود دارد. پیش از ارائه هر توصیه درمانی، ارجاع پزشکی مناسب را ثبت و انجام دهید.",
     screenAttest:
-      "این غربالگری ساختاریافته را کامل کردم و می‌دانم موارد انتخاب‌شده نیازمند ارجاع پزشکی است؛ غربالگری خالی جایگزین قضاوت بالینی نیست.",
+      "این غربالگری ساختاریافته را کامل کردم و می‌دانم علائم هشدار انتخاب‌شده نیازمند ارجاع پزشکی است؛ غربالگری خالی جایگزین قضاوت بالینی نیست.",
     clear: "پاک کردن فرم",
     creating: "در حال ثبت…",
     create: "ثبت و رفتن به معاینه",

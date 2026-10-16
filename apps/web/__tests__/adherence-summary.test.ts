@@ -124,6 +124,22 @@ describe("progression suggestion", () => {
     expect(suggestProgression(high, false)).toEqual({ kind: "regress", reason: "painHigh" });
   });
 
+  it("uses the item's own pain limit (e.g. tendon loading up to 5/10)", () => {
+    const tendon = summarizeItem("item-1", sched, [
+      report(days[0], "complete", 5), report(days[1], "complete", 4),
+      report(days[2], "complete", 5), report(days[3], "complete", 4),
+    ]);
+    expect(suggestProgression(tendon, false).kind).toBe("hold");
+    expect(suggestProgression(tendon, false, 5)).toEqual({ kind: "progress", reason: "consistentLowPain" });
+    expect(suggestProgression(tendon, false, 2).kind).toBe("regress");
+
+    const severe = summarizeItem("item-1", sched, [
+      report(days[0], "complete", 4), report(days[1], "complete", 7),
+      report(days[2], "complete", 4),
+    ]);
+    expect(suggestProgression(severe, false, 6)).toEqual({ kind: "review", reason: "highPain" });
+  });
+
   it("matches low completion to its reported reason", () => {
     const make = (reason: string) =>
       summarizeItem("item-1", sched, [

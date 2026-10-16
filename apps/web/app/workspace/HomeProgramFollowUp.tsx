@@ -12,6 +12,7 @@ import {
   reasonLabel,
   scheduledDays,
   suggestProgression,
+  DEFAULT_PAIN_LIMIT,
   summarizeItem,
   type SuggestionKind,
 } from "@/lib/clinical/adherence";
@@ -119,7 +120,11 @@ export function HomeProgramFollowUp({
                 program.endDate
               );
               const summary = summarizeItem(itemId ?? "", scheduled, itemId ? reports.data ?? [] : []);
-              const suggestion = suggestProgression(summary, program.status === "suspended");
+              const suggestion = suggestProgression(
+                summary,
+                program.status === "suspended",
+                item.painLimit ?? DEFAULT_PAIN_LIMIT
+              );
               const trend =
                 summary.painTrend === null
                   ? null

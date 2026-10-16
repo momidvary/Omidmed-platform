@@ -35,9 +35,9 @@ export const navItems: NavItem[] = [
   { href: "/case-analysis", key: "case-analysis", icon: "analysis", section: "workflow", parent: "/patients" },
   { href: "/treatment-planner", key: "treatment-planner", icon: "treatment", section: "workflow", parent: "/patients" },
   { href: "/clinical-records", key: "clinical-records", icon: "edit", section: "workflow", parent: "/patients" },
-  { href: "/exercise-library", key: "exercise-library", icon: "exercise", section: "tools" },
-  { href: "/protocols", key: "protocols", icon: "treatment", section: "tools" },
-  { href: "/ai-assistant", key: "ai-assistant", icon: "sparkle", section: "tools" },
+  { href: "/exercise-library", key: "exercise-library", icon: "exercise", section: "main" },
+  { href: "/protocols", key: "protocols", icon: "treatment", section: "main" },
+  { href: "/ai-assistant", key: "ai-assistant", icon: "search", section: "tools" },
   { href: "/red-flags", key: "red-flags", icon: "flag", section: "tools" },
   { href: "/patient-education", key: "patient-education", icon: "education", section: "tools" },
   {

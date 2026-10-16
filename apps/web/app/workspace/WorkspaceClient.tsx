@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Badge } from "@/components/ui/Badge";
 import { Button, ButtonLink } from "@/components/ui/Button";
@@ -9,6 +9,7 @@ import { Icon } from "@/components/ui/Icon";
 import { EmptyState, PageIntro, Spinner } from "@/components/ui/Misc";
 import { isMockMode } from "@/lib/config";
 import { hasClinicalSafetyClearance } from "@/lib/clinical/safety";
+import { RiskFactorNote } from "@/components/clinical/RiskFactorNote";
 import {
   carePathwayStates,
   type CareStep,
@@ -113,6 +114,18 @@ export function WorkspaceClient() {
       )
     : [];
   const latestCase = patientCases[0] ?? null;
+  const latestCaseId = latestCase?.id ?? null;
+
+  // Opening a patient's record makes them the active patient, so protocol
+  // and planner shortcuts act on this person without another selection.
+  // Applied once per case, so choosing an older assessment here still wins.
+  const appliedCaseId = useRef<string | null>(null);
+  useEffect(() => {
+    if (latestCaseId && appliedCaseId.current !== latestCaseId) {
+      appliedCaseId.current = latestCaseId;
+      setCurrentCase(latestCaseId);
+    }
+  }, [latestCaseId, setCurrentCase]);
 
   const episodeKey = baseKey && episode ? `${baseKey}:${episode.id}` : null;
   const caseKey = baseKey && latestCase ? `${baseKey}:${latestCase.id}` : null;
@@ -546,6 +559,7 @@ export function WorkspaceClient() {
                 </Badge>
               </p>
             )}
+            {latestCleared && <RiskFactorNote screen={latestCase?.safetyScreen} className="mt-2" />}
           </div>
           {patientAlerts.length > 0 && (
             <ButtonLink href="/alerts" size="sm" variant="danger">

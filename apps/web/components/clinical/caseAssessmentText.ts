@@ -16,7 +16,7 @@ const en = {
   unverified: "Assessment history could not be verified. Editing is locked until the complete signed history loads.",
   retry: "Retry history",
   noVersion:
-    "No signed assessment version was found. Editing is locked; ask an administrator to verify migration 020 and the case backfill.",
+    "No signed assessment version was found. Editing is locked; ask the clinic administrator to check the setup.",
   reasonLength: "Document a reason between 3 and 1,000 characters.",
   reviewFields: "Review the required fields, age, region, and pain score.",
   mustChange: "A correction must change at least one assessment field.",
@@ -95,7 +95,7 @@ export const caseAssessmentText: PageText<CaseAssessmentText> = {
     unverified: "تاریخچه ارزیابی تأیید نشد. تا بارگذاری کامل تاریخچه امضاشده، ویرایش قفل است.",
     retry: "بارگذاری دوباره تاریخچه",
     noVersion:
-      "هیچ نسخه امضاشده‌ای پیدا نشد. ویرایش قفل است؛ از مدیر بخواهید migration 020 و انتقال داده‌های کیس را بررسی کند.",
+      "هیچ نسخه امضاشده‌ای پیدا نشد. ویرایش قفل است؛ از مدیر کلینیک بخواهید تنظیمات را بررسی کند.",
     reasonLength: "دلیلی بین ۳ تا ۱۰۰۰ نویسه بنویسید.",
     reviewFields: "فیلدهای الزامی، سن، ناحیه و نمره درد را بررسی کنید.",
     mustChange: "اصلاح باید حداقل یکی از فیلدهای ارزیابی را تغییر دهد.",

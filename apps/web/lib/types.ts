@@ -15,7 +15,10 @@ export type SafetyDisposition =
 
 export interface CaseSafetyScreen {
   screenedAt: string | null;
+  /** Warning signs: these set the disposition and can block treatment. */
   selectedFlagIds: string[];
+  /** Risk factors: recorded for heightened vigilance; they never block treatment. */
+  riskFactorIds?: string[];
   disposition: SafetyDisposition;
   notes?: string;
   actionTaken?: string;
@@ -179,6 +182,12 @@ export interface BodyRegionModule {
 
 export interface RedFlagItem {
   id: string;
+  /**
+   * "warning": a current sign that needs medical assessment (sets the
+   * disposition). "risk": a history item that raises suspicion and is
+   * recorded for vigilance (IFOMPT framework, Finucane et al. 2020).
+   */
+  kind: "warning" | "risk";
   category: string;
   label: string;
   detail: string;

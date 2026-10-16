@@ -6,6 +6,12 @@ import type {
   TreatmentPlanInput,
 } from "@/lib/types";
 import { getRegion } from "@/lib/data/bodyRegions";
+import {
+  applyPlanGuide,
+  regionBalance,
+  regionMotorControl,
+  type PlanGuide,
+} from "@/lib/ai/planGuide";
 import type { ExerciseFa } from "@/lib/data/exerciseFa";
 import {
   detectSafetySignals,
@@ -95,6 +101,12 @@ export function buildReasoning(c: PatientCase): ClinicalReasoning {
     );
   }
 
+  for (const label of safetyFlagLabels(c.safetyScreen?.riskFactorIds ?? [])) {
+    redFlags.push(
+      `Recorded risk factor: ${label}. Treatment may continue with heightened vigilance; re-check related warning signs at each visit.`
+    );
+  }
+
   for (const signal of detectSafetySignals(haystack)) {
     redFlags.push(
       `Supplemental text warning (${signal.disposition}): ${signal.id}. Verify immediately using the structured screen.`
@@ -145,7 +157,7 @@ function pickOutcomeMeasures(c: PatientCase): string[] {
 }
 
 /** Generate a structured treatment plan from planner inputs. */
-export function buildTreatmentPlan(input: TreatmentPlanInput): TreatmentPlan {
+export function buildTreatmentPlan(input: TreatmentPlanInput, guide?: PlanGuide): TreatmentPlan {
   if (!input.safetyConfirmed) {
     throw new Error(
       "A completed clinical safety screen is required before treatment planning."
@@ -189,8 +201,8 @@ export function buildTreatmentPlan(input: TreatmentPlanInput): TreatmentPlan {
       ]
     : ["Target the main impairment: " + (input.mainImpairment || "identified weakness"), "Progressive overload 2–3×/week"];
 
-  const motorControl = ["Task-specific control drills", "Quality-of-movement retraining", "Breathing and relaxation as needed"];
-  const balance = ["Static balance progressing to dynamic", "Proprioception drills", "Perturbation training in later stages"];
+  const motorControl = regionMotorControl(input.region, "en");
+  const balance = regionBalance(input.region, "en");
 
   const education = [
     ...(region?.educationPoints.slice(0, 2) ?? []),
@@ -204,7 +216,7 @@ export function buildTreatmentPlan(input: TreatmentPlanInput): TreatmentPlan {
 
   const homeProgram = [
     "3–5 key exercises, clearly demonstrated.",
-    "Guidance on acceptable pain during/after (e.g. ≤ 3/10, settling within 24h).",
+    "Acceptable pain is set per exercise in the home program (commonly ≤3/10; tendon loading may allow ≤5/10), settling by the next morning.",
     "A simple log to track adherence and progress.",
   ];
 
@@ -220,10 +232,11 @@ export function buildTreatmentPlan(input: TreatmentPlanInput): TreatmentPlan {
       : "Re-assess outcome measures every 2–3 weeks.",
   ];
 
-  return {
+  const plan = {
     manualTherapy, exerciseTherapy, mobility, strengthening,
     motorControl, balance, education, homeProgram, frequency, progression,
   };
+  return guide ? applyPlanGuide(plan, guide, "en") : plan;
 }
 
 /** Generate a plain-language patient education handout. */
@@ -376,7 +389,7 @@ export function buildPatientChatReply(
       (recent.at(-1)?.painLevel ?? 0) - (recent[0]?.painLevel ?? 0) >= 2;
     if (worsening || (recent.at(-1)?.painLevel ?? 0) >= 7) {
       return (
-        `میانگین درد ثبت‌شده اخیر شما حدود ${avg} از ۱۰ است و روند نیاز به بررسی دارد. ` +
+        `میانگین درد ثبت‌شده اخیر شما حدود ${Number(avg).toLocaleString("fa-IR")} از ۱۰ است و روند نیاز به بررسی دارد. ` +
         "تا زمان بررسی، شدت تمرین را افزایش ندهید و برای فیزیوتراپیست تیکت ثبت کنید. اگر درد شدید یا علامت نگران‌کننده دارید، منتظر تیکت نمانید و ارزیابی پزشکی بگیرید."
       );
     }

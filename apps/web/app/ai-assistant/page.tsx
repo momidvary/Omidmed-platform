@@ -279,7 +279,7 @@ export default function AiAssistantPage() {
   return (
     <div className="space-y-6">
       <PageIntro
-        title={t.title}
+        title={CLINICAL_AI_ENABLED ? t.title : t.titleTemplate}
         description={CLINICAL_AI_ENABLED ? t.introAi : t.introTemplate}
       />
 
@@ -447,7 +447,7 @@ export default function AiAssistantPage() {
                 <div className="space-y-2 rounded-xl bg-[var(--color-surface-muted)] p-3 text-sm">
                   <p className="font-medium text-[var(--color-ink)]">
                     {currentCase.name}
-                    {currentCase.age ? `, ${currentCase.age}` : ""}
+                    {currentCase.age ? (locale === "fa" ? `، ${currentCase.age.toLocaleString("fa-IR")} ساله` : `, ${currentCase.age}`) : ""}
                   </p>
                   <p className="text-xs text-[var(--color-ink-soft)]">
                     {currentCase.mainComplaint}

@@ -9,6 +9,7 @@ import { useLocale } from "@/lib/store/LocaleContext";
 import { locales } from "@/lib/i18n/translations";
 import type { Locale } from "@/lib/i18n/translations";
 import { ClinicianGate } from "@/components/auth/ClinicianGate";
+import { ActivePatientBar } from "@/components/layout/ActivePatientBar";
 import { SaveStatusPill } from "@/components/ui/SaveStatusPill";
 import { useAuth } from "@/lib/store/AuthContext";
 import { isMockMode } from "@/lib/config";
@@ -208,7 +209,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </header>
 
         <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-6 lg:px-8">
-          <ClinicianGate>{children}</ClinicianGate>
+          <ClinicianGate>
+            <ActivePatientBar />
+            {children}
+          </ClinicianGate>
         </main>
       </div>
     </div>

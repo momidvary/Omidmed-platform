@@ -9,6 +9,8 @@ import { useLocale } from "@/lib/store/LocaleContext";
 import { intlLocale, useText } from "@/lib/i18n/text";
 import { plannerText } from "./text";
 import { hasClinicalSafetyClearance } from "@/lib/clinical/safety";
+import { RiskFactorNote } from "@/components/clinical/RiskFactorNote";
+import { protocolById, protocols } from "@/lib/clinical/protocols";
 import type {
   BodyRegionId,
   Irritability,
@@ -95,6 +97,21 @@ function PlannerForm() {
   const [precautions, setPrecautions] = useState("");
   const [weightBearingStatus, setWeightBearingStatus] = useState("");
   const [protocolConfirmed, setProtocolConfirmed] = useState(false);
+  const lang = locale === "fa" ? "fa" : "en";
+  // Optional protocol phase that shapes the plan text. A phase link from a
+  // protocol page (?protocol=&phase=) preselects it.
+  const [guideChoice, setGuideChoice] = useState(() => {
+    if (typeof window === "undefined") return { protocol: "", phase: "" };
+    const query = new URLSearchParams(window.location.search);
+    const chosen = protocolById(query.get("protocol") ?? "");
+    const phase = chosen?.phases.find((item) => item.id === query.get("phase"));
+    return { protocol: chosen?.id ?? "", phase: phase?.id ?? chosen?.phases[0]?.id ?? "" };
+  });
+  const guideProtocol = protocolById(guideChoice.protocol);
+  const guidePhase = guideProtocol?.phases.find((phase) => phase.id === guideChoice.phase);
+  const protocolOptions = [...protocols].sort(
+    (a, b) => Number(b.region === region) - Number(a.region === region)
+  );
   const [error, setError] = useState<string | null>(null);
 
   const [plan, setPlan] = useState<TreatmentPlan | null>(null);
@@ -117,6 +134,9 @@ function PlannerForm() {
   const generationToken = useRef(0);
 
   const safetyCleared = hasClinicalSafetyClearance(currentCase?.safetyScreen);
+  // A locked planner must also look locked: no field is editable until a
+  // case with a clear safety screen is selected.
+  const formLocked = loading || !safetyCleared || !currentCase;
   const safetyDisposition =
     currentCase?.safetyScreen?.disposition ?? "not-screened";
   const historyForCurrentCase =
@@ -271,8 +291,10 @@ function PlannerForm() {
     try {
       // 🔌 REAL AI API INTEGRATION POINT — replace with an authenticated,
       // server-side call that preserves the same safety gate.
+      const guide =
+        guideProtocol && guidePhase ? { protocol: guideProtocol, phase: guidePhase } : undefined;
       const result = await delay(
-        locale === "fa" ? buildTreatmentPlanFa(input) : buildTreatmentPlan(input)
+        locale === "fa" ? buildTreatmentPlanFa(input, guide) : buildTreatmentPlan(input, guide)
       );
       if (requestToken === generationToken.current) {
         setPlan(result);
@@ -488,6 +510,7 @@ function PlannerForm() {
               : t.selectOrCreate}
         </p>
       </div>
+      {safetyCleared && <RiskFactorNote screen={currentCase?.safetyScreen} />}
 
       <Card>
         <CardHeader
@@ -499,11 +522,14 @@ function PlannerForm() {
           }
           icon={<Icon name="treatment" width={18} height={18} />}
         />
-        <CardBody className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <CardBody
+          aria-disabled={formLocked || undefined}
+          className={`grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 ${!safetyCleared ? "opacity-60" : ""}`}
+        >
           <Field label={t.region} required>
             <Select
               value={region}
-              disabled={loading}
+              disabled={formLocked}
               onChange={(e) => {
                 setRegion(e.target.value as BodyRegionId);
                 invalidatePlan();
@@ -520,7 +546,7 @@ function PlannerForm() {
           <Field label={t.stage}>
             <Select
               value={stage}
-              disabled={loading}
+              disabled={formLocked}
               onChange={(e) => {
                 setStage(e.target.value as Stage);
                 invalidatePlan();
@@ -536,7 +562,7 @@ function PlannerForm() {
           <Field label={t.irritability}>
             <Select
               value={irritability}
-              disabled={loading}
+              disabled={formLocked}
               onChange={(e) => {
                 setIrritability(e.target.value as Irritability);
                 invalidatePlan();
@@ -553,18 +579,18 @@ function PlannerForm() {
               min={0}
               max={10}
               value={painSeverity}
-              disabled={loading}
+              disabled={formLocked}
               onChange={(e) => {
                 setPainSeverity(Number(e.target.value));
                 invalidatePlan();
               }}
-              className="mt-3 h-2 w-full cursor-pointer appearance-none rounded-full bg-gradient-to-r from-[var(--color-success)] via-[var(--color-warn)] to-[var(--color-danger)]"
+              className="mt-3 h-2 w-full cursor-pointer appearance-none rounded-full bg-gradient-to-r rtl:bg-gradient-to-l from-[var(--color-success)] via-[var(--color-warn)] to-[var(--color-danger)]"
             />
           </Field>
           <Field label={t.impairment}>
             <Input
               value={mainImpairment}
-              disabled={loading}
+              disabled={formLocked}
               onChange={(e) => {
                 setMainImpairment(e.target.value);
                 invalidatePlan();
@@ -575,7 +601,7 @@ function PlannerForm() {
           <Field label={t.goal}>
             <Input
               value={patientGoal}
-              disabled={loading}
+              disabled={formLocked}
               onChange={(e) => {
                 setPatientGoal(e.target.value);
                 invalidatePlan();
@@ -583,6 +609,42 @@ function PlannerForm() {
               placeholder={t.goalPlaceholder}
             />
           </Field>
+          <Field label={t.protocolGuide} hint={t.protocolGuideHint}>
+            <Select
+              value={guideChoice.protocol}
+              disabled={formLocked}
+              onChange={(event) => {
+                const next = protocolById(event.target.value);
+                setGuideChoice({ protocol: next?.id ?? "", phase: next?.phases[0]?.id ?? "" });
+                invalidatePlan();
+              }}
+            >
+              <option value="">{t.protocolNone}</option>
+              {protocolOptions.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {option.title[lang]}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          {guideProtocol && (
+            <Field label={t.protocolPhase}>
+              <Select
+                value={guideChoice.phase}
+                disabled={formLocked}
+                onChange={(event) => {
+                  setGuideChoice((previous) => ({ ...previous, phase: event.target.value }));
+                  invalidatePlan();
+                }}
+              >
+                {guideProtocol.phases.map((phase, index) => (
+                  <option key={phase.id} value={phase.id}>
+                    {t.phaseOption(index + 1, phase.name[lang])}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          )}
 
           {stage === "post-op" && (
             <div className="grid grid-cols-1 gap-4 rounded-xl border border-[var(--color-warn)]/30 bg-[var(--color-warn-soft)]/40 p-4 sm:col-span-2 sm:grid-cols-2 lg:col-span-3">
@@ -597,7 +659,7 @@ function PlannerForm() {
               <Field label={t.procedure} required>
                 <Input
                   value={procedure}
-                  disabled={loading}
+                  disabled={formLocked}
                   onChange={(event) => {
                     setProcedure(event.target.value);
                     invalidatePlan();
@@ -610,7 +672,7 @@ function PlannerForm() {
                   type="date"
                   max={localDateValue()}
                   value={surgeryDate}
-                  disabled={loading}
+                  disabled={formLocked}
                   onChange={(event) => {
                     setSurgeryDate(event.target.value);
                     invalidatePlan();
@@ -620,7 +682,7 @@ function PlannerForm() {
               <Field label={t.weightBearing} required>
                 <Input
                   value={weightBearingStatus}
-                  disabled={loading}
+                  disabled={formLocked}
                   onChange={(event) => {
                     setWeightBearingStatus(event.target.value);
                     invalidatePlan();
@@ -635,7 +697,7 @@ function PlannerForm() {
               >
                 <Textarea
                   value={precautions}
-                  disabled={loading}
+                  disabled={formLocked}
                   onChange={(event) => {
                     setPrecautions(event.target.value);
                     invalidatePlan();
@@ -649,7 +711,7 @@ function PlannerForm() {
                   type="checkbox"
                   className="mt-1"
                   checked={protocolConfirmed}
-                  disabled={loading}
+                  disabled={formLocked}
                   onChange={(event) => {
                     setProtocolConfirmed(event.target.checked);
                     invalidatePlan();

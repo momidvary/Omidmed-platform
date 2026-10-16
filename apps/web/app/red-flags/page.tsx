@@ -5,7 +5,8 @@ import {
   localizedRedFlag,
   redFlagCategories,
   redFlagCategoryLabel,
-  redFlags,
+  riskFactors,
+  warningSigns,
 } from "@/lib/data/redFlags";
 import { useLocale } from "@/lib/store/LocaleContext";
 import { intlLocale, useText } from "@/lib/i18n/text";
@@ -19,6 +20,7 @@ import { cn } from "@/lib/utils";
 import {
   evaluateSafetyScreen,
   redFlagDisposition,
+  splitSafetySelection,
 } from "@/lib/clinical/safety";
 import type { SafetyDisposition } from "@/lib/types";
 import { useCases } from "@/lib/store/CaseContext";
@@ -61,9 +63,17 @@ export default function RedFlagCheckerPage() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
+  const { warningIds, riskFactorIds } = splitSafetySelection(selected);
   const selectedItems = useMemo(
     () =>
-      redFlags
+      warningSigns
+        .filter((r) => selected.has(r.id))
+        .map((item) => localizedRedFlag(item, locale)),
+    [selected, locale]
+  );
+  const selectedRisks = useMemo(
+    () =>
+      riskFactors
         .filter((r) => selected.has(r.id))
         .map((item) => localizedRedFlag(item, locale)),
     [selected, locale]
@@ -132,14 +142,15 @@ export default function RedFlagCheckerPage() {
 
   async function completeScreen() {
     if (!reviewConfirmed || !currentCase || saving) return;
-    if (selected.size > 0 && actionTaken.trim().length < 3) {
+    if (warningIds.length > 0 && actionTaken.trim().length < 3) {
       setSaveError(t.actionRequired);
       return;
     }
     setSaving(true);
     setSaveError(null);
     const saved = await saveSafetyScreen(currentCase.id, {
-      selectedFlagIds: [...selected],
+      selectedFlagIds: warningIds,
+      riskFactorIds,
       notes,
       actionTaken,
     });
@@ -310,6 +321,14 @@ export default function RedFlagCheckerPage() {
                 ))}
               </div>
             )}
+            {selectedRisks.length > 0 && (
+              <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                <span className="text-[11px] text-[var(--color-ink-soft)]">{t.risksRecorded}</span>
+                {selectedRisks.map((item) => (
+                  <Badge key={item.id} tone="warn">{item.label}</Badge>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       ) : (
@@ -356,7 +375,8 @@ export default function RedFlagCheckerPage() {
         </div>
       )}
 
-      {/* Checklist grouped by category */}
+      {/* Checklist: warning signs grouped by category, then risk factors */}
+      <h2 className="text-base font-bold text-[var(--color-danger)]">{t.warningHeading}</h2>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         {redFlagCategories.map((category) => (
           <Card key={category}>
@@ -365,7 +385,7 @@ export default function RedFlagCheckerPage() {
               icon={<Icon name="flag" width={18} height={18} />}
             />
             <CardBody className="space-y-1.5">
-              {redFlags
+              {warningSigns
                 .filter((r) => r.category === category)
                 .map((source) => localizedRedFlag(source, locale))
                 .map((item) => {
@@ -415,6 +435,59 @@ export default function RedFlagCheckerPage() {
       </div>
 
       <Card>
+        <CardHeader
+          title={t.riskHeading}
+          subtitle={t.riskHint}
+          icon={<Icon name="alert" width={18} height={18} />}
+        />
+        <CardBody className="grid grid-cols-1 gap-1.5 md:grid-cols-2">
+          {riskFactors
+            .map((source) => localizedRedFlag(source, locale))
+          .map((item) => {
+                  const checked = selected.has(item.id);
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      role="checkbox"
+                      aria-checked={checked}
+                      onClick={() => toggle(item.id)}
+                      disabled={!currentCase || saving || phase === "completed"}
+                      className={cn(
+                        "flex w-full items-start gap-3 rounded-xl border px-3 py-2.5 text-start transition-colors",
+                        (!currentCase || saving || phase === "completed") &&
+                          "cursor-not-allowed opacity-60",
+                        checked
+                          ? "border-[var(--color-warn)]/40 bg-[var(--color-warn-soft)]"
+                          : "border-transparent hover:bg-[var(--color-surface-muted)]"
+                      )}
+                    >
+                      <span
+                        aria-hidden="true"
+                        className={cn(
+                          "mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-md border",
+                          checked
+                            ? "border-[var(--color-warn)] bg-[var(--color-warn)] text-white"
+                            : "border-[var(--color-border)] bg-white"
+                        )}
+                      >
+                        {checked && <Icon name="check" width={12} height={12} />}
+                      </span>
+                      <span>
+                        <span className="block text-sm font-medium text-[var(--color-ink)]">
+                          {item.label}
+                        </span>
+                        <span className="block text-xs text-[var(--color-ink-faint)]">
+                          {item.detail}
+                        </span>
+                      </span>
+                    </button>
+                  );
+                })}
+        </CardBody>
+      </Card>
+
+      <Card>
         <CardBody className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2">
             <label className="block text-sm font-medium text-[var(--color-ink)]">
@@ -436,16 +509,16 @@ export default function RedFlagCheckerPage() {
                 onChange={(event) => setActionTaken(event.target.value)}
                 maxLength={4000}
                 rows={4}
-                required={selected.size > 0}
+                required={warningIds.length > 0}
                 disabled={!currentCase || saving || phase === "completed"}
                 placeholder={
-                  selected.size > 0
+                  warningIds.length > 0
                     ? t.actionPlaceholderRequired
                     : t.actionPlaceholderOptional
                 }
                 className="mt-2 w-full rounded-xl border border-[var(--color-border)] bg-white px-3 py-2.5 text-sm font-normal outline-none focus:border-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-60"
               />
-              {selected.size > 0 && (
+              {warningIds.length > 0 && (
                 <span className="mt-1 block text-xs text-[var(--color-danger)]">
                   {t.actionMissing}
                 </span>
@@ -487,7 +560,7 @@ export default function RedFlagCheckerPage() {
                 !reviewConfirmed ||
                 saving ||
                 phase === "completed" ||
-                (selected.size > 0 && actionTaken.trim().length < 3)
+                (warningIds.length > 0 && actionTaken.trim().length < 3)
               }
             >
               {saving ? t.saving : t.save}

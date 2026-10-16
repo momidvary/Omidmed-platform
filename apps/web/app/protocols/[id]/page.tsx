@@ -10,7 +10,9 @@ import { motionFor } from "@/lib/animation/motions";
 import { hypothesisLabel, protocolById } from "@/lib/clinical/protocols";
 import { exercises } from "@/lib/data/exercises";
 import { localizeExercise } from "@/lib/data/exerciseLibraryFa";
+import { isMockMode } from "@/lib/config";
 import { useText } from "@/lib/i18n/text";
+import { useCases } from "@/lib/store/CaseContext";
 import { useLocale } from "@/lib/store/LocaleContext";
 import { protocolText } from "../text";
 
@@ -20,6 +22,10 @@ export default function ProtocolDetailPage() {
   const t = useText(protocolText);
   const lang = locale === "fa" ? "fa" : "en";
   const protocol = protocolById(params.id);
+  const { currentCase } = useCases();
+  // The builder needs a patient with an open episode (and, there, an approved
+  // plan and a clear safety screen). Show whose program the button would start.
+  const patient = !isMockMode && currentCase?.patientId && currentCase.episodeId ? currentCase : null;
 
   if (!protocol) {
     return (
@@ -98,6 +104,29 @@ export default function ProtocolDetailPage() {
                     </ul>
                   </div>
                 )}
+                <div className="rounded-xl border border-dashed border-[var(--color-border)] p-3">
+                  {patient ? (
+                    <>
+                      <Link
+                        href={`/treatment-planner?protocol=${protocol.id}&phase=${phase.id}#home-program`}
+                        className="inline-flex min-h-11 items-center rounded-xl bg-[var(--color-primary)] px-4 text-sm font-semibold text-white hover:bg-[var(--color-primary-strong)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)]"
+                      >
+                        {t.startPhase}
+                      </Link>
+                      <p className="mt-1.5 text-xs text-[var(--color-ink-soft)]">{t.startFor(patient.name)}</p>
+                    </>
+                  ) : (
+                    <>
+                      <span className="block text-sm font-semibold text-[var(--color-ink-soft)]">{t.startPhase}</span>
+                      <p className="mt-1 text-xs text-[var(--color-ink-soft)]">{isMockMode ? t.startDemo : t.startNeedsPatient}</p>
+                      {!isMockMode && (
+                        <Link href="/patients" className="mt-1.5 inline-block text-xs font-semibold text-[var(--color-primary-strong)] underline">
+                          {t.choosePatient}
+                        </Link>
+                      )}
+                    </>
+                  )}
+                </div>
                 {phase.progressWhen.length > 0 && (
                   <div className="rounded-xl bg-[var(--color-primary-soft)] p-3">
                     <h3 className="mb-1 text-xs font-bold text-[var(--color-primary-strong)]">{t.progressWhen}</h3>

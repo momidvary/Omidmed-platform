@@ -23,7 +23,7 @@ const en = {
   title: "Clinical Alerts",
   demoIntro: "Operational alerts are disabled in mock mode. No real clinician notification is sent.",
   demoTitle: "Demo mode has no safety queue",
-  demoBody: "Connect Supabase and apply migration 014 to test attributed acknowledgement and reviewed resume.",
+  demoBody: "Not available in the demo. In the clinic version, acknowledging an alert and resuming a program are recorded under your name.",
   accessTitle: "Clinical alert access required",
   accessBody: "Only clinic owners and assigned therapists can load this queue.",
   intro:
@@ -68,7 +68,7 @@ export const alertsText: PageText<AlertsText> = {
     unknownTime: "زمان نامشخص",
     summaryEmergency: "عبارت اورژانسی در تیکت بیمار",
     summaryUrgent: "عبارت فوری در تیکت بیمار",
-    summaryPain: (value) => `گزارش درد شدید${value === null ? "" : `: ${value}/10`}`,
+    summaryPain: (value) => `گزارش درد شدید${value === null ? "" : `: ${value} از ۱۰`}`,
     detailEmergency:
       "تیکت بیمار اورژانسی طبقه‌بندی شد. همین حالا با بیمار تماس بگیرید و مسیر اورژانس کلینیک را دنبال کنید؛ هرگز منتظر پاسخ صندوق پیام نمانید.",
     detailUrgent: "تیکت بیمار فوری طبقه‌بندی شد. همین حالا بررسی کنید و تماس و ارجاع همان روز را ثبت کنید.",
@@ -86,7 +86,7 @@ export const alertsText: PageText<AlertsText> = {
     title: "هشدارهای بالینی",
     demoIntro: "هشدارهای عملیاتی در حالت نمایشی غیرفعال‌اند و هیچ اعلان واقعی ارسال نمی‌شود.",
     demoTitle: "حالت نمایشی صف ایمنی ندارد",
-    demoBody: "برای آزمایش تأیید مشاهده و ادامه بازبینی‌شده، Supabase را وصل و migration 014 را اجرا کنید.",
+    demoBody: "این بخش در نسخه نمایشی فعال نیست. در نسخه کلینیک، تأیید مشاهده هشدار و ادامه برنامه با نام شما ثبت می‌شود.",
     accessTitle: "دسترسی به هشدارهای بالینی لازم است",
     accessBody: "فقط صاحب کلینیک و فیزیوتراپیست مسئول می‌توانند این صف را ببینند.",
     intro:

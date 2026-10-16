@@ -33,6 +33,7 @@ import { formatIranianMobile, normalizeIranianMobile } from "@/lib/phone";
 import { useLocale } from "@/lib/store/LocaleContext";
 import { intlLocale, useText } from "@/lib/i18n/text";
 import { patientsText, type PatientsText } from "./text";
+import { DemoPatientList } from "./DemoPatientList";
 
 const PAGE_SIZE = 20;
 const CURRENT_YEAR = new Date().getFullYear();
@@ -446,11 +447,7 @@ function PatientRegistry() {
           title={t.title}
           description={t.introShort}
         />
-        <EmptyState
-          icon="user"
-          title={t.demoEmpty}
-          description={t.demoEmptyHint}
-        />
+        <DemoPatientList />
       </div>
     );
   }

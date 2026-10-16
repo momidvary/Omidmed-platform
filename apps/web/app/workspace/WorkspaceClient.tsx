@@ -447,6 +447,12 @@ export function WorkspaceClient() {
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
+            {record.activeEpisode && (
+              <ButtonLink href={`/quick-visit?patient=${encodeURIComponent(record.id)}`} size="sm">
+                <Icon name="check" width={14} height={14} />
+                {t.quickVisit}
+              </ButtonLink>
+            )}
             {latestCase && (
               <ButtonLink href={newAssessmentHref} size="sm" variant="secondary">
                 <Icon name="plus" width={14} height={14} />

@@ -1,4 +1,5 @@
 import { DOSAGE_COLUMNS, dosageFromRow } from "@/lib/clinical/dosage";
+import type { FollowUpProgram, FollowUpReport } from "@/lib/clinical/followUps";
 import { getSupabase } from "./client";
 import type {
   CaseAssessmentRevisionInput,
@@ -2463,4 +2464,61 @@ export async function revokePrescription(
     });
     return !error && data === true;
   });
+}
+
+/**
+ * Published home programs and recent self-reports in the active clinic, for
+ * the dashboard follow-up list. RLS limits therapists to their own patients.
+ */
+export async function fetchClinicFollowUpData(
+  clinicId: string,
+  sinceLocalDate: string
+): Promise<{ programs: FollowUpProgram[]; reports: FollowUpReport[] } | null> {
+  const supabase = getSupabase();
+  if (!supabase || !clinicId || !/^\d{4}-\d{2}-\d{2}$/.test(sinceLocalDate)) return null;
+  try {
+    const [programResult, reportResult] = await Promise.all([
+      withTimeout(
+        supabase
+          .from("exercise_prescriptions")
+          .select("id, clinic_id, patient_id, episode_id, version, review_date, published_at, patients ( full_name )")
+          .eq("clinic_id", clinicId)
+          .eq("status", "published")
+          .limit(500)
+      ),
+      withTimeout(
+        supabase
+          .from("patient_exercise_completion_events")
+          .select("prescription_id, local_date")
+          .eq("clinic_id", clinicId)
+          .gte("local_date", sinceLocalDate)
+          .limit(5000)
+      ),
+    ]);
+    if (!programResult || !reportResult || programResult.error || reportResult.error) return null;
+    type Row = Record<string, unknown>;
+    const programs = ((programResult.data ?? []) as Row[]).flatMap((row): FollowUpProgram[] => {
+      if (row.clinic_id !== clinicId || !row.published_at) return [];
+      const patientValue = row.patients as Row | Row[] | null;
+      const patient = Array.isArray(patientValue) ? patientValue[0] : patientValue;
+      return [
+        {
+          prescriptionId: row.id as string,
+          patientId: row.patient_id as string,
+          patientName: typeof patient?.full_name === "string" ? patient.full_name : "",
+          episodeId: row.episode_id as string,
+          version: Number(row.version),
+          reviewDate: row.review_date as string,
+          publishedAt: row.published_at as string,
+        },
+      ];
+    });
+    const reports = ((reportResult.data ?? []) as Row[]).map((row) => ({
+      prescriptionId: row.prescription_id as string,
+      localDate: row.local_date as string,
+    }));
+    return { programs, reports };
+  } catch {
+    return null;
+  }
 }

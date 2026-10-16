@@ -83,12 +83,20 @@ export interface CaseFindingsVersion {
  * region (e.g. after the case region was revised), so only meaningful,
  * region-valid findings are stored, ranked or sent to the AI draft.
  */
+/**
+ * Asked for every region: surgery on this region in the last 12 months.
+ * Diagnostic hypotheses do not apply after surgery, so a "yes" switches the
+ * analysis to the post-operative pathway. It is not used in the ranking.
+ */
+export const POST_OP_QUESTION = "postop_recent";
+
 export function normalizeFindings(
   findings: ClinicalFindings,
   region: BodyRegionId | null | undefined
 ): ClinicalFindings {
   const knowledge = getRegionKnowledge(region);
   const questionIds = new Set(knowledge?.questions.map((q) => q.id) ?? []);
+  if (knowledge) questionIds.add(POST_OP_QUESTION);
   const testIds = new Set(knowledge?.tests.map((t) => t.id) ?? []);
   const answers = Object.fromEntries(
     Object.entries(findings.intake.answers).filter(

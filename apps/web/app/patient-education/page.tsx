@@ -181,7 +181,7 @@ export default function PatientEducationPage() {
                   {currentCase.name}
                   {currentCase.age ? (locale === "fa" ? `، ${currentCase.age.toLocaleString("fa-IR")} ساله` : `, ${currentCase.age}`) : ""}
                 </p>
-                <p className="text-xs text-[var(--color-ink-faint)]">
+                <p className="text-xs text-[var(--color-ink-faint)]" dir="auto">
                   {currentCase.mainComplaint}
                 </p>
               </div>

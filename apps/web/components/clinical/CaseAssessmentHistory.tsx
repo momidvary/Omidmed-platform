@@ -715,7 +715,7 @@ function HistoryField({
       <dt className="text-xs font-medium text-[var(--color-ink-faint)]">
         {label}
       </dt>
-      <dd className="mt-0.5 whitespace-pre-wrap text-[var(--color-ink-soft)]">
+      <dd className="mt-0.5 whitespace-pre-wrap text-[var(--color-ink-soft)]" dir="auto">
         {value}
       </dd>
     </div>

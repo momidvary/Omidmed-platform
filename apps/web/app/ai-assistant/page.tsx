@@ -449,7 +449,7 @@ export default function AiAssistantPage() {
                     {currentCase.name}
                     {currentCase.age ? (locale === "fa" ? `، ${currentCase.age.toLocaleString("fa-IR")} ساله` : `, ${currentCase.age}`) : ""}
                   </p>
-                  <p className="text-xs text-[var(--color-ink-soft)]">
+                  <p className="text-xs text-[var(--color-ink-soft)]" dir="auto">
                     {currentCase.mainComplaint}
                   </p>
                   <div className="flex flex-wrap gap-1.5 pt-1">

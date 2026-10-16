@@ -45,6 +45,7 @@ export default function ProtocolsPage() {
                     </div>
                     <p className="line-clamp-3 text-sm leading-relaxed text-[var(--color-ink-soft)]">{protocol.summary[lang]}</p>
                     <div className="mt-auto flex flex-wrap gap-1.5 pt-1">
+                      {protocol.postOp && <Badge tone="warn">{t.postOpBadge}</Badge>}
                       {protocol.hypotheses.map((id) => (
                         <Badge key={id} tone="primary">{hypothesisLabel(id)?.[lang] ?? id}</Badge>
                       ))}

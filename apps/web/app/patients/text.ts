@@ -35,6 +35,8 @@ const en = {
   weeklyTargetHint: "Planned sessions or home-program days per week (1–7).",
   therapistAutoAssign: "You will be assigned as this patient’s therapist automatically.",
   ownerUnassigned: "The new patient will start unassigned; an owner can assign a therapist later.",
+  ownerAssignHint: "Choose who treats this patient. You can change it later in the patient record.",
+  ownerKeeps: "Me (clinic owner) — no therapist yet",
   creating: "Creating…",
   createButton: "Register and open patient",
   createFailed:
@@ -207,6 +209,8 @@ export const patientsText: PageText<PatientsText> = {
     weeklyTargetHint: "تعداد جلسات یا روزهای برنامه خانگی در هفته (۱ تا ۷).",
     therapistAutoAssign: "شما به‌طور خودکار فیزیوتراپیست این بیمار خواهید شد.",
     ownerUnassigned: "بیمار جدید بدون فیزیوتراپیست ثبت می‌شود؛ صاحب کلینیک بعداً می‌تواند فیزیوتراپیست تعیین کند.",
+    ownerAssignHint: "چه کسی این بیمار را درمان می‌کند؟ بعداً در پرونده بیمار قابل تغییر است.",
+    ownerKeeps: "خودم (مدیر کلینیک) — فعلاً بدون فیزیوتراپیست",
     creating: "در حال ثبت…",
     createButton: "ثبت و باز کردن صفحه بیمار",
     createFailed:

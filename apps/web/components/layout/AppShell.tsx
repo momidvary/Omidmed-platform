@@ -86,7 +86,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       }
     >
       {/* Desktop sidebar */}
-      <aside className="hidden w-64 shrink-0 border-e border-[var(--color-border)] lg:block">
+      <aside className="hidden w-64 shrink-0 border-e border-[var(--color-border)] lg:block print:hidden">
         <div className="sticky top-0 h-screen">
           <Sidebar />
         </div>
@@ -128,7 +128,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Topbar */}
-        <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-[var(--color-border)] bg-white/80 px-4 py-3 backdrop-blur sm:px-6">
+        <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-[var(--color-border)] bg-white/80 px-4 py-3 backdrop-blur sm:px-6 print:hidden">
           <button
             ref={menuButtonRef}
             type="button"
@@ -203,7 +203,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           )}
         </header>
 
-        <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-6 lg:px-8">
+        <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-6 lg:px-8 print:max-w-none print:p-0">
           <ClinicianGate>
             <ActivePatientBar />
             {children}

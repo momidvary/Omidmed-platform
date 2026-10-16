@@ -15,6 +15,7 @@ import { isMockMode } from "@/lib/config";
 import { cn, formatDate } from "@/lib/utils";
 import { useLocale } from "@/lib/store/LocaleContext";
 import { useText, type PageText } from "@/lib/i18n/text";
+import { FollowUpSection } from "./FollowUpSection";
 
 const en = {
   greeting: (name: string | null) => (name ? `Hello, ${name}` : "Hello"),
@@ -245,6 +246,8 @@ export default function DashboardPage() {
           </div>
         </section>
       )}
+
+      {!isMockMode && clinical && <FollowUpSection />}
 
       <Card>
         <CardHeader

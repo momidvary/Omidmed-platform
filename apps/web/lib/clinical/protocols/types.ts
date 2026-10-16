@@ -13,7 +13,7 @@ import type { BodyRegionId } from "@/lib/types";
  * the home-program builder.
  */
 
-export const PROTOCOLS_VERSION = "physio-protocols-2";
+export const PROTOCOLS_VERSION = "physio-protocols-3";
 
 export interface ProtocolPhase {
   id: string;
@@ -27,6 +27,11 @@ export interface ProtocolPhase {
   other: LocalizedText[];
   /** Criteria to move to the next phase (empty for the last phase). */
   progressWhen: LocalizedText[];
+  /**
+   * Post-operative protocols only: the usual window in weeks since surgery.
+   * Used to suggest a phase; criteria and the surgeon's protocol still decide.
+   */
+  weeks?: { from: number; to: number | null };
 }
 
 export interface OutcomeMeasure {
@@ -37,8 +42,14 @@ export interface OutcomeMeasure {
 export interface Protocol {
   id: string;
   region: BodyRegionId;
-  /** Knowledge-base hypothesis ids this protocol serves. */
+  /** Knowledge-base hypothesis ids this protocol serves (none for post-op). */
   hypotheses: string[];
+  /**
+   * Set for rehabilitation after surgery. These protocols are chosen from the
+   * operation, not from a ranked hypothesis, and always defer to the
+   * surgeon's protocol and restrictions.
+   */
+  postOp?: { procedure: LocalizedText };
   title: LocalizedText;
   summary: LocalizedText;
   principles: LocalizedText[];

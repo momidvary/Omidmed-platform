@@ -9,6 +9,8 @@ const en = {
     "Reference template for a provisional hypothesis. Choose exercises, dose and progression from your examination; exercises reach a patient only through the home-program builder. Verify references against the current versions.",
   phases: (n: number) => `${n} phases`,
   linked: "Linked hypotheses",
+  postOpBadge: "After surgery",
+  procedure: "Operation",
   regionShort: {
     neck: "Neck", shoulder: "Shoulder", "low-back": "Low back", hip: "Hip",
     knee: "Knee", "ankle-foot": "Ankle & foot", "post-op": "Post-op", neuro: "Neuro", sports: "Sport",
@@ -47,6 +49,8 @@ export const protocolText: PageText<typeof en> = {
       "الگوی مرجع برای یک فرضیه بالینی موقت است. انتخاب تمرین، دوز و پیشرفت بر اساس معاینه شماست؛ تمرین فقط از راه نسخه‌نویس برنامه خانگی به بیمار می‌رسد. منابع را با نسخه فعلی تطبیق دهید.",
     phases: (n) => `${n.toLocaleString("fa-IR")} فاز`,
     linked: "فرضیه‌های مرتبط",
+    postOpBadge: "پس از جراحی",
+    procedure: "نوع عمل",
     regionShort: {
       neck: "گردن", shoulder: "شانه", "low-back": "کمر", hip: "لگن و ران",
       knee: "زانو", "ankle-foot": "مچ و کف پا", "post-op": "پس از جراحی", neuro: "عصبی", sports: "ورزشی",

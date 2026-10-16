@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Badge } from "@/components/ui/Badge";
-import { Button } from "@/components/ui/Button";
+import { Button, ButtonLink } from "@/components/ui/Button";
 import { Card, CardBody, CardHeader } from "@/components/ui/Card";
 import { Icon } from "@/components/ui/Icon";
 import { Spinner } from "@/components/ui/Misc";
@@ -51,12 +51,15 @@ export function HomeProgramFollowUp({
   episodeId,
   scopeKey,
   onEdit,
+  printHref,
 }: {
   program: PrescriptionRecord;
   episodeId: string;
   /** Patient/clinic scope the reports belong to; part of the load key. */
   scopeKey: string;
   onEdit: () => void;
+  /** Printable copy for patients without a portal account (published programs). */
+  printHref?: string;
 }) {
   const t = useText(followUpText);
   const { locale } = useLocale();
@@ -83,9 +86,16 @@ export function HomeProgramFollowUp({
         subtitle={t.subtitle(WINDOW_DAYS)}
         icon={<Icon name="exercise" />}
         action={
-          <Button size="sm" variant="secondary" onClick={onEdit}>
-            {t.editProgram}
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            {printHref && program.status === "published" && (
+              <ButtonLink size="sm" variant="ghost" href={printHref}>
+                {t.printProgram}
+              </ButtonLink>
+            )}
+            <Button size="sm" variant="secondary" onClick={onEdit}>
+              {t.editProgram}
+            </Button>
+          </div>
         }
       />
       <CardBody className="space-y-4">

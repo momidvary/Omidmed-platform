@@ -46,6 +46,7 @@ const en = {
   progressionOption: "Library progression",
   regressionOption: "Library regression",
   editProgram: "Edit home program",
+  printProgram: "Print for the patient",
   disclaimer:
     "Self-reported by the patient; a missing report does not mean the exercise was not done. Suggestions are transparent rules for your review — nothing changes until you save and publish a new program version.",
 };
@@ -97,6 +98,7 @@ export const followUpText: PageText<typeof en> = {
     progressionOption: "پیشرفت پیشنهادی کتابخانه",
     regressionOption: "پسرفت پیشنهادی کتابخانه",
     editProgram: "ویرایش برنامه خانگی",
+    printProgram: "چاپ برای بیمار",
     disclaimer:
       "این‌ها گزارش‌های خود بیمار است؛ نبود گزارش به معنی انجام‌نشدن تمرین نیست. پیشنهادها قواعد شفاف برای بررسی شماست و تا وقتی نسخه جدید برنامه را ذخیره و منتشر نکنید، چیزی تغییر نمی‌کند.",
   },

@@ -247,6 +247,7 @@ function PatientRegistry() {
   const [therapists, setTherapists] = useState<
     { id: string; fullName: string }[]
   >([]);
+  const [newPatientTherapistId, setNewPatientTherapistId] = useState("");
   const activeClinicRef = useRef(activeClinicId);
   const submitInFlight = useRef(false);
 
@@ -407,7 +408,12 @@ function PatientRegistry() {
     const created = await createPatientEpisode({
       clinicId,
       ...validated.normalized,
-      assignedTherapistId: profile.role === "therapist" ? profile.id : null,
+      assignedTherapistId:
+        profile.role === "therapist"
+          ? profile.id
+          : therapists.some((therapist) => therapist.id === newPatientTherapistId)
+            ? newPatientTherapistId
+            : null,
     });
 
     submitInFlight.current = false;
@@ -633,11 +639,29 @@ function PatientRegistry() {
                   </div>
                 </details>
 
-                <p className="rounded-xl bg-[var(--color-surface-muted)] px-4 py-3 text-xs text-[var(--color-ink-soft)]">
-                  {profile?.role === "therapist"
-                    ? t.therapistAutoAssign
-                    : t.ownerUnassigned}
-                </p>
+                {profile?.role !== "therapist" && therapists.length > 0 ? (
+                  <div className="max-w-sm">
+                    <Field label={t.primaryTherapist} hint={t.ownerAssignHint}>
+                      <Select
+                        value={newPatientTherapistId}
+                        onChange={(event) => setNewPatientTherapistId(event.target.value)}
+                      >
+                        <option value="">{t.ownerKeeps}</option>
+                        {therapists.map((therapist) => (
+                          <option key={therapist.id} value={therapist.id}>
+                            {therapist.fullName}
+                          </option>
+                        ))}
+                      </Select>
+                    </Field>
+                  </div>
+                ) : (
+                  <p className="rounded-xl bg-[var(--color-surface-muted)] px-4 py-3 text-xs text-[var(--color-ink-soft)]">
+                    {profile?.role === "therapist"
+                      ? t.therapistAutoAssign
+                      : t.ownerUnassigned}
+                  </p>
+                )}
 
                 {currentFeedback && (
                   <p

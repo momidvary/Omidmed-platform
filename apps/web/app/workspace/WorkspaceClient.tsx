@@ -29,12 +29,14 @@ import {
   fetchPrescriptionHistory,
   fetchTreatmentPlans,
 } from "@/lib/supabase/db";
+import { assessOutcomeChange } from "@/lib/clinical/outcomeChange";
 import type { OutcomeMeasurement, PatientCase } from "@/lib/types";
 import { cn, isUuid } from "@/lib/utils";
 import { workspaceText } from "./text";
 import { useSection } from "./useSection";
 import { HomeProgramFollowUp } from "./HomeProgramFollowUp";
 import { ProtocolPhaseCard } from "./ProtocolPhaseCard";
+import { DischargeCard } from "./DischargeCard";
 import { detectProtocolPhase } from "@/lib/clinical/protocols/detect";
 
 interface PathwayStep {
@@ -68,14 +70,8 @@ function outcomeTrends(measurements: OutcomeMeasurement[]) {
     );
     const first = sorted[0];
     const last = sorted[sorted.length - 1];
-    const delta = last.score - first.score;
-    const better =
-      delta === 0
-        ? 0
-        : (delta > 0) === (last.direction === "higher-better")
-          ? 1
-          : -1;
-    return { first, last, count: sorted.length, better };
+    const change = assessOutcomeChange(last.instrumentKey, first.score, last.score, last.direction);
+    return { first, last, count: sorted.length, better: change.direction, meaningful: change.meaningful };
   });
 }
 
@@ -608,8 +604,30 @@ export function WorkspaceClient() {
             episodeId={episode.id}
             scopeKey={baseKey ?? ""}
             onEdit={() => openCase(latestCase.id, "/treatment-planner#home-program")}
+            printHref={`/workspace/print?patient=${encodeURIComponent(record.id)}`}
           />
         )}
+
+      {record.latestEpisode && latestCase && documentation.data && (
+        <DischargeCard
+          key={record.latestEpisode.id}
+          episodeId={record.latestEpisode.id}
+          status={record.latestEpisode.status}
+          endedAt={record.latestEpisode.endedAt}
+          noteCount={noteCount}
+          trends={trends.map(({ first, last, count, better, meaningful }) => ({
+            name: last.instrumentName,
+            first: first.score,
+            last: last.score,
+            unit: last.unit,
+            count,
+            better,
+            meaningful,
+          }))}
+          dischargeNoteHref={`${recordsHref}&template=discharge`}
+          onClosed={retry}
+        />
+      )}
 
       <div className="grid gap-5 xl:grid-cols-2">
         <Card>
@@ -701,7 +719,7 @@ export function WorkspaceClient() {
                     <p className="text-sm text-[var(--color-ink-soft)]">{t.outcomesEmpty}</p>
                   ) : (
                     <ul className="space-y-1.5 text-sm">
-                      {trends.map(({ first, last, count, better }) => (
+                      {trends.map(({ first, last, count, better, meaningful }) => (
                         <li key={last.instrumentKey} className="flex flex-wrap items-center justify-between gap-2">
                           <span className="text-[var(--color-ink)]">{last.instrumentName}</span>
                           <span className="flex items-center gap-1.5 text-xs text-[var(--color-ink-soft)]">
@@ -709,6 +727,11 @@ export function WorkspaceClient() {
                             {count > 1 && (
                               <Badge tone={better > 0 ? "success" : better < 0 ? "danger" : "neutral"}>
                                 {better > 0 ? t.improved : better < 0 ? t.worsened : t.unchanged}
+                              </Badge>
+                            )}
+                            {count > 1 && better !== 0 && meaningful !== null && (
+                              <Badge tone={meaningful ? (better > 0 ? "success" : "danger") : "neutral"}>
+                                {meaningful ? t.meaningful : t.belowMcid}
                               </Badge>
                             )}
                           </span>

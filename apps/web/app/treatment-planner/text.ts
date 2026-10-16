@@ -91,6 +91,9 @@ const en = {
   goalPlaceholder: "e.g. Return to running 5km",
   protocolGuide: "Treatment protocol (optional)",
   protocolGuideHint: "Adds the phase goals, exercises and progression criteria to the draft.",
+  weeksSinceSurgery: (weeks: number, phase: string) =>
+    `${weeks} week${weeks === 1 ? "" : "s"} since surgery — the usual phase is “${phase}”. Criteria and the surgeon's protocol decide.`,
+  useSuggestedPhase: "Use this phase",
   protocolNone: "No protocol — region template only",
   protocolPhase: "Protocol phase",
   phaseOption: (index: number, name: string) => `Phase ${index}: ${name}`,
@@ -243,6 +246,9 @@ export const plannerText: PageText<PlannerText> = {
     goalPlaceholder: "مثلاً بازگشت به دویدن ۵ کیلومتر",
     protocolGuide: "پروتکل درمانی (اختیاری)",
     protocolGuideHint: "اهداف، تمرین‌ها و معیارهای پیشرفت فاز انتخابی به پیش‌نویس اضافه می‌شود.",
+    weeksSinceSurgery: (weeks: number, phase: string) =>
+      `${weeks.toLocaleString("fa-IR")} هفته از جراحی گذشته — فاز معمول «${phase}» است. معیارها و پروتکل جراح تصمیم‌گیرنده‌اند.`,
+    useSuggestedPhase: "انتخاب این فاز",
     protocolNone: "بدون پروتکل — فقط الگوی ناحیه",
     protocolPhase: "فاز پروتکل",
     phaseOption: (index, name) => `فاز ${index.toLocaleString("fa-IR")}: ${name}`,

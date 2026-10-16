@@ -19,6 +19,8 @@ const en: Dict = {
   // nav
   "nav.dashboard": "Dashboard",
   "nav.dashboard.desc": "Today's work",
+  "nav.quick-visit": "Quick Visit",
+  "nav.quick-visit.desc": "From the patient to a program in a few minutes",
   "nav.patients": "Patients",
   "nav.patients.desc": "Find or register a patient",
   "nav.clinical-records": "Session Notes",
@@ -98,6 +100,8 @@ const en: Dict = {
 const fa: Dict = {
   "nav.dashboard": "داشبورد",
   "nav.dashboard.desc": "کارهای امروز",
+  "nav.quick-visit": "ویزیت سریع",
+  "nav.quick-visit.desc": "از بیمار تا برنامه در چند دقیقه",
   "nav.patients": "بیماران",
   "nav.patients.desc": "پیدا کردن یا ثبت بیمار",
   "nav.clinical-records": "یادداشت جلسات",
@@ -173,6 +177,8 @@ const fa: Dict = {
 const ar: Dict = {
   "nav.dashboard": "لوحة التحكم",
   "nav.dashboard.desc": "مهام اليوم",
+  "nav.quick-visit": "زيارة سريعة",
+  "nav.quick-visit.desc": "من المريض إلى البرنامج في دقائق",
   "nav.patients": "المرضى",
   "nav.patients.desc": "السجل والرعاية النشطة",
   "nav.clinical-records": "ملاحظات الجلسات",

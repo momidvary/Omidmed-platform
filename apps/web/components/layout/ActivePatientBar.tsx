@@ -42,7 +42,7 @@ const text = {
 };
 
 /** Paths where the bar adds nothing (the page itself is about choosing a patient). */
-const hiddenOn = ["/", "/patients", "/settings"];
+const hiddenOn = ["/", "/patients", "/settings", "/quick-visit"];
 
 /**
  * Shows which patient the clinical tools (planner, protocols, prescription)

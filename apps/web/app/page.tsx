@@ -22,6 +22,8 @@ const en = {
   intro: "Start with a patient: register someone new or find an existing patient.",
   newPatient: "Register new patient",
   newAssessment: "New assessment",
+  quickVisit: "Quick visit",
+  quickVisitHint: "Quick visit: from the patient to a provisional hypothesis and a ready program in a few minutes.",
   searchLabel: "Find a patient",
   searchPlaceholder: "Patient name…",
   search: "Find",
@@ -48,6 +50,8 @@ const text: PageText<typeof en> = {
     intro: "کار را از بیمار شروع کنید: بیمار جدید ثبت کنید یا بیمار قبلی را پیدا کنید.",
     newPatient: "ثبت بیمار جدید",
     newAssessment: "ارزیابی جدید",
+    quickVisit: "ویزیت سریع",
+    quickVisitHint: "ویزیت سریع: از بیمار تا فرضیه موقت و برنامه آماده در چند دقیقه.",
     searchLabel: "پیدا کردن بیمار",
     searchPlaceholder: "نام بیمار…",
     search: "جستجو",
@@ -71,6 +75,7 @@ const text: PageText<typeof en> = {
     intro: "ابدأ بالمريض: سجّل مريضًا جديدًا أو ابحث عن مريض موجود.",
     newPatient: "تسجيل مريض جديد",
     newAssessment: "تقييم جديد",
+    quickVisit: "زيارة سريعة",
     searchLabel: "البحث عن مريض",
     searchPlaceholder: "اسم المريض…",
     search: "بحث",
@@ -176,6 +181,7 @@ export default function DashboardPage() {
           {t.greeting(isMockMode ? null : displayName)}
         </h2>
         <p className="mt-2 max-w-xl text-sm text-white/85">{t.intro}</p>
+        <p className="mt-1 max-w-xl text-sm text-white/85">{t.quickVisitHint}</p>
         <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center">
           {!isMockMode && (
             <form
@@ -205,13 +211,13 @@ export default function DashboardPage() {
             </form>
           )}
           <ButtonLink
-            href={isMockMode ? "/new-case" : "/patients?new=1"}
+            href="/quick-visit"
             size="lg"
             variant="secondary"
-            className="border-0 text-[var(--color-primary-strong)]"
+            className="min-h-14 border-0 px-7 text-lg text-[var(--color-primary-strong)]"
           >
-            <Icon name="plus" width={20} height={20} />
-            {isMockMode ? t.newAssessment : t.newPatient}
+            <Icon name="check" width={22} height={22} />
+            {t.quickVisit}
           </ButtonLink>
         </div>
       </section>

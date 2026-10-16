@@ -201,3 +201,42 @@ test("a risk factor is recorded as a precaution and does not lock treatment", as
   await page.goto("/treatment-planner");
   await expect(page.getByLabel("Body region")).toBeDisabled();
 });
+
+test("quick visit asks one question at a time and stops on a warning sign", async ({ page }) => {
+  await page.goto("/quick-visit");
+  await page.getByLabel("Full name", { exact: true }).fill("Demo Quick");
+  await page.getByLabel("Age", { exact: true }).fill("24");
+  await page.getByRole("button", { name: "Knee Pain", exact: true }).click();
+  await page.getByRole("button", { name: "Under 6 weeks" }).click();
+  await page.getByRole("button", { name: "Continue" }).click();
+
+  // The knee screen leaves out spinal-only signs but keeps general ones.
+  await expect(page.getByRole("button", { name: /Fever/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Saddle anaesthesia/ })).toHaveCount(0);
+  await page.getByRole("button", { name: "None of these" }).click();
+  await page.getByRole("button", { name: "No", exact: true }).click();
+
+  // One history question at a time, with yes / no / don't know.
+  await expect(page.getByText("Question 1")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Don't know" })).toBeVisible();
+  for (let i = 0; i < 12 && (await page.getByRole("button", { name: "Don't know" }).count()); i += 1) {
+    await page.getByRole("button", { name: "No", exact: true }).click();
+  }
+  for (let i = 0; i < 6 && (await page.getByRole("button", { name: "Not done" }).count()); i += 1) {
+    await page.getByRole("button", { name: "Not done" }).click();
+  }
+  await expect(page.getByText(/provisional hypothesis from the recorded findings/i)).toBeVisible();
+
+  // A selected warning sign stops the visit before any treatment.
+  await page.goto("/quick-visit");
+  await page.getByLabel("Full name", { exact: true }).fill("Demo Warning");
+  await page.getByLabel("Age", { exact: true }).fill("60");
+  await page.getByRole("button", { name: "Low Back Pain", exact: true }).click();
+  await page.getByRole("button", { name: "Over 3 months" }).click();
+  await page.getByRole("button", { name: "Continue" }).click();
+  await page.getByRole("button", { name: /Saddle anaesthesia/ }).click();
+  await page.getByRole("button", { name: /Record the 1 selected sign/ }).click();
+  await page.getByRole("button", { name: "No", exact: true }).click();
+  await expect(page.getByText("Treatment stops here")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Confirm and build the program" })).toHaveCount(0);
+});

@@ -28,6 +28,7 @@ export interface NavItem {
 
 export const navItems: NavItem[] = [
   { href: "/", key: "dashboard", icon: "dashboard", section: "main" },
+  { href: "/quick-visit", key: "quick-visit", icon: "check", section: "main" },
   { href: "/patients", key: "patients", icon: "users", section: "main", matches: ["/workspace"] },
   { href: "/alerts", key: "alerts", icon: "alert", section: "main", badge: "alerts" },
   { href: "/tickets", key: "tickets", icon: "inbox", section: "main", badge: "tickets" },
